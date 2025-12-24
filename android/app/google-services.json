@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "463362132648",
+    "project_id": "kiri-hat-live",
+    "storage_bucket": "kiri-hat-live.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:463362132648:android:0c699a6967c5e0e5eb109d",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpDwyoGZfQbCxi0OioIul5S7krGUZMnWM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

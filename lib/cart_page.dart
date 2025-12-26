@@ -23,11 +23,11 @@ class _CartPageState extends State<CartPage> {
     return total;
   }
 
-  // 2. CHECKOUT LOGIC (The most important part)
+  // 2. CHECKOUT LOGIC
   Future<void> _placeOrder(List<QueryDocumentSnapshot> cartItems) async {
     setState(() => _isCheckingOut = true);
 
-    // A. Group items by Vendor (So we create separate orders for separate shops)
+    // A. Group items by Vendor
     Map<String, List<Map<String, dynamic>>> ordersByVendor = {};
 
     for (var doc in cartItems) {
@@ -38,24 +38,23 @@ class _CartPageState extends State<CartPage> {
         ordersByVendor[vendorId] = [];
       }
 
-      // Add item to that vendor's list
       ordersByVendor[vendorId]!.add({
         'name': data['name'],
         'price': data['price'],
         'qty': data['qty'] ?? 1,
         'imageUrl': data['imageUrl'],
-        'productId': doc.id, // Reference to original product
+        'productId': doc.id,
       });
     }
 
-    // B. Create an Order Document for each Vendor
+    // B. Create Order Documents
     WriteBatch batch = FirebaseFirestore.instance.batch();
 
+    // FIXED: Renamed 'sum' to 'currentSum' to avoid type conflict
     ordersByVendor.forEach((vendorId, items) {
-      // Calculate total for just this vendor's order
       double orderTotal = items.fold(
         0,
-        (sum, item) => sum + (item['price'] * item['qty']),
+        (currentSum, item) => currentSum + (item['price'] * item['qty']),
       );
 
       DocumentReference orderRef = FirebaseFirestore.instance
@@ -65,23 +64,21 @@ class _CartPageState extends State<CartPage> {
       batch.set(orderRef, {
         'order_id': orderRef.id,
         'vendor_id': vendorId,
-        'customer_id': user?.email, // Or user.uid
-        'customer_phone':
-            user?.email?.split('@')[0] ??
-            "Unknown", // Extract phone from fake email
+        'customer_id': user?.email,
+        'customer_phone': user?.email?.split('@')[0] ?? "Unknown",
         'items': items,
         'total_amount': orderTotal,
-        'status': 'Pending', // Pending -> Packed -> Shipped -> Delivered
+        'status': 'Pending',
         'created_at': FieldValue.serverTimestamp(),
       });
     });
 
-    // C. Clear the User's Cart
+    // C. Clear Cart
     for (var doc in cartItems) {
       batch.delete(doc.reference);
     }
 
-    // D. Commit all changes
+    // D. Commit
     try {
       await batch.commit();
       if (mounted) {
@@ -97,8 +94,8 @@ class _CartPageState extends State<CartPage> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(ctx); // Close dialog
-                  Navigator.pop(context); // Go back to shop
+                  Navigator.pop(ctx);
+                  Navigator.pop(context);
                 },
                 child: const Text("OK"),
               ),
@@ -107,16 +104,17 @@ class _CartPageState extends State<CartPage> {
         );
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
+        // FIXED: Added Block
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
     }
 
     setState(() => _isCheckingOut = false);
   }
 
-  // 3. DELETE ITEM FROM CART
   void _removeFromCart(String docId) {
     FirebaseFirestore.instance
         .collection('users')
@@ -140,8 +138,10 @@ class _CartPageState extends State<CartPage> {
             .collection('cart')
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
+            // FIXED: Added Block
             return const Center(child: CircularProgressIndicator());
+          }
 
           var cartItems = snapshot.data!.docs;
           if (cartItems.isEmpty) {
@@ -163,7 +163,6 @@ class _CartPageState extends State<CartPage> {
 
           return Column(
             children: [
-              // LIST OF ITEMS
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.all(10),
@@ -204,17 +203,13 @@ class _CartPageState extends State<CartPage> {
                   },
                 ),
               ),
-
-              // BOTTOM CHECKOUT BAR
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
+                  // FIXED: Replaced withOpacity(0.1) -> withAlpha(25)
                   boxShadow: [
-                    BoxShadow(
-                      blurRadius: 10,
-                      color: Colors.grey.withOpacity(0.1),
-                    ),
+                    BoxShadow(blurRadius: 10, color: Colors.grey.withAlpha(25)),
                   ],
                 ),
                 child: SafeArea(

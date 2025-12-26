@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:463362132648:android:0c699a6967c5e0e5eb109d",
+        "mobilesdk_app_id": "1:463362132648:android:80f981fba36fd55beb109d",
         "android_client_info": {
-          "package_name": "com.example.myapp"
+          "package_name": "com.kirihat.live_app"
         }
       },
       "oauth_client": [],

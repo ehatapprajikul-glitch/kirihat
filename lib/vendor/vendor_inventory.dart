@@ -1,438 +1,236 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'add_product_screen.dart';
+import 'add_category_screen.dart';
+import 'vendor_product_detail.dart';
 
 class VendorInventoryScreen extends StatefulWidget {
   const VendorInventoryScreen({super.key});
+
   @override
   State<VendorInventoryScreen> createState() => _VendorInventoryScreenState();
 }
 
-class _VendorInventoryScreenState extends State<VendorInventoryScreen> {
-  final User? currentUser = FirebaseAuth.instance.currentUser;
+class _VendorInventoryScreenState extends State<VendorInventoryScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final User? user = FirebaseAuth.instance.currentUser;
   String _searchQuery = "";
+  final TextEditingController _searchController = TextEditingController();
 
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _mrpController = TextEditingController();
-  final _stockController = TextEditingController();
-  final _tagsController = TextEditingController();
-  final _descController = TextEditingController();
-
-  String _heroImageUrl = "";
-  List<String> _galleryUrls = [];
-  bool _isUploadingImage = false;
-
-  String _selectedCategory = 'Groceries';
-  final List<String> _categories = [
-    'Groceries',
-    'Vegetables',
-    'Snacks',
-    'Household',
-    'Electronics',
-    'Fashion',
-    'General',
-  ];
-
-  Future<void> _pickAndUploadImage({bool isHero = true}) async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-    if (image == null) return;
-
-    setState(() => _isUploadingImage = true);
-
-    try {
-      Uint8List imgData = await image.readAsBytes();
-      var uri = Uri.parse(
-        "https://api.cloudinary.com/v1_1/du634o3sf/image/upload",
-      );
-      var request = http.MultipartRequest("POST", uri);
-      request.fields['upload_preset'] = "ouofgw7n";
-      request.files.add(
-        http.MultipartFile.fromBytes('file', imgData, filename: "product.jpg"),
-      );
-
-      var response = await request.send();
-
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-
-      if (response.statusCode == 200) {
-        var responseData = await response.stream.toBytes();
-        var jsonMap = jsonDecode(String.fromCharCodes(responseData));
-        String downloadUrl = jsonMap['secure_url'];
-
-        setState(() {
-          if (isHero) {
-            _heroImageUrl = downloadUrl;
-          } else {
-            _galleryUrls.add(downloadUrl);
-          }
-        });
-        messenger.showSnackBar(const SnackBar(content: Text("✅ Uploaded!")));
-      } else {
-        messenger.showSnackBar(const SnackBar(content: Text("Upload Failed")));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(SnackBar(content: Text("Error: $e")));
-    }
-    if (mounted) {
-      setState(() => _isUploadingImage = false);
-    }
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
   }
 
-  void _showProductDialog({Map<String, dynamic>? oldData, String? docId}) {
-    _heroImageUrl = "";
-    _galleryUrls = [];
-    _isUploadingImage = false;
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
 
-    if (oldData != null) {
-      _nameController.text = oldData['name'];
-      _priceController.text = oldData['price'].toString();
-      _mrpController.text = (oldData['mrp'] ?? oldData['price']).toString();
-      _stockController.text = oldData['stock'].toString();
-      _tagsController.text = (oldData['tags'] as List<dynamic>? ?? []).join(
-        ', ',
-      );
-      _descController.text = oldData['description'] ?? '';
-      _heroImageUrl = oldData['imageUrl'] ?? '';
-      _selectedCategory = _categories.contains(oldData['category'])
-          ? oldData['category']
-          : 'Groceries';
-
-      if (oldData['gallery'] != null) {
-        for (var url in oldData['gallery']) {
-          _galleryUrls.add(url.toString());
-        }
-      }
-    } else {
-      _clearForm();
-    }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text(docId == null ? "Add New Product" : "Edit Product"),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Product Images",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: GestureDetector(
-                        onTap: () async {
-                          await _pickAndUploadImage(isHero: true);
-                          setDialogState(() {});
-                        },
-                        child: Container(
-                          height: 120,
-                          width: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            border: Border.all(color: Colors.grey),
-                          ),
-                          child: _isUploadingImage
-                              ? const Center(child: CircularProgressIndicator())
-                              : (_heroImageUrl.isNotEmpty)
-                                  ? Image.network(_heroImageUrl,
-                                      fit: BoxFit.cover)
-                                  : const Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.camera_alt),
-                                        Text("Tap to Upload"),
-                                      ],
-                                    ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 10,
-                      children: [
-                        ..._galleryUrls.map(
-                          (url) => Chip(
-                            label: const Text("Img"),
-                            avatar: const Icon(Icons.image, size: 16),
-                            onDeleted: () =>
-                                setDialogState(() => _galleryUrls.remove(url)),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () async {
-                            await _pickAndUploadImage(isHero: false);
-                            setDialogState(() {});
-                          },
-                          icon: const Icon(
-                            Icons.add_a_photo,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(thickness: 2),
-                    TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: "Product Name",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _priceController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: "Selling ₹",
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _mrpController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: "MRP ₹",
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _stockController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: "Stock",
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: DropdownButtonFormField(
-                            initialValue: _selectedCategory,
-                            items: _categories
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) {
-                              if (v != null) {
-                                setDialogState(
-                                  () => _selectedCategory = v.toString(),
-                                );
-                              }
-                            },
-                            decoration: const InputDecoration(
-                              labelText: "Category",
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _tagsController,
-                      decoration: const InputDecoration(
-                        labelText: "Keywords/Tags",
-                        hintText: "rice, basmati, food",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _descController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: "Description",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+  // --- DELETE LOGIC ---
+  Future<void> _deleteCategory(String docId, String categoryName) async {
+    bool confirm = await showDialog(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text("Delete Category?"),
+            content: Text(
+                "Warning: This will delete '$categoryName' and ALL products inside it."),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("Cancel"),
-              ),
+                  onPressed: () => Navigator.pop(c, false),
+                  child: const Text("Cancel")),
               ElevatedButton(
-                onPressed: _isUploadingImage
-                    ? null
-                    : () => _saveProduct(docId, ctx),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text("Save"),
-              ),
+                  onPressed: () => Navigator.pop(c, true),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text("Delete All")),
             ],
-          );
-        },
-      ),
-    );
+          ),
+        ) ??
+        false;
+
+    if (confirm) {
+      // 1. Delete Products
+      var products = await FirebaseFirestore.instance
+          .collection('products')
+          .where('category', isEqualTo: categoryName)
+          .get();
+      for (var doc in products.docs) {
+        await doc.reference.delete();
+      }
+      // 2. Delete Category
+      await FirebaseFirestore.instance
+          .collection('categories')
+          .doc(docId)
+          .delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Category and items deleted.")));
+      }
+    }
   }
 
-  Future<void> _saveProduct(String? docId, BuildContext ctx) async {
-    if (_nameController.text.isEmpty) {
-      return;
-    }
+  Future<void> _deleteProduct(String docId) async {
+    bool confirm = await showDialog(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text("Delete Product?"),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(c, false),
+                  child: const Text("Cancel")),
+              TextButton(
+                  onPressed: () => Navigator.pop(c, true),
+                  child: const Text("Delete",
+                      style: TextStyle(color: Colors.red))),
+            ],
+          ),
+        ) ??
+        false;
 
-    List<String> keywords = _nameController.text.toLowerCase().split(' ');
-    List<String> tags = _tagsController.text
-        .toLowerCase()
-        .split(',')
-        .map((e) => e.trim())
-        .toList();
-    List<String> searchIndex = [...keywords, ...tags];
-    searchIndex.removeWhere((e) => e.isEmpty);
-
-    Map<String, dynamic> data = {
-      'name': _nameController.text.trim(),
-      'category': _selectedCategory,
-      'price': int.tryParse(_priceController.text) ?? 0,
-      'mrp': int.tryParse(_mrpController.text) ?? 0,
-      'stock': int.tryParse(_stockController.text) ?? 0,
-      'imageUrl': _heroImageUrl,
-      'gallery': _galleryUrls,
-      'description': _descController.text.trim(),
-      'tags': tags,
-      'search_keywords': searchIndex,
-      'vendor_id': currentUser?.email,
-      'isActive': true,
-    };
-    if (docId == null) {
-      data['created_at'] = FieldValue.serverTimestamp();
-    }
-
-    if (docId == null) {
-      await FirebaseFirestore.instance.collection('products').add(data);
-    } else {
+    if (confirm) {
       await FirebaseFirestore.instance
           .collection('products')
           .doc(docId)
-          .update(data);
-    }
-
-    if (ctx.mounted) {
-      Navigator.pop(ctx);
+          .delete();
     }
   }
 
-  void _clearForm() {
-    _nameController.clear();
-    _priceController.clear();
-    _mrpController.clear();
-    _stockController.clear();
-    _tagsController.clear();
-    _descController.clear();
-    _heroImageUrl = "";
-    _galleryUrls = [];
+  // --- SAFE ICON BUILDER (Handles URL vs Emoji) ---
+  Widget _buildCategoryIcon(String? iconData) {
+    if (iconData == null || iconData.isEmpty) {
+      return const Icon(Icons.image_not_supported,
+          size: 40, color: Colors.grey);
+    }
+    // Check if it's a URL (Cloudinary)
+    if (iconData.startsWith('http')) {
+      return Container(
+        height: 50,
+        width: 50,
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            image: DecorationImage(
+              image: NetworkImage(iconData),
+              fit: BoxFit.cover,
+              onError: (e, s) => {}, // Silent error
+            )),
+      );
+    }
+    // Assume it's an emoji/text
+    return Text(iconData, style: const TextStyle(fontSize: 40));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Inventory"),
+        title: const Text("Inventory Manager"),
         backgroundColor: Colors.orange[100],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: "Search...",
-                prefixIcon: Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              onChanged: (val) =>
-                  setState(() => _searchQuery = val.toLowerCase()),
-            ),
-          ),
+        elevation: 0,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.deepOrange,
+          indicatorColor: Colors.deepOrange,
+          tabs: const [
+            Tab(text: "Categories"),
+            Tab(text: "All Items"),
+          ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showProductDialog(),
-        child: const Icon(Icons.add),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildCategoriesTab(),
+          _buildItemsTab(),
+        ],
+      ),
+    );
+  }
+
+  // --- TAB 1: CATEGORIES ---
+  Widget _buildCategoriesTab() {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: "catBtn",
+            onPressed: () => showDialog(
+                context: context, builder: (_) => const AddCategoryScreen()),
+            label: const Text("New Category"),
+            icon: const Icon(Icons.category),
+            backgroundColor: Colors.blueGrey,
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton.extended(
+            heroTag: "prodBtn",
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AddProductScreen())),
+            label: const Text("New Product"),
+            icon: const Icon(Icons.add),
+            backgroundColor: Colors.deepOrange,
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection('products')
-            .where('vendor_id', isEqualTo: currentUser?.email)
+            .collection('categories')
+            .orderBy('created_at', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          var docs = snapshot.data!.docs
-              .where(
-                (d) =>
-                    d['name'].toString().toLowerCase().contains(_searchQuery),
-              )
-              .toList();
+          var docs = snapshot.data!.docs;
 
-          return ListView.builder(
+          if (docs.isEmpty) {
+            return const Center(child: Text("No categories yet."));
+          }
+
+          return GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.1),
             itemCount: docs.length,
             itemBuilder: (context, index) {
               var data = docs[index].data() as Map<String, dynamic>;
-              return Card(
-                child: ListTile(
-                  leading:
-                      (data['imageUrl'] != null && data['imageUrl'].isNotEmpty)
-                          ? Image.network(
-                              data['imageUrl'],
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                            )
-                          : const Icon(Icons.image),
-                  title: Text(data['name']),
-                  subtitle: Text(
-                    "₹${data['price']} (MRP: ${data['mrp'] ?? 0})",
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _showProductDialog(
-                      oldData: data,
-                      docId: docs[index].id,
-                    ),
+              return GestureDetector(
+                onTap: () {
+                  _searchController.text = data['name'] ?? "";
+                  setState(() => _searchQuery =
+                      (data['name'] ?? "").toString().toLowerCase());
+                  _tabController.animateTo(1);
+                },
+                child: Card(
+                  elevation: 2,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildCategoryIcon(data['icon']),
+                      const SizedBox(height: 10),
+                      Text(data['name'] ?? "Unnamed",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 5),
+                      TextButton.icon(
+                        onPressed: () =>
+                            _deleteCategory(docs[index].id, data['name'] ?? ""),
+                        icon: const Icon(Icons.delete,
+                            size: 16, color: Colors.red),
+                        label: const Text("Delete",
+                            style: TextStyle(color: Colors.red, fontSize: 12)),
+                      )
+                    ],
                   ),
                 ),
               );
@@ -440,6 +238,152 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen> {
           );
         },
       ),
+    );
+  }
+
+  // --- TAB 2: ITEMS ---
+  Widget _buildItemsTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(10),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: "Search products...",
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = "");
+                  }),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            onChanged: (val) =>
+                setState(() => _searchQuery = val.toLowerCase()),
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('products')
+                .where('vendor_id', isEqualTo: user?.uid)
+                // .orderBy('created_at', descending: true) // Commented out
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text("No items found."));
+              }
+
+              var docs = snapshot.data!.docs;
+
+              var filtered = docs.where((d) {
+                var data = d.data() as Map<String, dynamic>;
+                String name = (data['name'] ?? "").toString().toLowerCase();
+                String category =
+                    (data['category'] ?? "").toString().toLowerCase();
+                return name.contains(_searchQuery) ||
+                    category.contains(_searchQuery);
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return const Center(
+                    child: Text("No items found matching search."));
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  var doc = filtered[index];
+                  var data = doc.data() as Map<String, dynamic>;
+
+                  // SAFE TIMESTAMP PARSING
+                  String date = "Unknown Date";
+                  if (data['created_at'] != null &&
+                      data['created_at'] is Timestamp) {
+                    date = DateFormat('MMM d, y • h:mm a')
+                        .format((data['created_at'] as Timestamp).toDate());
+                  }
+
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    child: ListTile(
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => VendorProductDetailScreen(
+                                    productData: data, productId: doc.id)));
+                      },
+                      leading: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4),
+                            image: (data['imageUrl'] != null &&
+                                    data['imageUrl'].toString().isNotEmpty)
+                                ? DecorationImage(
+                                    image: NetworkImage(data['imageUrl']),
+                                    fit: BoxFit.cover)
+                                : null),
+                        child: (data['imageUrl'] == null ||
+                                data['imageUrl'].toString().isEmpty)
+                            ? const Icon(Icons.image, color: Colors.grey)
+                            : null,
+                      ),
+                      title: Text(data['name'] ?? "Unknown Product",
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Added: $date",
+                              style: const TextStyle(
+                                  fontSize: 11, color: Colors.grey)),
+                          Text(
+                              "Stock: ${data['stock_quantity'] ?? 0} | ₹${data['price'] ?? 0}",
+                              style: TextStyle(
+                                  color: (data['stock_quantity'] ?? 0) < 5
+                                      ? Colors.red
+                                      : Colors.green,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => AddProductScreen(
+                                        initialData: data, docId: doc.id))),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteProduct(doc.id),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

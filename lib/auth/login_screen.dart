@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../customer/address_screen.dart';
+
+// IMPORTS FOR ALL DASHBOARDS
 import '../customer/customer_dashboard.dart';
+import '../vendor/vendor_dashboard.dart';
+import '../admin/admin_dashboard.dart';
+import '../rider/rider_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,7 +18,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // State
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -42,228 +45,176 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Email validation regex
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
-  }
+  bool _isValidEmail(String email) =>
+      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
+  bool _isValidPhone(String phone) => RegExp(r'^[6-9]\d{9}$').hasMatch(phone);
 
-  // Phone validation (Indian format: starts with 6-9, 10 digits)
-  bool _isValidPhone(String phone) {
-    return RegExp(r'^[6-9]\d{9}$').hasMatch(phone);
+  // --- ROUTING LOGIC (Fixed) ---
+  void _navigateBasedOnRole(String roleRaw, BuildContext context) {
+    Widget targetScreen;
+
+    // FIX: Normalize the string to handle "Vendor", "vendor ", etc.
+    String role = roleRaw.toLowerCase().trim();
+
+    print("NAVIGATION: Detected cleaned role -> '$role'");
+
+    switch (role) {
+      case 'vendor':
+        targetScreen = const VendorDashboard();
+        break;
+      case 'admin':
+        targetScreen = const AdminDashboard();
+        break;
+      case 'rider':
+        targetScreen = const RiderDashboard();
+        break;
+      case 'customer':
+        targetScreen = const CustomerDashboard();
+        break;
+      default:
+        print(
+            "NAVIGATION WARNING: Unknown role '$role', defaulting to Customer.");
+        targetScreen = const CustomerDashboard();
+        break;
+    }
+
+    // Show a quick message so you know what happened (Remove this line later if you want)
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text("Welcome! Logging in as: ${role.toUpperCase()}"),
+          duration: const Duration(seconds: 1)),
+    );
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => targetScreen),
+      (route) => false,
+    );
   }
 
   Future<void> _submit() async {
-    // Validate form first
-    if (!_formKey.currentState!.validate()) {
-      print("Form validation failed");
-      return;
-    }
-
-    // Remove focus from input fields
+    if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-
-    // Set loading state
     setState(() => _isLoading = true);
 
     try {
       if (_isLogin) {
-        print("Attempting login...");
+        // --- LOGIN ---
+        UserCredential userCredential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
 
-        // LOGIN
-        UserCredential userCredential = await FirebaseAuth.instance
-            .signInWithEmailAndPassword(
-              email: _emailController.text.trim(),
-              password: _passwordController.text.trim(),
-            );
-
-        print("Login successful for user: ${userCredential.user?.email}");
-
-        // Check if user document exists in Firestore
         if (userCredential.user != null) {
+          String uid = userCredential.user!.uid;
+          print("DEBUG: Auth Successful. UID: $uid");
+
+          // FETCH USER DOC
           DocumentSnapshot userDoc = await FirebaseFirestore.instance
               .collection('users')
-              .doc(userCredential.user!.uid)
+              .doc(uid)
               .get();
-
-          print("User document exists: ${userDoc.exists}");
 
           if (!mounted) return;
 
-          // Navigate based on whether user has completed profile
           if (userDoc.exists) {
-            Map<String, dynamic>? userData =
-                userDoc.data() as Map<String, dynamic>?;
-            bool hasAddress = userData?['hasAddress'] ?? false;
+            // FIX: Safely read the role
+            var data = userDoc.data() as Map<String, dynamic>;
+            String role = data['role'] ?? 'customer';
 
-            print("Has address: $hasAddress");
-
-            if (hasAddress) {
-              // User has completed profile, go to dashboard
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CustomerDashboard(),
-                ),
-                (route) => false,
-              );
-            } else {
-              // User needs to add address
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const AddressScreen()),
-                (route) => false,
-              );
-            }
+            print("DEBUG: Firestore Document Found. Raw Role: '$role'");
+            _navigateBasedOnRole(role, context);
           } else {
-            // User document doesn't exist, go to address screen to complete profile
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const AddressScreen()),
-              (route) => false,
-            );
-          }
-        }
-      } else {
-        print("Attempting signup...");
+            // CRITICAL FIX: User exists in Auth but NOT in Database.
+            // This happens if you manually created user in Auth tab but forgot Firestore tab.
+            print(
+                "DEBUG: User missing in Firestore! Creating default customer entry.");
 
-        // SIGN UP
-        UserCredential cred = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(
-              email: _emailController.text.trim(),
-              password: _passwordController.text.trim(),
-            );
-
-        print("Signup successful for user: ${cred.user?.email}");
-
-        // Create user document in Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(cred.user!.uid)
-            .set({
-              'name': _nameController.text.trim(),
+            await FirebaseFirestore.instance.collection('users').doc(uid).set({
               'email': _emailController.text.trim(),
-              'phone': _phoneController.text.trim(),
-              'role': 'customer',
+              'role': 'customer', // Defaulting to customer for safety
               'created_at': FieldValue.serverTimestamp(),
               'hasAddress': false,
             });
 
-        print("User document created in Firestore");
+            _navigateBasedOnRole('customer', context);
+          }
+        }
+      } else {
+        // --- SIGN UP (Always Customer) ---
+        UserCredential cred =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(cred.user!.uid)
+            .set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'role': 'customer', // Always Customer on Sign Up
+          'created_at': FieldValue.serverTimestamp(),
+          'hasAddress': false,
+        });
 
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const AddressScreen()),
-          );
+          _navigateBasedOnRole('customer', context);
         }
       }
     } on FirebaseAuthException catch (e) {
-      print("FirebaseAuthException: ${e.code} - ${e.message}");
-
       if (!mounted) return;
-
       String errorMessage;
-
       switch (e.code) {
         case 'user-not-found':
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Account not found. Please complete details to Sign Up.",
-              ),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text("Account not found. Switching to Sign Up..."),
+              backgroundColor: Colors.orange));
           setState(() => _isLogin = false);
           return;
-
         case 'wrong-password':
+          errorMessage = "Incorrect password.";
+          break;
         case 'invalid-credential':
-          errorMessage = "Incorrect password. Please try again.";
+        case 'INVALID_LOGIN_CREDENTIALS':
+          errorMessage = "Invalid email or password. If new, please Sign Up.";
           break;
-
         case 'email-already-in-use':
-          errorMessage = "This email is already registered. Please login.";
+          errorMessage = "Email already registered. Please login.";
           break;
-
-        case 'weak-password':
-          errorMessage = "Password is too weak. Use at least 6 characters.";
-          break;
-
-        case 'invalid-email':
-          errorMessage = "Invalid email format.";
-          break;
-
-        case 'network-request-failed':
-          errorMessage = "Network error. Please check your connection.";
-          break;
-
-        case 'too-many-requests':
-          errorMessage = "Too many attempts. Please try again later.";
-          break;
-
         default:
-          errorMessage =
-              e.message ?? "Authentication failed. Please try again.";
+          errorMessage = e.message ?? "Authentication failed.";
       }
-
       _showError(errorMessage);
     } catch (e) {
-      print("General exception: $e");
-
-      if (mounted) {
-        _showError("An unexpected error occurred: ${e.toString()}");
-      }
+      if (mounted) _showError("Error: ${e.toString()}");
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: _errorRed,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: _errorRed));
   }
 
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
-
-    if (email.isEmpty) {
-      _showError("Please enter your email address first");
+    if (email.isEmpty || !_isValidEmail(email)) {
+      _showError("Enter a valid email first");
       return;
     }
-
-    if (!_isValidEmail(email)) {
-      _showError("Please enter a valid email address");
-      return;
-    }
-
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Password reset link sent to your email!"),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Reset link sent!"), backgroundColor: Colors.green));
       }
     } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        if (e.code == 'user-not-found') {
-          _showError("No account found with this email");
-        } else {
-          _showError(e.message ?? "Failed to send reset email");
-        }
-      }
+      if (mounted) _showError(e.message ?? "Failed to send reset email");
     }
   }
 
@@ -274,318 +225,174 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Center(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            bool isDesktop = constraints.maxWidth > 768;
-            if (isDesktop) {
-              return _buildDesktopLayout();
-            } else {
-              return _buildMobileLayout();
-            }
+            return constraints.maxWidth > 768
+                ? _buildDesktopLayout()
+                : _buildMobileLayout();
           },
         ),
       ),
     );
   }
 
-  // DESKTOP LAYOUT
+  // --- UI WIDGETS ---
+
   Widget _buildDesktopLayout() {
     return Container(
       constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 600),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(4),
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]),
       child: Row(
         children: [
-          // LEFT PANEL
           Expanded(
             flex: 4,
             child: Container(
-              decoration: BoxDecoration(
-                color: _brandColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  bottomLeft: Radius.circular(4),
-                ),
-              ),
+              color: _brandColor,
               padding: const EdgeInsets.all(40),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _isLogin ? "Login" : "Looks like you're new here!",
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      Text(_isLogin ? "Login" : "Welcome!",
+                          style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                       const SizedBox(height: 20),
                       Text(
-                        _isLogin
-                            ? "Get access to your Orders, Wishlist and Recommendations"
-                            : "Sign up to get started",
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.white.withOpacity(0.9),
-                          height: 1.5,
-                        ),
-                      ),
+                          _isLogin
+                              ? "Access your dashboard."
+                              : "Sign up to start shopping.",
+                          style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white.withAlpha(230))),
                     ],
                   ),
-                  Center(
-                    child: Icon(
-                      Icons.shopping_bag_outlined,
-                      size: 120,
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                  ),
+                  Icon(Icons.shopping_bag_outlined,
+                      size: 120, color: Colors.white.withAlpha(77)),
                 ],
               ),
             ),
           ),
-
-          // RIGHT PANEL
           Expanded(
-            flex: 6,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(40),
-              child: _buildFormContent(),
-            ),
-          ),
+              flex: 6,
+              child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(40),
+                  child: _buildFormContent())),
         ],
       ),
     );
   }
 
-  // MOBILE LAYOUT
   Widget _buildMobileLayout() {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-          child: _buildFormContent(),
-        ),
-      ),
+          child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+              child: _buildFormContent())),
     );
   }
 
-  // FORM CONTENT
   Widget _buildFormContent() {
     return Form(
       key: _formKey,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Mobile Header
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 768) {
-                return Column(
-                  children: [
-                    Icon(
-                      Icons.shopping_bag_outlined,
-                      size: 60,
-                      color: _brandColor,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Kiri Hat",
-                      style: TextStyle(
+          if (MediaQuery.of(context).size.width < 768) ...[
+            Icon(Icons.shopping_bag_outlined, size: 60, color: _brandColor),
+            const SizedBox(height: 10),
+            Center(
+                child: Text("Kiri Hat",
+                    style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: _brandColor,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Text(
-                      _isLogin ? "Login" : "Sign Up",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: _textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _isLogin
-                          ? "Enter your email to continue"
-                          : "Create your account",
-                      style: TextStyle(fontSize: 14, color: _textGrey),
-                    ),
-                    const SizedBox(height: 30),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
-          // Name field (Sign Up only)
+                        color: _brandColor))),
+            const SizedBox(height: 30),
+            Text(_isLogin ? "Login" : "Sign Up",
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: _textDark)),
+            const SizedBox(height: 30),
+          ],
           if (!_isLogin) ...[
             _buildInputField(
-              controller: _nameController,
-              label: "Full Name",
-              hint: "Enter your full name",
-              icon: Icons.person_outline,
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return "Full name is required";
-                }
-                if (val.trim().length < 3) {
-                  return "Name must be at least 3 characters";
-                }
-                return null;
-              },
-            ),
+                controller: _nameController,
+                label: "Full Name",
+                icon: Icons.person_outline,
+                validator: (val) =>
+                    (val == null || val.length < 3) ? "Name required" : null),
             const SizedBox(height: 20),
-          ],
-
-          // Phone field (Sign Up only)
-          if (!_isLogin) ...[
             _buildInputField(
-              controller: _phoneController,
-              label: "Mobile Number",
-              hint: "10-digit mobile number",
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              maxLength: 10,
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return "Mobile number is required";
-                }
-                if (!_isValidPhone(val.trim())) {
-                  return "Enter a valid 10-digit mobile number";
-                }
-                return null;
-              },
-            ),
+                controller: _phoneController,
+                label: "Mobile Number",
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                validator: (val) => (val == null || !_isValidPhone(val))
+                    ? "Valid phone required"
+                    : null),
             const SizedBox(height: 20),
           ],
-
-          // Email field
           _buildInputField(
-            controller: _emailController,
-            label: "Email",
-            hint: "Enter your email",
-            icon: Icons.email_outlined,
-            keyboardType: TextInputType.emailAddress,
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) {
-                return "Email is required";
-              }
-              if (!_isValidEmail(val.trim())) {
-                return "Enter a valid email address";
-              }
-              return null;
-            },
-          ),
-
+              controller: _emailController,
+              label: "Email",
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+              validator: (val) => (val == null || !_isValidEmail(val))
+                  ? "Valid email required"
+                  : null),
           const SizedBox(height: 20),
-
-          // Password field
           _buildInputField(
-            controller: _passwordController,
-            label: "Password",
-            hint: "Enter your password",
-            icon: Icons.lock_outline,
-            isPassword: true,
-            validator: (val) {
-              if (val == null || val.isEmpty) {
-                return "Password is required";
-              }
-              if (val.length < 6) {
-                return "Password must be at least 6 characters";
-              }
-              return null;
-            },
-          ),
-
-          // Forgot Password (Login only)
+              controller: _passwordController,
+              label: "Password",
+              icon: Icons.lock_outline,
+              isPassword: true,
+              validator: (val) => (val == null || val.length < 6)
+                  ? "Min 6 chars required"
+                  : null),
           if (_isLogin)
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: _handleForgotPassword,
-                child: Text(
-                  "Forgot Password?",
-                  style: TextStyle(
-                    color: _brandColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
+                  onPressed: _handleForgotPassword,
+                  child: Text("Forgot Password?",
+                      style: TextStyle(
+                          color: _brandColor, fontWeight: FontWeight.w600))),
             ),
-
-          const SizedBox(height: 10),
-
-          // Terms text
-          Text(
-            "By continuing, you agree to our Terms of Use and Privacy Policy",
-            style: TextStyle(color: _textGrey, fontSize: 11),
-            textAlign: TextAlign.center,
-          ),
-
           const SizedBox(height: 24),
-
-          // Submit Button
           SizedBox(
             height: 50,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _buttonColor,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade400,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                elevation: 0,
-              ),
+                  backgroundColor: _buttonColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(2))),
               child: _isLoading
                   ? const SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : Text(
-                      _isLogin ? "Login" : "Sign Up",
+                          color: Colors.white, strokeWidth: 2.5))
+                  : Text(_isLogin ? "Login" : "Sign Up",
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+                          fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
-
           const SizedBox(height: 24),
-
-          // Toggle Login/Signup
           Center(
             child: TextButton(
               onPressed: _isLoading
                   ? null
                   : () {
-                      setState(() {
-                        _isLogin = !_isLogin;
-                      });
+                      setState(() => _isLogin = !_isLogin);
                       _formKey.currentState?.reset();
                     },
               child: RichText(
@@ -593,17 +400,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontSize: 14, color: _textDark),
                   children: [
                     TextSpan(
-                      text: _isLogin
-                          ? "New to Kiri Hat? "
-                          : "Already have an account? ",
-                    ),
+                        text: _isLogin
+                            ? "New to Kiri Hat? "
+                            : "Already have an account? "),
                     TextSpan(
-                      text: _isLogin ? "Create an account" : "Login",
-                      style: TextStyle(
-                        color: _brandColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                        text: _isLogin ? "Create an account" : "Login",
+                        style: TextStyle(
+                            color: _brandColor, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -614,70 +417,34 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // CUSTOM INPUT FIELD
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool isPassword = false,
-    TextInputType? keyboardType,
-    int? maxLength,
-    String? Function(String?)? validator,
-  }) {
+  Widget _buildInputField(
+      {required TextEditingController controller,
+      required String label,
+      required IconData icon,
+      bool isPassword = false,
+      TextInputType? keyboardType,
+      int? maxLength,
+      String? Function(String?)? validator}) {
     return TextFormField(
       controller: controller,
       obscureText: isPassword && _obscurePassword,
       keyboardType: keyboardType,
       maxLength: maxLength,
-      style: TextStyle(color: _textDark, fontSize: 15),
-      cursorColor: _brandColor,
-      buildCounter:
-          (context, {required currentLength, required isFocused, maxLength}) =>
-              null,
       decoration: InputDecoration(
         labelText: label,
-        hintText: hint,
-        hintStyle: TextStyle(color: _textGrey.withOpacity(0.6), fontSize: 14),
-        labelStyle: TextStyle(color: _textGrey, fontSize: 14),
-        floatingLabelStyle: TextStyle(color: _brandColor, fontSize: 14),
         prefixIcon: Icon(icon, color: _textGrey, size: 20),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: _textGrey,
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() => _obscurePassword = !_obscurePassword);
-                },
-              )
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: _textGrey),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword))
             : null,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(2),
-          borderSide: BorderSide(color: _borderGrey, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(2),
-          borderSide: BorderSide(color: _borderGrey, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(2),
-          borderSide: BorderSide(color: _brandColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(2),
-          borderSide: BorderSide(color: _errorRed, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(2),
-          borderSide: BorderSide(color: _errorRed, width: 2),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(2)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        counterText: "",
       ),
       validator: validator,
     );

@@ -2,23 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'firebase_options.dart';
 
-// --- IMPORTS FOR ALL SCREENS ---
+// Screens
 import 'auth/login_screen.dart';
+import 'customer/customer_dashboard.dart';
 import 'vendor/vendor_dashboard.dart';
+import 'admin/admin_dashboard.dart';
 import 'rider/rider_dashboard.dart';
-import 'customer/customer_dashboard.dart'; // <--- The new 4-tab Customer Dashboard
+
+// IMPORT THE GATE
+import 'customer/location_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const KiriHatApp());
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
 }
 
-class KiriHatApp extends StatelessWidget {
-  const KiriHatApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,110 +33,79 @@ class KiriHatApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
+        scaffoldBackgroundColor: Colors.grey[50],
       ),
-      home: const AuthWrapper(),
+      home: const AuthWrapper(), // The Traffic Cop
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// AUTH WRAPPER (The Traffic Controller)
-// ---------------------------------------------------------------------------
-class AuthWrapper extends StatelessWidget {
+// --- THE TRAFFIC COP (Decides which screen to show on app start) ---
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // 1. Waiting for Auth Status
+        // 1. If Waiting for Auth Data
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+              body: Center(child: CircularProgressIndicator()));
         }
 
-        // 2. Not Logged In -> Show Login Screen
+        // 2. If User is Logged Out -> Show Login
+        // Note: If you want guests to view products, change this to LocationGate()
         if (!snapshot.hasData) {
           return const LoginScreen();
         }
 
-        // 3. Logged In -> Check Role in Firestore
+        // 3. If User is Logged In -> Check Role in Firestore
         User user = snapshot.data!;
-
         return FutureBuilder<DocumentSnapshot>(
-          // CRITICAL FIX: Use 'user.uid', NOT 'user.email'
           future: FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .get(),
-          builder: (context, roleSnapshot) {
-            if (roleSnapshot.connectionState == ConnectionState.waiting) {
+          builder: (context, userSnapshot) {
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
+                  body: Center(child: CircularProgressIndicator()));
             }
 
-            String role = 'customer'; // Default fallback
+            if (userSnapshot.hasData && userSnapshot.data!.exists) {
+              // Get Role
+              var data = userSnapshot.data!.data() as Map<String, dynamic>;
+              String role = (data['role'] ?? 'customer').toLowerCase();
+              
+              // ROUTING LOGIC
+              if (role == 'admin') {
+                return const AdminDashboard();
+              }
+              if (role == 'vendor') {
+                return const VendorDashboard();
+              }
+              if (role == 'rider') {
+                return const RiderDashboard();
+              }
 
-            if (roleSnapshot.hasData && roleSnapshot.data!.exists) {
-              Map<String, dynamic>? data =
-                  roleSnapshot.data!.data() as Map<String, dynamic>?;
-              role = data?['role'] ?? 'customer';
+              // --- CUSTOMER LOGIC ---
+              // Instead of going straight to Dashboard, we send them to the GATE.
+              // The Gate will check GPS -> Then send them to Dashboard.
+              return const LocationGate(); 
             }
 
-            // 4. Route to Correct Dashboard
-            if (role == 'admin') return const AdminDashboard();
-            if (role == 'vendor') return const VendorDashboard();
-            if (role == 'rider') return const RiderDashboard();
-
-            // Default to the new Customer Dashboard (Home, Categories, Orders, Me)
-            return const CustomerDashboard();
+            // Fallback (e.g. new user without data yet) -> Send to Gate
+            return const LocationGate();
           },
         );
       },
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// ADMIN DASHBOARD (Simplified)
-// ---------------------------------------------------------------------------
-class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Admin Dashboard"),
-        backgroundColor: Colors.red[100],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => FirebaseAuth.instance.signOut(),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.admin_panel_settings, size: 80, color: Colors.red),
-            const SizedBox(height: 20),
-            const Text(
-              "Welcome, Admin!",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "Use the Firebase Console to manage users.",
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

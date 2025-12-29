@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'category_products.dart'; // Import the new screen
 
 class CustomerCategoryScreen extends StatelessWidget {
   const CustomerCategoryScreen({super.key});
 
   final List<Map<String, dynamic>> categories = const [
-    {'name': 'Groceries', 'icon': Icons.local_grocery_store},
     {'name': 'Vegetables', 'icon': Icons.eco},
+    {'name': 'Fruits', 'icon': Icons.apple},
+    {'name': 'Dairy', 'icon': Icons.egg},
+    {'name': 'Bakery', 'icon': Icons.breakfast_dining},
+    {'name': 'Drinks', 'icon': Icons.local_drink},
     {'name': 'Snacks', 'icon': Icons.fastfood},
     {'name': 'Household', 'icon': Icons.home},
     {'name': 'Electronics', 'icon': Icons.electrical_services},
@@ -15,9 +19,12 @@ class CustomerCategoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Categories"),
+        title: const Text("All Categories"),
         backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
       body: GridView.builder(
         padding: const EdgeInsets.all(16),
@@ -25,38 +32,45 @@ class CustomerCategoryScreen extends StatelessWidget {
           crossAxisCount: 3,
           mainAxisSpacing: 20,
           crossAxisSpacing: 20,
+          childAspectRatio: 0.8,
         ),
         itemCount: categories.length,
         itemBuilder: (context, index) {
           return InkWell(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Filtering by ${categories[index]['name']}"),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CategoryProductsScreen(
+                    categoryName: categories[index]['name'],
+                  ),
                 ),
               );
             },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.green.shade50,
-                  child: Icon(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
                     categories[index]['icon'],
                     color: Colors.green,
-                    size: 30,
+                    size: 35,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  categories[index]['name'],
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 10),
+                  Text(
+                    categories[index]['name'],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

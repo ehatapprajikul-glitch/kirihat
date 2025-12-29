@@ -57,9 +57,8 @@ class _CartPageState extends State<CartPage> {
         (currentSum, item) => currentSum + (item['price'] * item['qty']),
       );
 
-      DocumentReference orderRef = FirebaseFirestore.instance
-          .collection('orders')
-          .doc();
+      DocumentReference orderRef =
+          FirebaseFirestore.instance.collection('orders').doc();
 
       batch.set(orderRef, {
         'order_id': orderRef.id,
@@ -178,8 +177,7 @@ class _CartPageState extends State<CartPage> {
                           width: 50,
                           height: 50,
                           color: Colors.grey[200],
-                          child:
-                              (data['imageUrl'] != null &&
+                          child: (data['imageUrl'] != null &&
                                   data['imageUrl'].isNotEmpty)
                               ? Image.network(
                                   data['imageUrl'],

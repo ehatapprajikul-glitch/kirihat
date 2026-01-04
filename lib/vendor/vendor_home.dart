@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'my_listed_products.dart';
+import 'vendor_sales_analytics.dart';
 
 class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
@@ -30,217 +32,222 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.orange[600],
-        elevation: 0,
-        title: const Row(
-          children: [
-            Icon(Icons.dashboard, color: Colors.white),
-            SizedBox(width: 10),
-            Text("Dashboard",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 1. WELCOME & SEARCH
-            _buildHeader(),
+    // Determine screen width for responsive grid
+    double width = MediaQuery.of(context).size.width;
+    int crossAxisCount = width > 1200 ? 4 : (width > 800 ? 2 : 1);
+    double childAspectRatio = width > 1200 ? 1.5 : (width > 800 ? 1.8 : 1.5);
 
-            // 2. DATA STREAMS
-            // CRITICAL FIX: Removed complex queries to ensure data loads first.
-            // Filtering is done in Dart to avoid Indexing errors for now.
-            StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance.collection('orders').snapshots(),
-              builder: (context, orderSnapshot) {
-                return StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('products')
-                      .where('vendor_id', isEqualTo: currentUser?.uid)
-                      .snapshots(),
-                  builder: (context, productSnapshot) {
-                    // Check connection state specifically
-                    if (orderSnapshot.connectionState ==
-                            ConnectionState.waiting ||
-                        productSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.all(50.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-
-                    if (orderSnapshot.hasError) {
-                      return Center(
-                          child: Text(
-                              "Error loading orders: ${orderSnapshot.error}"));
-                    }
-
-                    // --- CLIENT SIDE FILTERING (SAFER) ---
-                    // Filter orders for this vendor manually to bypass index issues
-                    var allOrders = orderSnapshot.data?.docs ?? [];
-                    var vendorOrders = allOrders.where((doc) {
-                      var data = doc.data() as Map<String, dynamic>;
-                      // Check matches on either UID or Email
-                      return data['vendor_id'] == currentUser?.uid ||
-                          data['vendor_id'] == currentUser?.email;
-                    }).toList();
-
-                    var products = productSnapshot.data?.docs ?? [];
-
-                    // Sales Logic
-                    double totalRevenue = 0;
-                    double todayRevenue = 0;
-                    int pendingOrders = 0;
-                    int processingOrders = 0;
-                    int completedOrders = 0;
-
-                    for (var doc in vendorOrders) {
-                      var data = doc.data() as Map<String, dynamic>;
-                      double amount = (data['total_amount'] ?? 0).toDouble();
-                      String status = data['status'] ?? 'Pending';
-                      Timestamp? date = data['created_at'];
-
-                      // Calculate Revenue (Only if not cancelled)
-                      if (status != 'Cancelled') {
-                        totalRevenue += amount;
-                        if (isToday(date)) todayRevenue += amount;
-                      }
-
-                      if (status == 'Pending') pendingOrders++;
-                      if (status == 'Shipped') processingOrders++;
-                      if (status == 'Delivered') completedOrders++;
-                    }
-
-                    // Inventory Logic
-                    int totalProducts = products.length;
-                    int lowStockCount = 0;
-                    for (var doc in products) {
-                      var data = doc.data() as Map<String, dynamic>;
-                      int stock = data['stock_quantity'] ?? 0;
-                      if (stock < 5) lowStockCount++;
-                    }
-
-                    return Column(
-                      children: [
-                        // KPI CARDS
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: GridView.count(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 1.4,
-                            children: [
-                              _buildKPICard(
-                                  "Total Sales",
-                                  formatCurrency(totalRevenue),
-                                  "Today: ${formatCurrency(todayRevenue)}",
-                                  Colors.green,
-                                  Icons.attach_money),
-                              _buildKPICard(
-                                  "Total Orders",
-                                  "${vendorOrders.length}",
-                                  "Pending: $pendingOrders",
-                                  Colors.blue,
-                                  Icons.shopping_bag),
-                              _buildKPICard(
-                                  "Products",
-                                  "$totalProducts",
-                                  "Low Stock: $lowStockCount",
-                                  Colors.orange,
-                                  Icons.inventory),
-                              _buildKPICard(
-                                  "Payouts",
-                                  formatCurrency(totalRevenue * 0.9),
-                                  "Next: Jan 15",
-                                  Colors.purple,
-                                  Icons.account_balance_wallet),
-                            ],
-                          ),
-                        ),
-
-                        // LOW STOCK ALERT
-                        if (lowStockCount > 0)
-                          _buildLowStockAlert(lowStockCount),
-
-                        // RECENT ORDERS
-                        _buildSectionHeader("Recent Orders"),
-                        _buildRecentOrdersList(vendorOrders),
-
-                        const SizedBox(height: 80),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- WIDGETS ---
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-      decoration: BoxDecoration(
-        color: Colors.orange[600],
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-      ),
+    return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Welcome, ${currentUser?.displayName ?? 'Vendor'}",
-            style: const TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 15),
+          // 1. DASHBOARD WELCOME HEADER (Replaces AppBar)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(8)),
-            child: const TextField(
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: "Search products, orders...",
-                prefixIcon: Icon(Icons.search, color: Colors.grey),
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFF512F), Color(0xFFDD2476)], 
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Hello, ${currentUser?.displayName ?? 'Vendor'}!",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Here's what's happening today.",
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 2. DASHBOARD CONTENT
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+            builder: (context, orderSnapshot) {
+              return StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('products')
+                    .where('vendor_id', isEqualTo: currentUser?.uid)
+                    .snapshots(),
+                builder: (context, productSnapshot) {
+                  if (orderSnapshot.connectionState == ConnectionState.waiting ||
+                      productSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(50.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  // Client-side filtering
+                  var allOrders = orderSnapshot.data?.docs ?? [];
+                  var vendorOrders = allOrders.where((doc) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    return data['vendor_id'] == currentUser?.uid ||
+                        data['vendor_id'] == currentUser?.email;
+                  }).toList();
+
+                  var products = productSnapshot.data?.docs ?? [];
+
+                  // Calculate Stats
+                  double totalRevenue = 0;
+                  double todayRevenue = 0;
+                  int pendingOrders = 0;
+                  for (var doc in vendorOrders) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    double amount = (data['total_amount'] ?? 0).toDouble();
+                    String status = data['status'] ?? 'Pending';
+                    Timestamp? date = data['created_at'];
+
+                    if (status != 'Cancelled') {
+                      totalRevenue += amount;
+                      if (isToday(date)) todayRevenue += amount;
+                    }
+                    if (status == 'Pending') pendingOrders++;
+                  }
+
+                  int totalProducts = products.length;
+                  int lowStockCount = 0;
+                  for (var doc in products) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    int stock = data['stock_quantity'] ?? 0;
+                    if (stock < 5) lowStockCount++;
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // STATS GRID
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: 24,
+                          mainAxisSpacing: 24,
+                          childAspectRatio: childAspectRatio,
+                          children: [
+                            _buildStatCard("Today's Revenue", formatCurrency(todayRevenue), Icons.attach_money, [const Color(0xFF11998e), const Color(0xFF38ef7d)]),
+                            _buildStatCard("Pending Orders", "$pendingOrders", Icons.shopping_bag, [const Color(0xFFFC466B), const Color(0xFF3F5EFB)]),
+                            _buildStatCard("Active Products", "$totalProducts", Icons.inventory_2, [const Color(0xFFff9966), const Color(0xFFff5e62)]),
+                            _buildStatCard("Total Sales", formatCurrency(totalRevenue), Icons.show_chart, [const Color(0xFF4568DC), const Color(0xFFB06AB3)]),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+
+                        if (lowStockCount > 0)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF2F2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.shade100),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+                                  child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text("Low Stock Alert", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                      Text("$lowStockCount products need restocking soon.", style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red),
+                              ],
+                            ),
+                          ),
+                          
+                        if (lowStockCount > 0) const SizedBox(height: 24),
+
+                          // QUICK ACTIONS
+                          const Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          const SizedBox(height: 16),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              // If width is large, show 3 or 4 cards. If small, maybe 2.
+                              // Currently we have 2 actions, let's just use a Row or Grid.
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildActionCard(
+                                      "My Products", 
+                                      "Manage your inventory", 
+                                      Icons.inventory, 
+                                      const Color(0xFF0D9759), 
+                                      () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListedProductsScreen()))
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildActionCard(
+                                      "Analytics", 
+                                      "View detailed reports", 
+                                      Icons.pie_chart, 
+                                      const Color(0xFF4568DC), 
+                                      () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorSalesAnalytics()))
+                                    ),
+                                  ),
+                                  // Add empty Expanded if you want equal sizing for more items in future
+                                  // const Expanded(child: SizedBox()),
+                                ],
+                              );
+                            }
+                          ),
+                          const SizedBox(height: 32),
+
+                        // RECENT ORDERS TITLE
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Recent Orders", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            TextButton(onPressed: (){}, child: const Text("View All"))
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        _buildRecentOrders(vendorOrders),
+                        const SizedBox(height: 80),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildKPICard(String title, String mainValue, String subValue,
-      Color color, IconData icon) {
+  Widget _buildStatCard(String title, String value, IconData icon, List<Color> colors) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-              color: Colors.grey.shade200,
-              blurRadius: 5,
-              offset: const Offset(0, 2))
+          BoxShadow(color: colors[0].withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -250,161 +257,133 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: color, size: 24),
-              if (title == "Products" &&
-                  subValue.contains("Low") &&
-                  !subValue.contains(": 0"))
-                const Icon(Icons.warning_amber_rounded,
-                    color: Colors.red, size: 16)
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                child: Icon(icon, color: Colors.white, size: 18),
+              ),
             ],
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(mainValue,
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
-              const SizedBox(height: 2),
-              Text(title,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4)),
-            child: Text(subValue,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
                 style: TextStyle(
-                    fontSize: 10, color: color, fontWeight: FontWeight.bold)),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLowStockAlert(int count) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red[50],
-        border: Border.all(color: Colors.red.shade200),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning, color: Colors.red),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Stock Alert",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.red)),
-                Text("$count products are low on stock.",
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black87)),
-              ],
-            ),
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
           ),
-          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          TextButton(onPressed: () {}, child: const Text("View All")),
-        ],
-      ),
-    );
-  }
+  Widget _buildRecentOrders(List<QueryDocumentSnapshot> docs) {
+    if (docs.isEmpty) return const Center(child: Text("No orders yet", style: TextStyle(color: Colors.grey)));
 
-  Widget _buildRecentOrdersList(List<QueryDocumentSnapshot> docs) {
-    if (docs.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(20.0),
-        child: Text("No orders yet.", style: TextStyle(color: Colors.grey)),
-      );
-    }
-
-    // Sort manually since we removed .orderBy from query
+    // Sort manually
     docs.sort((a, b) {
       Timestamp t1 = (a.data() as Map)['created_at'] ?? Timestamp.now();
       Timestamp t2 = (b.data() as Map)['created_at'] ?? Timestamp.now();
       return t2.compareTo(t1);
     });
 
-    var recentDocs = docs.take(5).toList();
-
     return ListView.builder(
+      padding: EdgeInsets.zero,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      itemCount: recentDocs.length,
+      itemCount: docs.take(5).length,
       itemBuilder: (context, index) {
-        var data = recentDocs[index].data() as Map<String, dynamic>;
-        String orderId = data['order_id'] ??
-            recentDocs[index].id.substring(0, 5).toUpperCase();
-        String customer = data['customer_phone'] ?? "Customer";
-        double total = (data['total_amount'] ?? 0).toDouble();
+        var data = docs[index].data() as Map<String, dynamic>;
         String status = data['status'] ?? 'Pending';
-
-        String dateStr = "Recent";
-        if (data['created_at'] != null) {
-          dateStr = DateFormat('MMM d')
-              .format((data['created_at'] as Timestamp).toDate());
-        }
-
-        Color statusColor = Colors.orange;
-        if (status == 'Delivered') statusColor = Colors.green;
-        if (status == 'Cancelled') statusColor = Colors.red;
-        if (status == 'Shipped') statusColor = Colors.blue;
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          elevation: 2,
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue[50],
-              child: const Icon(Icons.receipt_long, color: Colors.blue),
-            ),
-            title: Text("Order #$orderId",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text("$customer • $dateStr"),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(formatCurrency(total),
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4)),
-                  child: Text(status,
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: statusColor,
-                          fontWeight: FontWeight.bold)),
+        Color statusColor = status == 'Delivered' ? Colors.green : (status == 'Cancelled' ? Colors.red : Colors.orange);
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.grey.shade100, blurRadius: 4, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.receipt_long, color: Colors.blue),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Order #${data['order_id'] ?? 'N/A'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Text(DateFormat('MMM d, h:mm a').format((data['created_at'] as Timestamp).toDate()), 
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                   Text(formatCurrency((data['total_amount'] ?? 0).toDouble()), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                   const SizedBox(height: 4),
+                   Container(
+                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                     decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                     child: Text(status.toUpperCase(), style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                   )
+                ],
+              )
+            ],
           ),
         );
       },

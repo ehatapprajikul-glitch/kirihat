@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'product_detail.dart';
+import 'product/enhanced_product_detail.dart';
 import 'address_screen.dart';
 import '../widgets/order_timer.dart'; // Import Timer Widget
+import '../services/notification_service.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   final DocumentSnapshot orderDoc;
@@ -91,6 +92,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     : selectedReason,
                 'cancelled_at': FieldValue.serverTimestamp(),
               });
+
+              // --- NOTIFY VENDOR ---
+              Map<String, dynamic>? data = widget.orderDoc.data() as Map<String, dynamic>?;
+              String? vId = data?['vendor_id'];
+              if (vId != null) {
+                await NotificationService.sendNotification(
+                  vendorId: vId,
+                  title: 'Order Cancelled by Customer',
+                  message: 'Order #${data?['order_id'] ?? widget.orderDoc.id} was cancelled. Reason: $selectedReason',
+                  type: 'order_cancelled',
+                  orderId: data?['order_id'] ?? widget.orderDoc.id,
+                );
+              }
+              // ---------------------
 
               if (mounted) {
                 setState(() => _isLoading = false);
@@ -462,7 +477,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => ProductDetailScreen(
+                                  builder: (_) => EnhancedProductDetailScreen(
                                       productData: item,
                                       productId: "unknown")));
                         },

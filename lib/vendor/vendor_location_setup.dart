@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
+
 class VendorLocationSetup extends StatefulWidget {
   const VendorLocationSetup({super.key});
 
@@ -15,7 +16,7 @@ class _VendorLocationSetupState extends State<VendorLocationSetup> {
   // Controllers for Manual Entry
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _pincodeController = TextEditingController();
+  final TextEditingController _pincodeController = TextEditingController(); // Primary Pincode
   final TextEditingController _latController = TextEditingController();
   final TextEditingController _lngController = TextEditingController();
 
@@ -147,7 +148,7 @@ class _VendorLocationSetupState extends State<VendorLocationSetup> {
           backgroundColor: Colors.green,
         ));
         setState(() => _isLoading = false);
-        Navigator.pop(context); // Go back after saving
+        // Do not pop, let them manage zones
       }
     } catch (e) {
       if (mounted) {
@@ -157,6 +158,9 @@ class _VendorLocationSetupState extends State<VendorLocationSetup> {
       }
     }
   }
+
+  // --- SHOP PROFILE ONLY ---
+  // Service Zones are now managed in vendor_zones.dart
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +175,7 @@ class _VendorLocationSetupState extends State<VendorLocationSetup> {
 
         return Scaffold(
           appBar: AppBar(
-              title: const Text("Shop Profile & Location"),
+              title: const Text("Shop Profile & Zones"),
               backgroundColor: Colors.orange[100]),
           body: StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
@@ -190,13 +194,8 @@ class _VendorLocationSetupState extends State<VendorLocationSetup> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Center(
-                          child: Icon(Icons.store_mall_directory,
-                              size: 60, color: Colors.orange)),
-                      const SizedBox(height: 20),
-
                       // --- SECTION 1: BUSINESS DETAILS ---
-                      const Text("Business Details",
+                      const Text("1. Shop Details",
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 18)),
                       const SizedBox(height: 10),
@@ -222,100 +221,28 @@ class _VendorLocationSetupState extends State<VendorLocationSetup> {
                         keyboardType: TextInputType.number,
                         maxLength: 6,
                         decoration: const InputDecoration(
-                            labelText: "6-Digit Pincode (Important)",
+                            labelText: "Shop Pincode",
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.markunread_mailbox),
                             counterText: ""),
                       ),
 
-                      const SizedBox(height: 30),
-                      const Divider(),
-                      const SizedBox(height: 10),
-
-                      // --- SECTION 2: GPS LOCATION ---
-                      const Text("GPS Location",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(height: 5),
-                      const Text("This is used for the 'Nearby' feature.",
-                          style: TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 15),
-
-                      // AUTO DETECT BUTTON
+                      const SizedBox(height: 20),
+                       // SAVE PROFILE BUTTON
                       SizedBox(
                         width: double.infinity,
                         height: 50,
-                        child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _autoDetectLocation,
-                          icon: const Icon(Icons.my_location),
-                          label: Text(_isLoading
-                              ? "Processing..."
-                              : "AUTO DETECT GPS & PINCODE"),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue[800],
-                              foregroundColor: Colors.white),
-                        ),
-                      ),
-
-                      if (_statusMessage.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Text(_statusMessage,
-                              style: TextStyle(
-                                  color: _statusMessage.contains("Error")
-                                      ? Colors.red
-                                      : Colors.green)),
-                        ),
-
-                      const SizedBox(height: 20),
-
-                      // Manual Lat/Lng Fields
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _latController,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: "Latitude",
-                                  border: OutlineInputBorder()),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: _lngController,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: "Longitude",
-                                  border: OutlineInputBorder()),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 40),
-
-                      // --- SAVE BUTTON ---
-                      SizedBox(
-                        width: double.infinity,
-                        height: 55,
                         child: ElevatedButton(
                           onPressed: _isLoading
                               ? null
                               : () => _saveShopProfile(currentUser.uid),
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.blue[800],
                               foregroundColor: Colors.white),
-                          child: const Text("SAVE SHOP PROFILE",
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          child: const Text("UPDATE SHOP PROFILE"),
                         ),
                       ),
+                      const SizedBox(height: 30),
                     ],
                   ),
                 );

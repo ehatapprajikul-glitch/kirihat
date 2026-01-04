@@ -146,7 +146,7 @@ class _ManageAddressesScreenState extends State<ManageAddressesScreen> {
             itemBuilder: (context, index) {
               var data = docs[index].data() as Map<String, dynamic>;
               String fullAddress =
-                  "${data['house_no']}, ${data['street']}, ${data['city']} - ${data['pincode']}";
+                  "${data['house_no']}, ${data['street']}, ${data['service_area'] ?? data['city']} - ${data['pincode']}";
 
               return Card(
                 elevation: 2,

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/notification_service.dart';
 import '../widgets/order_timer.dart'; // Ensure this matches your project structure
 
 class RiderOrdersScreen extends StatefulWidget {
@@ -136,6 +137,31 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
           .collection('orders')
           .doc(orderDoc.id)
           .update(dataToUpdate);
+
+      // --- SEND NOTIFICATION TO VENDOR ---
+      Map<String, dynamic>? currentData = orderDoc.data() as Map<String, dynamic>?;
+      String? vId = currentData?['vendor_id'];
+
+      if (vId != null) {
+        if (newStatus == 'Delivered') {
+          await NotificationService.sendNotification(
+            vendorId: vId,
+            title: 'Order Delivered',
+            message: 'Order #${currentData?['order_id'] ?? orderDoc.id} has been delivered.',
+            type: 'order_delivered',
+            orderId: currentData?['order_id'] ?? orderDoc.id,
+          );
+        } else if (newStatus == 'Cancelled') {
+          await NotificationService.sendNotification(
+            vendorId: vId,
+            title: 'Order Cancelled by Rider',
+            message: 'Order #${currentData?['order_id'] ?? orderDoc.id} cancelled. Reason: $cancelReason',
+            type: 'rider_cancelled',
+            orderId: currentData?['order_id'] ?? orderDoc.id,
+          );
+        }
+      }
+      // -----------------------------------
 
       if (newStatus == 'Delivered' && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

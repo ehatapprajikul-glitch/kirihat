@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../services/service_area_service.dart';
 
 class AddressScreen extends StatefulWidget {
   final String? addressId;
@@ -18,8 +17,12 @@ class AddressScreen extends StatefulWidget {
 
 class _AddressScreenState extends State<AddressScreen> {
   final _formKey = GlobalKey<FormState>();
+  final ServiceAreaService _serviceAreaService = ServiceAreaService();
+  
   bool _isLoading = false;
   bool _isFetchingPin = false;
+  List<String> _availableAreas = [];
+  String? _selectedArea;
 
   // Controllers
   late TextEditingController _nameController;
@@ -29,14 +32,9 @@ class _AddressScreenState extends State<AddressScreen> {
   late TextEditingController _streetController;
   late TextEditingController _landmarkController;
   late TextEditingController _marketController;
-  late TextEditingController _cityController;
   late TextEditingController _districtController;
   late TextEditingController _stateController;
   late TextEditingController _pinController;
-
-  // Manual Coordinate Controllers
-  late TextEditingController _latController;
-  late TextEditingController _lngController;
 
   @override
   void initState() {
@@ -46,33 +44,23 @@ class _AddressScreenState extends State<AddressScreen> {
     _nameController = TextEditingController(text: data['name'] ?? "");
     _phoneController = TextEditingController(text: data['phone'] ?? "");
     _altPhoneController = TextEditingController(text: data['alt_phone'] ?? "");
-
     _houseController = TextEditingController(text: data['house_no'] ?? "");
     _streetController = TextEditingController(text: data['street'] ?? "");
     _landmarkController = TextEditingController(text: data['landmark'] ?? "");
-    _marketController =
-        TextEditingController(text: data['nearby_market'] ?? "");
-    _cityController = TextEditingController(text: data['city'] ?? "");
-
+    _marketController = TextEditingController(text: data['nearby_market'] ?? "");
     _districtController = TextEditingController(text: data['district'] ?? "");
     _stateController = TextEditingController(text: data['state'] ?? "");
     _pinController = TextEditingController(text: data['pincode'] ?? "");
-
-    // Initialize Lat/Lng Controllers
-    double? initialLat;
-    double? initialLng;
-
-    if (data.containsKey('location')) {
-      GeoPoint p = data['location'];
-      initialLat = p.latitude;
-      initialLng = p.longitude;
-    }
-
-    _latController = TextEditingController(text: initialLat?.toString() ?? "");
-    _lngController = TextEditingController(text: initialLng?.toString() ?? "");
+    
+    _selectedArea = data['service_area'];
 
     if (widget.addressId == null) {
       _fetchUserDetails();
+    }
+    
+    // If editing and has pincode, load areas
+    if (_pinController.text.length == 6) {
+      _fetchPinDetails(_pinController.text);
     }
   }
 
@@ -101,91 +89,21 @@ class _AddressScreenState extends State<AddressScreen> {
     }
   }
 
-  // --- ROBUST GPS DETECTION (FIXED FOR GEOLOCATOR 13) ---
-  Future<void> _useCurrentLocation() async {
-    setState(() => _isLoading = true);
-
-    try {
-      // 1. Check Service Status
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        await Geolocator.openLocationSettings();
-        // Check again after opening settings
-        serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (!serviceEnabled) {
-          throw "Location services are disabled. Please enable GPS.";
-        }
-      }
-
-      // 2. Check Permissions
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw "Location permission denied.";
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw "Location permission permanently denied. Enable in Settings.";
-      }
-
-      // 3. Get Coordinates (Corrected for v13.0.1)
-      LocationSettings locationSettings = const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 100,
-      );
-
-      Position position = await Geolocator.getCurrentPosition(
-          locationSettings: locationSettings);
-
-      // Update Manual Fields
-      setState(() {
-        _latController.text = position.latitude.toString();
-        _lngController.text = position.longitude.toString();
-      });
-
-      // 4. Reverse Geocoding
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-
-        setState(() {
-          _pinController.text = place.postalCode ?? "";
-          _stateController.text = place.administrativeArea ?? "";
-          _cityController.text =
-              place.locality ?? place.subAdministrativeArea ?? "";
-          _districtController.text = place.subAdministrativeArea ?? "";
-          _streetController.text =
-              "${place.subLocality ?? ''} ${place.thoroughfare ?? ''}".trim();
-
-          if (_houseController.text.isEmpty) {
-            _houseController.text = place.name ?? "";
-          }
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Location Detected!"),
-              backgroundColor: Colors.green));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("GPS Error: $e"), backgroundColor: Colors.red));
-      }
-    }
-
-    if (mounted) setState(() => _isLoading = false);
-  }
-
-  // --- PINCODE API LOGIC ---
+  // --- PINCODE API LOGIC + SERVICE AREA FETCH ---
   Future<void> _fetchPinDetails(String pin) async {
     if (pin.length != 6) return;
-    setState(() => _isFetchingPin = true);
+    
+    // Remember current selection to restore if available
+    final previousSelection = _selectedArea;
+    
+    setState(() {
+      _isFetchingPin = true;
+      _availableAreas = [];
+      _selectedArea = null;
+    });
+    
     try {
+      // Fetch District/State from India Post API
       final url = Uri.parse('https://api.postalpincode.in/pincode/$pin');
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -195,16 +113,60 @@ class _AddressScreenState extends State<AddressScreen> {
           setState(() {
             _districtController.text = postOffice['District'];
             _stateController.text = postOffice['State'];
-            if (_cityController.text.isEmpty) {
-              _cityController.text = postOffice['Block'];
-            }
           });
         }
       }
+      
+      // Fetch Service Areas from vendor service_areas
+      final serviceAreas = await _serviceAreaService.getServiceAreasForPincode(pin);
+      
+      if (serviceAreas.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No service available in this pincode yet'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        setState(() {
+          _isFetchingPin = false;
+        });
+        return;
+      }
+      
+      // Extract unique areas
+      Set<String> areas = {};
+      for (var zone in serviceAreas) {
+        if (zone['areas'] != null) {
+          areas.addAll(List<String>.from(zone['areas']));
+        }
+      }
+      
+      final areasList = areas.toList()..sort();
+      
+      setState(() {
+        _availableAreas = areasList;
+        
+        // Auto-select previous selection if available
+        if (previousSelection != null && areasList.contains(previousSelection)) {
+          _selectedArea = previousSelection;
+          print('✅ Auto-selected previous service area: $previousSelection');
+        } else if (areasList.length == 1) {
+          // If only one area, auto-select it
+          _selectedArea = areasList.first;
+          print('✅ Auto-selected only available area: ${areasList.first}');
+        }
+        
+        _isFetchingPin = false;
+      });
+      
     } catch (e) {
       debugPrint("Error fetching PIN: $e");
+      if (mounted) {
+        setState(() => _isFetchingPin = false);
+      }
     }
-    if (mounted) setState(() => _isFetchingPin = false);
   }
 
   // --- SAVE ---
@@ -215,6 +177,14 @@ class _AddressScreenState extends State<AddressScreen> {
           backgroundColor: Colors.red));
       return;
     }
+    
+    if (_selectedArea == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Please select a service area"),
+          backgroundColor: Colors.red));
+      return;
+    }
+    
     setState(() => _isLoading = true);
 
     try {
@@ -230,20 +200,12 @@ class _AddressScreenState extends State<AddressScreen> {
         'street': _streetController.text.trim(),
         'landmark': _landmarkController.text.trim(),
         'nearby_market': _marketController.text.trim(),
-        'city': _cityController.text.trim(),
+        'service_area': _selectedArea, // Changed from city
         'district': _districtController.text.trim(),
         'state': _stateController.text.trim(),
         'pincode': _pinController.text.trim(),
         'created_at': FieldValue.serverTimestamp(),
       };
-
-      // VITAL: Parse Lat/Lng from Text Fields
-      double? finalLat = double.tryParse(_latController.text);
-      double? finalLng = double.tryParse(_lngController.text);
-
-      if (finalLat != null && finalLng != null) {
-        addressData['location'] = GeoPoint(finalLat, finalLng);
-      }
 
       if (widget.addressId != null) {
         await FirebaseFirestore.instance
@@ -289,12 +251,9 @@ class _AddressScreenState extends State<AddressScreen> {
     _streetController.dispose();
     _landmarkController.dispose();
     _marketController.dispose();
-    _cityController.dispose();
     _districtController.dispose();
     _stateController.dispose();
     _pinController.dispose();
-    _latController.dispose();
-    _lngController.dispose();
     super.dispose();
   }
 
@@ -303,7 +262,7 @@ class _AddressScreenState extends State<AddressScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.addressId != null ? "Edit Address" : "Add Address"),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF0D9759),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -313,49 +272,7 @@ class _AddressScreenState extends State<AddressScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- 1. GPS BUTTON ---
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _useCurrentLocation,
-                  icon: const Icon(Icons.my_location),
-                  label: Text(
-                      _isLoading ? "Detecting..." : "DETECT MY LOCATION (GPS)"),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade50,
-                      foregroundColor: Colors.blue.shade800,
-                      elevation: 0,
-                      side: BorderSide(color: Colors.blue.shade200)),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // --- 2. MANUAL COORDINATES ---
-              const Text("Coordinates (Auto-filled or Manual)",
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildTextField(
-                          _latController, "Latitude", Icons.explore,
-                          isNumber: true, isMandatory: true)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: _buildTextField(
-                          _lngController, "Longitude", Icons.explore,
-                          isNumber: true, isMandatory: true)),
-                ],
-              ),
-              const SizedBox(height: 10),
-              const Divider(),
-              const SizedBox(height: 10),
-
-              // --- 3. CONTACT DETAILS ---
+              // --- CONTACT DETAILS ---
               const Text("Contact Details",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 10),
@@ -372,7 +289,7 @@ class _AddressScreenState extends State<AddressScreen> {
 
               const SizedBox(height: 25),
 
-              // --- 4. ADDRESS DETAILS ---
+              // --- ADDRESS DETAILS ---
               const Text("Address Details",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 10),
@@ -391,43 +308,56 @@ class _AddressScreenState extends State<AddressScreen> {
                   _marketController, "Nearby Market *", Icons.shopping_basket,
                   isMandatory: true),
               const SizedBox(height: 15),
-              _buildTextField(
-                  _cityController, "Village / City *", Icons.location_city,
-                  isMandatory: true),
-              const SizedBox(height: 15),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _pinController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      onChanged: (val) {
-                        if (val.length == 6) _fetchPinDetails(val);
-                      },
-                      validator: (val) => (val == null || val.length != 6)
-                          ? "Invalid PIN"
-                          : null,
-                      decoration: InputDecoration(
-                        labelText: "PIN Code *",
-                        prefixIcon:
-                            const Icon(Icons.pin_drop, color: Colors.green),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                        counterText: "",
-                        suffixIcon: _isFetchingPin
-                            ? const Padding(
-                                padding: EdgeInsets.all(10),
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : null,
-                      ),
-                    ),
-                  ),
-                ],
+              // PIN CODE
+              TextFormField(
+                controller: _pinController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                onChanged: (val) {
+                  if (val.length == 6) _fetchPinDetails(val);
+                },
+                validator: (val) =>
+                    (val == null || val.length != 6) ? "Invalid PIN" : null,
+                decoration: InputDecoration(
+                  labelText: "PIN Code *",
+                  prefixIcon: const Icon(Icons.pin_drop, color: Color(0xFF0D9759)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  counterText: "",
+                  suffixIcon: _isFetchingPin
+                      ? const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : null,
+                ),
               ),
               const SizedBox(height: 15),
+
+              // SERVICE AREA DROPDOWN
+              DropdownButtonFormField<String>(
+                value: _selectedArea,
+                decoration: InputDecoration(
+                  labelText: "Service Area *",
+                  prefixIcon: const Icon(Icons.location_city, color: Color(0xFF0D9759)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                items: _availableAreas.map((area) {
+                  return DropdownMenuItem(value: area, child: Text(area));
+                }).toList(),
+                onChanged: _availableAreas.isEmpty
+                    ? null
+                    : (val) {
+                        setState(() => _selectedArea = val);
+                      },
+                validator: (val) => val == null ? "Please select service area" : null,
+                hint: Text(_availableAreas.isEmpty
+                    ? "Enter pincode first"
+                    : "Select service area"),
+              ),
+              const SizedBox(height: 15),
+
+              // DISTRICT & STATE (Auto-filled, read-only)
               Row(
                 children: [
                   Expanded(
@@ -450,7 +380,7 @@ class _AddressScreenState extends State<AddressScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveAddress,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: const Color(0xFF0D9759),
                     foregroundColor: Colors.white,
                   ),
                   child: _isLoading
@@ -475,11 +405,7 @@ class _AddressScreenState extends State<AddressScreen> {
     return TextFormField(
       controller: controller,
       readOnly: isReadOnly,
-      keyboardType: isNumber
-          ? (label.contains("Latitude") || label.contains("Longitude")
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.phone)
-          : TextInputType.text,
+      keyboardType: isNumber ? TextInputType.phone : TextInputType.text,
       maxLength: (isNumber && label.contains("Mobile")) ? 10 : null,
       validator: (val) {
         if (isMandatory && (val == null || val.trim().isEmpty))
@@ -493,7 +419,7 @@ class _AddressScreenState extends State<AddressScreen> {
       },
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.green),
+        prefixIcon: Icon(icon, color: const Color(0xFF0D9759)),
         filled: isReadOnly,
         counterText: "",
         fillColor: isReadOnly ? Colors.grey[200] : Colors.white,

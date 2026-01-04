@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
-import 'customer_home.dart';
+import 'customer_dashboard.dart';
 import 'address_screen.dart';
+import '../services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -48,7 +50,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     _fetchVendorSettings(); // Fetch fees for THIS vendor
+    _loadSessionAddress(); // Auto-fill from session
     _loadDefaultAddress();
+  }
+
+  // --- 1a. LOAD SESSION ADDRESS (Auto-fill PIN + Area) ---
+  Future<void> _loadSessionAddress() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? sessionPin = prefs.getString('pincode');
+      String? sessionArea = prefs.getString('area');
+
+      if (sessionPin != null && sessionArea != null) {
+        setState(() {
+          _pinCtrl.text = sessionPin;
+          _cityCtrl.text = sessionArea; // Use area as service area
+        });
+        // Check zone immediately
+        _checkZoneAndFees(sessionPin);
+      }
+    } catch (e) {
+      debugPrint("Error loading session address: $e");
+    }
   }
 
   // --- 1. LOAD DEFAULT ADDRESS ---
@@ -79,12 +102,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _phoneCtrl.text = address['phone'] ?? "";
       _houseCtrl.text = address['house_no'] ?? "";
       _streetCtrl.text = address['street'] ?? "";
-      _cityCtrl.text = address['city'] ?? "";
-      _pinCtrl.text = address['pincode'] ?? "";
+      // DON'T overwrite service area and pincode - they come from session only
+      // _cityCtrl.text = address['service_area'] ?? address['city'] ?? "";
+      // _pinCtrl.text = address['pincode'] ?? "";
     });
-    if (_pinCtrl.text.isNotEmpty) {
-      _checkZoneAndFees(_pinCtrl.text);
-    }
+    
+    // Service area and pincode are already set from session, no need to check again
   }
 
   // --- 3. SHOW SAVED ADDRESS SHEET ---
@@ -154,7 +177,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold)),
                             subtitle: Text(
-                                "${data['house_no']}, ${data['city']}, ${data['pincode']}"),
+                                "${data['house_no']}, ${data['service_area'] ?? data['city']}, ${data['pincode']}"),
                             trailing: IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
                               onPressed: () {
@@ -337,6 +360,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'current_address': orderData['delivery_address'],
       }, SetOptions(merge: true));
 
+      // SEND NOTIFICATION TO VENDOR
+      await NotificationService.sendNotification(
+        vendorId: widget.vendorId,
+        title: 'New Order Received',
+        message: 'Order #${orderData['order_id']} for ₹${orderData['total_amount']} placed.',
+        type: 'order_new',
+        orderId: orderData['order_id'], // Might differ from doc ID, but usable for display
+      );
+
       if (mounted) {
         showDialog(
           context: context,
@@ -355,7 +387,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const CustomerHomeScreen()));
+                            builder: (_) => const CustomerDashboard()));
                   },
                   child: const Text("OK"))
             ],
@@ -459,16 +491,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                           child: _buildTextField(_pinCtrl, "Pincode",
-                              isNumber: true, onChanged: (val) {
-                        if (val.length == 6) _checkZoneAndFees(val);
-                      })),
+                              isNumber: true, readOnly: true)),
                     ]),
                     const SizedBox(height: 10),
                     Row(children: [
-                      Expanded(
-                          child: _buildTextField(_streetCtrl, "Street/Area")),
+                      Expanded(child: _buildTextField(_streetCtrl, "Street/Area")),
                       const SizedBox(width: 10),
-                      Expanded(child: _buildTextField(_cityCtrl, "City")),
+                      Expanded(
+                          child: _buildTextField(_cityCtrl, "Service Area",
+                              readOnly: true,
+                              suffixIcon: const Icon(Icons.lock_outline,
+                                  size: 16, color: Colors.grey))),
                     ]),
                     if (_isZoneFound)
                       Padding(
@@ -502,7 +535,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       title: const Row(children: [
                         Icon(Icons.access_time, size: 18),
                         SizedBox(width: 8),
-                        Text("Standard Delivery (2 Hours)")
+                        Text("Standard Delivery")
                       ]),
                       subtitle: Text(
                           _standardFee == 0 ? "FREE" : "₹$_standardFee",
@@ -613,17 +646,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildTextField(TextEditingController ctrl, String hint,
-      {bool isNumber = false, Function(String)? onChanged}) {
+      {bool isNumber = false, Function(String)? onChanged, bool readOnly = false, Widget? suffixIcon}) {
     return TextFormField(
       controller: ctrl,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
       onChanged: onChanged,
+      readOnly: readOnly,
       decoration: InputDecoration(
         labelText: hint,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         isDense: true,
+        filled: readOnly,
+        fillColor: readOnly ? Colors.grey[100] : null,
+        suffixIcon: suffixIcon ?? (readOnly ? const Icon(Icons.lock_outline, size: 18, color: Colors.grey) : null),
       ),
       validator: (val) => (val == null || val.isEmpty) ? "Required" : null,
     );

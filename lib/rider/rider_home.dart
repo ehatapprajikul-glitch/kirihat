@@ -20,6 +20,8 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     _findRiderProfile();
   }
 
+  bool _isLoadingProfile = true;
+
   Future<void> _findRiderProfile() async {
     if (user?.email == null) return;
     try {
@@ -29,10 +31,16 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           .limit(1)
           .get();
       if (snapshot.docs.isNotEmpty) {
-        setState(() => _realRiderId = snapshot.docs.first.id);
+        setState(() { 
+          _realRiderId = snapshot.docs.first.id;
+          _isLoadingProfile = false;
+        });
+      } else {
+        setState(() => _isLoadingProfile = false);
       }
     } catch (e) {
       debugPrint("Error: $e");
+      setState(() => _isLoadingProfile = false);
     }
   }
 
@@ -216,10 +224,26 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 },
               )
             else
-              const Center(
+              Center(
                   child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text("Loading Profile..."),
+                padding: const EdgeInsets.all(20.0),
+                child: _isLoadingProfile 
+                    ? const Text("Loading Profile...")
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48, color: Colors.orange),
+                          const SizedBox(height: 16),
+                          const Text("Rider Profile Not Found", style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          const Text("Please contact admin to initialize your account.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _findRiderProfile,
+                            child: const Text("Retry"),
+                          )
+                        ],
+                      ),
               )),
           ],
         ),

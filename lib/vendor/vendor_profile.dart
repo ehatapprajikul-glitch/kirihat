@@ -59,6 +59,12 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                 vendorData?['shop_address'] ?? vendorData?['address'] ?? "";
             _isLoading = false;
           });
+        } else {
+          // New vendor - no profile yet
+          setState(() {
+            _isLoading = false;
+            _isEditing = true; // Auto-open edit mode for new users
+          });
         }
       } catch (e) {
         debugPrint("Error fetching profile: $e");

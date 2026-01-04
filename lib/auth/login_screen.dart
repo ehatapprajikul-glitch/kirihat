@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'phone_auth_screen.dart';
 
 // IMPORTS FOR ALL DASHBOARDS
 import '../customer/customer_dashboard.dart';
+import '../customer/onboarding/pincode_gate.dart';
 import '../vendor/vendor_dashboard.dart';
-import '../admin/admin_dashboard.dart';
+import '../admin/admin_web_layout.dart';
 import '../rider/rider_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -63,13 +65,15 @@ class _LoginScreenState extends State<LoginScreen> {
         targetScreen = const VendorDashboard();
         break;
       case 'admin':
-        targetScreen = const AdminDashboard();
+        targetScreen = const AdminWebLayout();
         break;
       case 'rider':
         targetScreen = const RiderDashboard();
         break;
       case 'customer':
-        targetScreen = const CustomerDashboard();
+        // Route customers to PincodeGateScreen for location onboarding
+        // PincodeGateScreen checks if onboarding is complete and auto-redirects if so
+        targetScreen = const PincodeGateScreen();
         break;
       default:
         print(
@@ -290,9 +294,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildMobileLayout() {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
           child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // Reduced top padding
               child: _buildFormContent())),
     );
   }
@@ -409,6 +421,38 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: _brandColor, fontWeight: FontWeight.bold)),
                   ],
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: Divider(color: Colors.grey[300])),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text("OR", style: TextStyle(color: Colors.grey[600])),
+              ),
+              Expanded(child: Divider(color: Colors.grey[300])),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PhoneAuthScreen()),
+                );
+              },
+              icon: const Icon(Icons.phone_android),
+              label: const Text("Continue with Mobile Number",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _brandColor,
+                side: BorderSide(color: _brandColor),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),

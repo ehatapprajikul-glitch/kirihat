@@ -13,24 +13,107 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
 
+
   // Coupon State
   final TextEditingController _couponController = TextEditingController();
   double _discountAmount = 0;
   bool _isCouponApplied = false;
+  String? _appliedCouponId;
 
-  // --- COUPON LOGIC (Simulated) ---
-  void _applyCoupon() {
+  // --- REAL COUPON LOGIC ---
+  Future<void> _applyCoupon() async {
     String code = _couponController.text.trim().toUpperCase();
-    if (code == "WELCOME50") {
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a coupon code"), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    try {
+      // Query coupon from Firestore
+      var couponQuery = await FirebaseFirestore.instance
+          .collection('coupons')
+          .where('code', isEqualTo: code)
+          .where('is_active', isEqualTo: true)
+          .get();
+
+      if (couponQuery.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Invalid coupon code"), backgroundColor: Colors.red),
+        );
+        return;
+      }
+
+      var couponDoc = couponQuery.docs.first;
+      var couponData = couponDoc.data();
+
+      // Check expiry
+      Timestamp? validUntil = couponData['valid_until'];
+      if (validUntil != null && validUntil.toDate().isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("This coupon has expired"), backgroundColor: Colors.red),
+        );
+        return;
+      }
+
+      // Calculate discount
+      var cartSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user?.uid)
+          .collection('cart')
+          .get();
+      
+      double cartTotal = _getCartTotal(cartSnapshot.docs);
+      
+      if (cartTotal == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cart is empty"), backgroundColor: Colors.red),
+        );
+        return;
+      }
+      
+      num? minOrderValue = couponData['min_order_value'];
+      
+      if (minOrderValue != null && cartTotal < minOrderValue) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Minimum order value is ₹$minOrderValue"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      double discount = 0;
+      if (couponData['discount_type'] == 'percentage') {
+        discount = (cartTotal * (couponData['discount_value'] as num)) / 100;
+      } else {
+        discount = (couponData['discount_value'] as num).toDouble();
+      }
+
+      // Apply max discount limit
+      num? maxDiscount = couponData['max_discount'];
+      if (maxDiscount != null && discount > maxDiscount) {
+        discount = maxDiscount.toDouble();
+      }
+
       setState(() {
-        _discountAmount = 50.0;
+        _discountAmount = discount;
         _isCouponApplied = true;
+        _appliedCouponId = couponDoc.id;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Coupon Applied!"), backgroundColor: Colors.green));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Invalid Code"), backgroundColor: Colors.red));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Coupon applied! You saved ₹${discount.toStringAsFixed(0)}"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -38,9 +121,22 @@ class _CartScreenState extends State<CartScreen> {
     setState(() {
       _discountAmount = 0;
       _isCouponApplied = false;
+      _appliedCouponId = null;
       _couponController.clear();
     });
   }
+
+  double _getCartTotal(List<DocumentSnapshot>? cartItems) {
+    if (cartItems == null || cartItems.isEmpty) return 0;
+    
+    double total = 0;
+    for (var doc in cartItems) {
+      var data = doc.data() as Map<String, dynamic>;
+      total += ((data['price'] ?? 0) as num).toDouble() * ((data['quantity'] ?? 1) as int);
+    }
+    return total;
+  }
+
 
   // --- CART ACTIONS ---
   Future<void> _updateQty(String docId, int current, bool increase) async {

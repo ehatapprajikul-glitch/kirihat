@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'customer_orders.dart';
 import 'manage_addresses.dart';
 import '../auth/login_screen.dart';
+import '../auth/phone_auth_screen.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -14,7 +15,6 @@ class CustomerProfileScreen extends StatefulWidget {
 
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
-  bool _isCallbackLoading = false;
   static DateTime? _lastResetTime;
 
   // --- 1. EDIT PROFILE DIALOG (Updated with Dropdown) ---
@@ -133,64 +133,270 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
   // --- 3. RAISE CALLBACK REQUEST ---
   Future<void> _raiseCallbackRequest() async {
-    setState(() => _isCallbackLoading = true);
-    try {
-      var existingRequests = await FirebaseFirestore.instance
-          .collection('support_requests')
-          .where('user_id', isEqualTo: user!.uid)
-          .where('status', isEqualTo: 'Pending')
-          .get();
-
-      if (existingRequests.docs.isNotEmpty) {
-        if (mounted) {
-          showDialog(
-              context: context,
-              builder: (c) => AlertDialog(
-                    title:
-                        const Icon(Icons.info, color: Colors.orange, size: 50),
-                    content: const Text(
-                        "You already have a pending callback request.\n\nPlease wait for our team to contact you before raising another."),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(c),
-                          child: const Text("OK"))
-                    ],
-                  ));
-        }
-      } else {
-        await FirebaseFirestore.instance.collection('support_requests').add({
-          'user_id': user!.uid,
-          'user_email': user!.email,
-          'phone': user!.phoneNumber ?? "Not provided",
-          'type': 'Callback Request',
-          'status': 'Pending',
-          'created_at': FieldValue.serverTimestamp(),
-        });
-
-        if (mounted) {
-          showDialog(
-              context: context,
-              builder: (c) => AlertDialog(
-                    title: const Icon(Icons.check_circle,
-                        color: Colors.green, size: 50),
-                    content: const Text(
-                        "Request Received! Our team will call you within 12 hours."),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(c),
-                          child: const Text("OK"))
-                    ],
-                  ));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: $e")));
-      }
+    // Show beautiful dialog to collect callback details
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final reasonController = TextEditingController();
+    final messageController = TextEditingController();
+    
+    // Pre-fill with user data
+    var userData = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+    if (userData.exists) {
+      var data = userData.data()!;
+      nameController.text = data['name'] ?? '';
+      phoneController.text = data['phone'] ?? user!.phoneNumber ?? '';
     }
-    if (mounted) {
-      setState(() => _isCallbackLoading = false);
+
+    String selectedReason = 'General Inquiry';
+    
+    bool? submitted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 500),
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with Icon
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0D9759).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.headset_mic,
+                              color: Color(0xFF0D9759),
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Request Callback',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'We\'ll call you within 12 hours',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context, false),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Name Field
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Your Name *',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.person, color: Color(0xFF0D9759)),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Phone Field
+                      TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number *',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.phone, color: Color(0xFF0D9759)),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Reason Dropdown
+                      DropdownButtonFormField<String>(
+                        value: selectedReason,
+                        decoration: InputDecoration(
+                          labelText: 'Reason for Callback',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.help_outline, color: Color(0xFF0D9759)),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'General Inquiry', child: Text('General Inquiry')),
+                          DropdownMenuItem(value: 'Order Issue', child: Text('Order Issue')),
+                          DropdownMenuItem(value: 'Product Question', child: Text('Product Question')),
+                          DropdownMenuItem(value: 'Payment Issue', child: Text('Payment Issue')),
+                          DropdownMenuItem(value: 'Delivery Issue', child: Text('Delivery Issue')),
+                          DropdownMenuItem(value: 'Other', child: Text('Other')),
+                        ],
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedReason = value!;
+                          });
+                        },
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Message Field
+                      TextField(
+                        controller: messageController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          labelText: 'Message (Optional)',
+                          hintText: 'Tell us how we can help you...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.message, color: Color(0xFF0D9759)),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (nameController.text.trim().isEmpty || 
+                                phoneController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please fill in all required fields'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            
+                            // Check for existing pending requests
+                            var existing = await FirebaseFirestore.instance
+                                .collection('callback_requests')
+                                .where('user_id', isEqualTo: user!.uid)
+                                .where('status', isEqualTo: 'pending')
+                                .get();
+                                
+                            if (existing.docs.isNotEmpty) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('You already have a pending callback request'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                Navigator.pop(context, false);
+                              }
+                              return;
+                            }
+                            
+                            // Submit callback request
+                            await FirebaseFirestore.instance.collection('callback_requests').add({
+                              'user_id': user!.uid,
+                              'customer_name': nameController.text.trim(),
+                              'phone': phoneController.text.trim(),
+                              'reason': selectedReason,
+                              'message': messageController.text.trim(),
+                              'status': 'pending',
+                              'is_priority': false,
+                              'created_at': FieldValue.serverTimestamp(),
+                            });
+                            
+                            if (context.mounted) {
+                              Navigator.pop(context, true);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9759),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'SUBMIT REQUEST',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    
+    if (submitted == true && mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF0D9759),
+                  size: 60,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Request Submitted!',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Our team will call you within 12 hours',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -200,7 +406,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const PhoneAuthScreen()), // Changed from LoginScreen
         (route) => false,
       );
     }
@@ -208,6 +414,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (user != null) {
+        print('DEBUG PROFILE: Email=${user!.email}, Phone=${user!.phoneNumber}');
+        print('DEBUG PROFILE: Providers=${user!.providerData.map((e) => e.providerId).toList()}');
+    }
     if (user == null) {
       return const Scaffold(body: Center(child: Text("Please Login")));
     }
@@ -262,7 +472,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                             Text(data['name'] ?? "User",
                                 style: const TextStyle(
                                     fontSize: 18, fontWeight: FontWeight.bold)),
-                            Text(user!.email ?? "",
+                            Text(
+                                (user!.email != null && user!.email!.isNotEmpty) 
+                                    ? user!.email! 
+                                    : (user!.phoneNumber ?? ""),
                                 style: const TextStyle(color: Colors.grey)),
                             if (data['gender'] != null)
                               Text(data['gender'],
@@ -296,8 +509,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         MaterialPageRoute(
                             builder: (_) => const ManageAddressesScreen()));
                   }),
-                  _buildMenuItem(
-                      Icons.lock_outline, "Change Password", _changePassword),
+                  // Only show Change Password if logged in with Email/Password
+                  if (user!.providerData.any((p) => p.providerId == 'password'))
+                    _buildMenuItem(
+                        Icons.lock_outline, "Change Password", _changePassword),
                 ]),
 
                 const SizedBox(height: 20),
@@ -318,19 +533,18 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                       const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed:
-                              _isCallbackLoading ? null : _raiseCallbackRequest,
-                          icon: _isCallbackLoading
-                              ? const SizedBox()
-                              : const Icon(Icons.headset_mic),
-                          label: _isCallbackLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : const Text("Request Callback (12 hrs)"),
+                        child: ElevatedButton.icon(
+                          onPressed: _raiseCallbackRequest,
+                          icon: const Icon(Icons.headset_mic),
+                          label: const Text("Request Callback (12 hrs)"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9759),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 15),

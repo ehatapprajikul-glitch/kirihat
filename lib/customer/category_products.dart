@@ -1,38 +1,95 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'product_detail.dart'; // To open product details
+import 'package:shared_preferences/shared_preferences.dart';
+import 'product/enhanced_product_detail.dart';
+import '../services/home_layout_service.dart';
 
-class CategoryProductsScreen extends StatelessWidget {
+class CategoryProductsScreen extends StatefulWidget {
   final String categoryName;
 
   const CategoryProductsScreen({super.key, required this.categoryName});
 
   @override
+  State<CategoryProductsScreen> createState() => _CategoryProductsScreenState();
+}
+
+class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
+  final _layoutService = HomeLayoutService();
+  List<String> _vendorIds = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVendorFromSession();
+  }
+
+  Future<void> _loadVendorFromSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? vendorId = prefs.getString('vendorId');
+      
+      if (vendorId != null) {
+        setState(() {
+          _vendorIds = [vendorId];
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      print('Error loading session: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          title: Text(widget.categoryName),
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_vendorIds.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          title: Text(widget.categoryName),
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: Text('No vendor selected. Please select your area first.'),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text(categoryName),
+        title: Text(widget.categoryName),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection('products')
-            .where('isActive', isEqualTo: true)
-            // Note: In real app, you'd filter by 'category' field.
-            // For now, we simulate this or assume your products have a 'category' field.
-            // If not, we can filter locally or you need to add 'category' to your vendor add product page.
-            .where('category', isEqualTo: categoryName)
+            .collection('vendor_inventory')
+            .where('vendor_id', whereIn: _vendorIds)
+            .where('isAvailable', isEqualTo: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          var docs = snapshot.data!.docs;
-
-          if (docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -40,13 +97,15 @@ class CategoryProductsScreen extends StatelessWidget {
                   Icon(Icons.search_off, size: 80, color: Colors.grey[300]),
                   const SizedBox(height: 10),
                   Text(
-                    "No $categoryName found",
+                    "No ${widget.categoryName} found",
                     style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
             );
           }
+
+          var inventoryDocs = snapshot.data!.docs;
 
           return GridView.builder(
             padding: const EdgeInsets.all(10),
@@ -56,85 +115,102 @@ class CategoryProductsScreen extends StatelessWidget {
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
             ),
-            itemCount: docs.length,
+            itemCount: inventoryDocs.length,
             itemBuilder: (context, index) {
-              var data = docs[index].data() as Map<String, dynamic>;
+              var inventoryData = inventoryDocs[index].data() as Map<String, dynamic>;
 
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductDetailScreen(
-                        productData: data,
-                        productId: docs[index].id,
+              return FutureBuilder<Map<String, dynamic>>(
+                future: _layoutService.enrichInventoryWithProduct(inventoryData),
+                builder: (context, productSnapshot) {
+                  if (!productSnapshot.hasData) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  var data = productSnapshot.data!;
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EnhancedProductDetailScreen(
+                            productData: data,
+                            productId: inventoryDocs[index].id,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(color: Colors.grey.shade200, blurRadius: 4),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Image
+                          Expanded(
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(8),
+                                ),
+                                image: (data['imageUrl'] != null &&
+                                        data['imageUrl'] != "")
+                                    ? DecorationImage(
+                                        image: NetworkImage(data['imageUrl']),
+                                        fit: BoxFit.contain,
+                                      )
+                                    : null,
+                              ),
+                              child: (data['imageUrl'] == null ||
+                                      data['imageUrl'] == "")
+                                  ? const Icon(Icons.image, color: Colors.grey)
+                                  : null,
+                            ),
+                          ),
+                          // Info
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  data['name'] ?? "Product",
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "₹${data['price']}",
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
                 },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(color: Colors.grey.shade200, blurRadius: 4),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Image
-                      Expanded(
-                        child: Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(8),
-                            ),
-                            image: (data['imageUrl'] != null &&
-                                    data['imageUrl'] != "")
-                                ? DecorationImage(
-                                    image: NetworkImage(data['imageUrl']),
-                                    fit: BoxFit.contain,
-                                  )
-                                : null,
-                          ),
-                          child: (data['imageUrl'] == null ||
-                                  data['imageUrl'] == "")
-                              ? const Icon(Icons.image, color: Colors.grey)
-                              : null,
-                        ),
-                      ),
-                      // Info
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data['name'] ?? "Product",
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "₹${data['price']}",
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               );
             },
           );

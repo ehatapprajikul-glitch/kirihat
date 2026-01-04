@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Add intl package for DateFormat if needed, or use string formatting
 
 class VendorRidersScreen extends StatefulWidget {
   const VendorRidersScreen({super.key});
@@ -14,21 +13,18 @@ class _VendorRidersScreenState extends State<VendorRidersScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
 
   // --- DELETE LOGIC ---
-  void _deleteRider(String docId) {
+  void _deleteDoc(DocumentReference ref) {
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text("Delete Rider?"),
+        title: const Text("Delete?"),
         content: const Text("This action cannot be undone."),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () {
-              FirebaseFirestore.instance
-                  .collection('riders')
-                  .doc(docId)
-                  .delete();
+              ref.delete();
               Navigator.pop(c);
             },
             style: ElevatedButton.styleFrom(
@@ -53,99 +49,165 @@ class _VendorRidersScreenState extends State<VendorRidersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text("Rider Management"),
-        backgroundColor: Colors.orange[100],
-        elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openRiderForm(),
-        backgroundColor: Colors.deepOrange,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text("Add New Rider"),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('riders')
-            .where('vendor_id', isEqualTo: user?.uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          var docs = snapshot.data!.docs;
-
-          if (docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.moped, size: 80, color: Colors.grey[300]),
-                  const SizedBox(height: 10),
-                  const Text("No riders found.",
-                      style: TextStyle(color: Colors.grey)),
-                  const Text("Add a rider to start delivering."),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              var data = docs[index].data() as Map<String, dynamic>;
-              String status = data['status'] ?? 'Active';
-
-              return Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.orange[50],
-                    child: Text(
-                      (data['name'] ?? "U")[0].toUpperCase(),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange),
-                    ),
-                  ),
-                  title: Text(data['name'] ?? "Unknown Rider",
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("${data['phone']}"),
-                      Text(status,
-                          style: TextStyle(
-                              color: status == 'Active'
-                                  ? Colors.green
-                                  : Colors.red,
-                              fontSize: 12)),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _openRiderForm(riderDoc: docs[index]),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteRider(docs[index].id),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text("Rider Management"),
+          backgroundColor: Colors.orange[100],
+          elevation: 0,
+          bottom: const TabBar(
+            labelColor: Colors.deepOrange,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.deepOrange,
+            tabs: [
+              Tab(text: "Active Riders"),
+              Tab(text: "Pending Requests"),
+            ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _openRiderForm(),
+          backgroundColor: Colors.deepOrange,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text("Request New Rider"),
+        ),
+        body: TabBarView(
+          children: [
+            _buildRiderList(isRequests: false),
+            _buildRiderList(isRequests: true),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildRiderList({required bool isRequests}) {
+    String collection = isRequests ? 'rider_requests' : 'riders';
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection(collection)
+          .where('vendor_id', isEqualTo: user?.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        var docs = snapshot.data!.docs;
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(isRequests ? Icons.pending_actions : Icons.moped,
+                    size: 80, color: Colors.grey[300]),
+                const SizedBox(height: 10),
+                Text(
+                    isRequests
+                        ? "No pending requests."
+                        : "No active riders found.",
+                    style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            var data = docs[index].data() as Map<String, dynamic>;
+            String status = data['status'] ?? (isRequests ? 'Pending' : 'Active');
+
+            return Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor:
+                      isRequests ? Colors.blue[50] : Colors.orange[50],
+                  child: Text(
+                    (data['name'] ?? "U")[0].toUpperCase(),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color:
+                            isRequests ? Colors.blue : Colors.deepOrange),
+                  ),
+                ),
+                title: Text(data['name'] ?? "Unknown Rider",
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("${data['phone']}"),
+                    Row(
+                      children: [
+                        Text(status,
+                            style: TextStyle(
+                                color: _getStatusColor(status),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
+                        if (status.toLowerCase() == 'rejected' && data['rejection_reason'] != null)
+                           Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: Text(
+                                "(${data['rejection_reason']})",
+                                style: const TextStyle(color: Colors.red, fontStyle: FontStyle.italic, fontSize: 12),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                           ),
+                      ],
+                    ),
+                  ],
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Only allow Editing Requests or Active Riders if needed
+                    IconButton(
+                      icon: Icon(
+                          status.toLowerCase() == 'rejected'
+                              ? Icons.refresh
+                              : Icons.edit,
+                          color: status.toLowerCase() == 'rejected'
+                              ? Colors.red
+                              : Colors.blue),
+                      tooltip: status.toLowerCase() == 'rejected'
+                          ? "Re-apply"
+                          : "Edit",
+                      onPressed: () => _openRiderForm(riderDoc: docs[index]),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _deleteDoc(docs[index].reference),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 }
 
@@ -192,7 +254,7 @@ class _RiderFormScreenState extends State<RiderFormScreen> {
     var data = widget.riderDoc!.data() as Map<String, dynamic>;
     _nameCtrl.text = data['name'] ?? '';
     _emailCtrl.text = data['email'] ?? '';
-    _passCtrl.text = data['password'] ?? ''; // Displaying for edit convenience
+    _passCtrl.text = data['password'] ?? ''; 
     _dobCtrl.text = data['dob'] ?? '';
     _gender = data['gender'] ?? 'Male';
     _addressCtrl.text = data['address'] ?? '';
@@ -204,11 +266,28 @@ class _RiderFormScreenState extends State<RiderFormScreen> {
   Future<void> _selectDate() async {
     DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(2000),
+      initialDate: DateTime(2005), // Default to 20ish years ago
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
     );
     if (picked != null) {
+      // Age Validation
+      final now = DateTime.now();
+      final age = now.year - picked.year - 
+          ((now.month < picked.month || (now.month == picked.month && now.day < picked.day)) ? 1 : 0);
+
+      if (age < 18) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Rider must be at least 18 years old."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       setState(() {
         _dobCtrl.text = "${picked.day}/${picked.month}/${picked.year}";
       });
@@ -224,33 +303,46 @@ class _RiderFormScreenState extends State<RiderFormScreen> {
         'vendor_id': widget.vendorId,
         'name': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
-        'password': _passCtrl.text.trim(), // Stored for reference/login logic
+        'password': _passCtrl.text.trim(), 
         'dob': _dobCtrl.text.trim(),
         'gender': _gender,
         'address': _addressCtrl.text.trim(),
         'aadhar_number': _aadharCtrl.text.trim(),
         'pan_number': _panCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
-        'status': 'Active', // Default status
-        'role': 'rider',
         'updated_at': FieldValue.serverTimestamp(),
       };
 
       if (widget.riderDoc == null) {
-        // Create New
+        // --- CREATE NEW REQUEST ---
+        riderData['status'] = 'pending';
         riderData['created_at'] = FieldValue.serverTimestamp();
-        riderData['joined_date'] = FieldValue.serverTimestamp();
-        await FirebaseFirestore.instance.collection('riders').add(riderData);
+        
+        await FirebaseFirestore.instance.collection('rider_requests').add(riderData);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Request Submitted. Admin will review.")));
+          Navigator.pop(context);
+        }
       } else {
-        // Update Existing
+        // --- UPDATE EXISTING ---
+        // If Status was Rejected, reset to Pending (Re-apply)
+        var currentData = widget.riderDoc!.data() as Map<String, dynamic>;
+        if (currentData['status'] == 'rejected') {
+          riderData['status'] = 'pending';
+          riderData['rejection_reason'] = FieldValue.delete();
+        }
+        
         await widget.riderDoc!.reference.update(riderData);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Request Updated/Re-submitted")));
+          Navigator.pop(context);
+        }
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Rider Saved Successfully")));
-        Navigator.pop(context);
-      }
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: $e")));
@@ -261,10 +353,10 @@ class _RiderFormScreenState extends State<RiderFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isNew = widget.riderDoc == null;
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(widget.riderDoc == null ? "Add Rider" : "Edit Rider Profile"),
+        title: Text(isNew ? "Request New Rider" : "Edit Details"),
         backgroundColor: Colors.orange[100],
       ),
       body: Form(
@@ -279,7 +371,7 @@ class _RiderFormScreenState extends State<RiderFormScreen> {
               _buildTextField(_emailCtrl, "Email Address", Icons.email,
                   isEmail: true),
               _buildTextField(_passCtrl, "Password", Icons.lock,
-                  isObscure: true), // In real app, hide this better
+                  isObscure: true),
 
               Row(
                 children: [
@@ -334,9 +426,9 @@ class _RiderFormScreenState extends State<RiderFormScreen> {
                       foregroundColor: Colors.white),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(widget.riderDoc == null
-                          ? "CREATE RIDER PROFILE"
-                          : "UPDATE PROFILE"),
+                      : Text(isNew
+                          ? "SUBMIT REQUEST"
+                          : "UPDATE DETAILS"),
                 ),
               ),
               const SizedBox(height: 40),

@@ -347,15 +347,18 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (data['unit'] != null && data['unit'].toString().isNotEmpty)
+                             Text("${data['unit']}", style: const TextStyle(fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.w500)),
                           Text("Added: $date",
                               style: const TextStyle(
                                   fontSize: 11, color: Colors.grey)),
+                          const SizedBox(height: 4),
                           Text(
                               "Stock: ${data['stock_quantity'] ?? 0} | ₹${data['price'] ?? 0}",
                               style: TextStyle(
-                                  color: (data['stock_quantity'] ?? 0) < 5
-                                      ? Colors.red
-                                      : Colors.green,
+                                  color: (data['stock_quantity'] ?? 0) <= 0
+                                      ? Colors.red 
+                                      : (data['stock_quantity'] ?? 0) < 5 ? Colors.orange : Colors.green,
                                   fontWeight: FontWeight.bold)),
                         ],
                       ),

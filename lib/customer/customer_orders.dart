@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'order_details.dart';
-import 'product_detail.dart'; // Import this to navigate to product details
+import 'product/enhanced_product_detail.dart'; // Import this to navigate to product details
 
 class CustomerOrdersScreen extends StatelessWidget {
   const CustomerOrdersScreen({super.key});
@@ -167,7 +167,7 @@ class CustomerOrdersScreen extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => ProductDetailScreen(
+                                builder: (_) => EnhancedProductDetailScreen(
                                   productData: item,
                                   productId:
                                       item['productId'], // Pass ID safely

@@ -5,14 +5,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 
 // Screens
+import 'auth/phone_auth_screen.dart';
 import 'auth/login_screen.dart';
 import 'customer/customer_dashboard.dart';
 import 'vendor/vendor_dashboard.dart';
-import 'admin/admin_dashboard.dart';
+import 'admin/admin_web_layout.dart';
 import 'rider/rider_dashboard.dart';
 
-// IMPORT THE GATE
-import 'customer/location_gate.dart';
+// IMPORT THE GATES
+import 'customer/onboarding/pincode_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,10 +61,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
               body: Center(child: CircularProgressIndicator()));
         }
 
-        // 2. If User is Logged Out -> Show Login
-        // Note: If you want guests to view products, change this to LocationGate()
+        // 2. If User is Logged Out -> Show Phone Auth (Primary)
+        // Email login is available as secondary option in PhoneAuthScreen
         if (!snapshot.hasData) {
-          return const LoginScreen();
+          return const PhoneAuthScreen();
         }
 
         // 3. If User is Logged In -> Check Role in Firestore
@@ -86,7 +87,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
               
               // ROUTING LOGIC
               if (role == 'admin') {
-                return const AdminDashboard();
+                return const AdminWebLayout();
               }
               if (role == 'vendor') {
                 return const VendorDashboard();
@@ -96,13 +97,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
               }
 
               // --- CUSTOMER LOGIC ---
-              // Instead of going straight to Dashboard, we send them to the GATE.
-              // The Gate will check GPS -> Then send them to Dashboard.
-              return const LocationGate(); 
+              // Send customers to Pincode Gate (Phase 3 implementation)
+              // The Gate will check session -> prompt pincode -> assign vendor -> go to home
+              return const PincodeGateScreen(); 
             }
 
-            // Fallback (e.g. new user without data yet) -> Send to Gate
-            return const LocationGate();
+            // Fallback (e.g. new user without data yet) -> Send to Pincode Gate
+            return const PincodeGateScreen();
           },
         );
       },

@@ -230,6 +230,40 @@ class _SubcategoryManagementScreenState extends State<SubcategoryManagementScree
                         : null,
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Image Guidelines
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text(
+                            'Image Guidelines',
+                            style: TextStyle(
+                              color: Colors.blue, 
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text('• Format: PNG or SVG (Transparent background pref.)', style: TextStyle(fontSize: 11)),
+                      Text('• Size: 512x512px (Square 1:1)', style: TextStyle(fontSize: 11)),
+                      Text('• Max size: 2MB', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

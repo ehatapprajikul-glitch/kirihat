@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../main.dart';
 import 'phone_auth_screen.dart';
 
 // IMPORTS FOR ALL DASHBOARDS
@@ -89,9 +90,11 @@ class _LoginScreenState extends State<LoginScreen> {
           duration: const Duration(seconds: 1)),
     );
 
+    // We navigate to AuthWrapper. It has the stream listener and will route correctly.
+    // This allows the app to react to role changes in real-time without needing a refresh.
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => targetScreen),
+      MaterialPageRoute(builder: (context) => const AuthWrapper()),
       (route) => false,
     );
   }

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import '../utils/cart_helper.dart';
 import 'checkout_screen.dart';
+import '../auth/phone_auth_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -11,419 +15,387 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  final User? user = FirebaseAuth.instance.currentUser;
+  List<Map<String, dynamic>> _cartItems = [];
+  bool _isLoading = true;
 
-
-  // Coupon State
-  final TextEditingController _couponController = TextEditingController();
-  double _discountAmount = 0;
-  bool _isCouponApplied = false;
-  String? _appliedCouponId;
-
-  // --- REAL COUPON LOGIC ---
-  Future<void> _applyCoupon() async {
-    String code = _couponController.text.trim().toUpperCase();
-    if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a coupon code"), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    try {
-      // Query coupon from Firestore
-      var couponQuery = await FirebaseFirestore.instance
-          .collection('coupons')
-          .where('code', isEqualTo: code)
-          .where('is_active', isEqualTo: true)
-          .get();
-
-      if (couponQuery.docs.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Invalid coupon code"), backgroundColor: Colors.red),
-        );
-        return;
-      }
-
-      var couponDoc = couponQuery.docs.first;
-      var couponData = couponDoc.data();
-
-      // Check expiry
-      Timestamp? validUntil = couponData['valid_until'];
-      if (validUntil != null && validUntil.toDate().isBefore(DateTime.now())) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("This coupon has expired"), backgroundColor: Colors.red),
-        );
-        return;
-      }
-
-      // Calculate discount
-      var cartSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user?.uid)
-          .collection('cart')
-          .get();
-      
-      double cartTotal = _getCartTotal(cartSnapshot.docs);
-      
-      if (cartTotal == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cart is empty"), backgroundColor: Colors.red),
-        );
-        return;
-      }
-      
-      num? minOrderValue = couponData['min_order_value'];
-      
-      if (minOrderValue != null && cartTotal < minOrderValue) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Minimum order value is ₹$minOrderValue"),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      double discount = 0;
-      if (couponData['discount_type'] == 'percentage') {
-        discount = (cartTotal * (couponData['discount_value'] as num)) / 100;
-      } else {
-        discount = (couponData['discount_value'] as num).toDouble();
-      }
-
-      // Apply max discount limit
-      num? maxDiscount = couponData['max_discount'];
-      if (maxDiscount != null && discount > maxDiscount) {
-        discount = maxDiscount.toDouble();
-      }
-
-      setState(() {
-        _discountAmount = discount;
-        _isCouponApplied = true;
-        _appliedCouponId = couponDoc.id;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Coupon applied! You saved ₹${discount.toStringAsFixed(0)}"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
-      );
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadCart();
   }
 
-  void _removeCoupon() {
-    setState(() {
-      _discountAmount = 0;
-      _isCouponApplied = false;
-      _appliedCouponId = null;
-      _couponController.clear();
-    });
-  }
-
-  double _getCartTotal(List<DocumentSnapshot>? cartItems) {
-    if (cartItems == null || cartItems.isEmpty) return 0;
+  Future<void> _loadCart() async {
+    setState(() => _isLoading = true);
     
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Guest mode - load from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? cartJson = prefs.getString('guest_cart');
+      
+      if (cartJson != null) {
+        try {
+          List<dynamic> decoded = json.decode(cartJson);
+          _cartItems = decoded.cast<Map<String, dynamic>>();
+        } catch (e) {
+          debugPrint('Error loading guest cart: $e');
+          _cartItems = [];
+        }
+      }
+    } else {
+      // Logged-in mode - load from Firestore
+      try {
+        var snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('cart')
+            .get();
+
+        _cartItems = snapshot.docs.map((doc) {
+          var data = doc.data();
+          // Ensure all required fields are present
+          return {
+            'product_id': doc.id,
+            'name': data['name'] ?? '',
+            'price': data['price'] ?? 0,
+            'imageUrl': data['imageUrl'] ?? '',
+            'quantity': data['quantity'] ?? 1,
+            'vendor_id': data['vendor_id'] ?? '',
+          };
+        }).toList();
+      } catch (e) {
+        debugPrint('Error loading Firestore cart: $e');
+        _cartItems = [];
+      }
+    }
+    
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _updateQuantity(String productId, int newQty) async {
+    if (newQty < 1) {
+      await CartHelper.removeCartItem(context, productId);
+    } else {
+      await CartHelper.updateCartItemQuantity(context, productId, newQty);
+    }
+    await _loadCart();
+  }
+
+  Future<void> _removeItem(String productId) async {
+    await CartHelper.removeCartItem(context, productId);
+    await _loadCart();
+  }
+
+  double _calculateTotal() {
     double total = 0;
-    for (var doc in cartItems) {
-      var data = doc.data() as Map<String, dynamic>;
-      total += ((data['price'] ?? 0) as num).toDouble() * ((data['quantity'] ?? 1) as int);
+    for (var item in _cartItems) {
+      final price = (item['price'] ?? 0).toDouble();
+      final quantity = (item['quantity'] ?? 1) as int;
+      total += price * quantity;
     }
     return total;
   }
 
-
-  // --- CART ACTIONS ---
-  Future<void> _updateQty(String docId, int current, bool increase) async {
-    if (user == null) {
-      return;
-    }
-    int newQty = increase ? current + 1 : current - 1;
-
-    if (newQty < 1) {
-      _removeItem(docId);
-    } else {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user!.uid)
-          .collection('cart')
-          .doc(docId)
-          .update({'quantity': newQty});
-    }
-  }
-
-  Future<void> _removeItem(String docId) async {
-    if (user == null) {
-      return;
-    }
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .collection('cart')
-        .doc(docId)
-        .delete();
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (user == null) {
-      return const Scaffold(body: Center(child: Text("Please Login")));
-    }
+    final user = FirebaseAuth.instance.currentUser;
+    final isGuest = user == null;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Cart"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: const Color(0xFF0D9759),
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       backgroundColor: Colors.grey[50],
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(user!.uid)
-            .collection('cart')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _cartItems.isEmpty
+              ? _buildEmptyCart()
+              : _buildCartContent(isGuest),
+    );
+  }
 
-          var cartItems = snapshot.data!.docs;
+  Widget _buildEmptyCart() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text(
+            "Your cart is empty",
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Add items to get started",
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
 
-          if (cartItems.isEmpty) {
-            return const Center(
-                child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                  Icon(Icons.shopping_cart_outlined,
-                      size: 80, color: Colors.grey),
-                  SizedBox(height: 10),
-                  Text("Cart is Empty",
-                      style: TextStyle(color: Colors.grey, fontSize: 18))
-                ]));
-          }
+  Widget _buildCartContent(bool isGuest) {
+    final total = _calculateTotal();
+    final vendorId = _cartItems.isNotEmpty ? _cartItems[0]['vendor_id'] : null;
 
-          // CALCULATION
-          double subtotal = 0;
-          String? vendorId; // Capture vendor ID for checkout logic
-          List<Map<String, dynamic>> cartDataList = [];
+    return Column(
+      children: [
+        // Cart Items List
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _cartItems.length,
+            itemBuilder: (context, index) {
+              final item = _cartItems[index];
+              return _buildCartItem(item);
+            },
+          ),
+        ),
 
-          for (var doc in cartItems) {
-            var data = doc.data() as Map<String, dynamic>;
-            subtotal += (data['price'] ?? 0) * (data['quantity'] ?? 1);
-
-            // Capture the vendor ID from the first item (Logic enforces single vendor cart)
-            if (vendorId == null && data['vendor_id'] != null) {
-              vendorId = data['vendor_id'];
-            }
-
-            cartDataList.add(data);
-          }
-
-          double finalTotal = subtotal - _discountAmount;
-          if (finalTotal < 0) {
-            finalTotal = 0;
-          }
-
-          return Column(
+        // Bottom Summary
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Column(
             children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: cartItems.length,
-                  itemBuilder: (context, index) {
-                    var data = cartItems[index].data() as Map<String, dynamic>;
-                    double price = (data['price'] ?? 0).toDouble();
-                    int qty = (data['quantity'] ?? 1);
-
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(10),
-                        leading: Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey[200],
-                              image: data['imageUrl'] != null
-                                  ? DecorationImage(
-                                      image: NetworkImage(data['imageUrl']),
-                                      fit: BoxFit.cover)
-                                  : null),
-                          child: data['imageUrl'] == null
-                              ? const Icon(Icons.image, color: Colors.grey)
-                              : null,
-                        ),
-                        title: Text(data['name'] ?? "Product",
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text("₹$price"),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                                icon: const Icon(Icons.remove_circle_outline,
-                                    color: Colors.red),
-                                onPressed: () => _updateQty(
-                                    cartItems[index].id, qty, false)),
-                            Text("$qty",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
-                            IconButton(
-                                icon: const Icon(Icons.add_circle_outline,
-                                    color: Colors.green),
-                                onPressed: () =>
-                                    _updateQty(cartItems[index].id, qty, true)),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // COUPON SECTION
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300)),
-                child: Row(
-                  children: [
-                    const Icon(Icons.local_offer_outlined,
-                        color: Colors.orange),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _couponController,
-                        enabled: !_isCouponApplied,
-                        decoration: const InputDecoration(
-                            hintText: "Enter Coupon Code",
-                            border: InputBorder.none),
-                      ),
+              // Total
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Total",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "₹${total.toStringAsFixed(2)}",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0D9759),
                     ),
-                    TextButton(
-                      onPressed:
-                          _isCouponApplied ? _removeCoupon : _applyCoupon,
-                      child: Text(_isCouponApplied ? "REMOVE" : "APPLY",
-                          style: TextStyle(
-                              color:
-                                  _isCouponApplied ? Colors.red : Colors.blue,
-                              fontWeight: FontWeight.bold)),
-                    )
-                  ],
-                ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 16),
 
-              // CHECKOUT SUMMARY
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(20)),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.grey.withAlpha(25),
-                          blurRadius: 10,
-                          offset: const Offset(0, -5))
-                    ]),
-                child: Column(
-                  children: [
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Subtotal",
-                              style: TextStyle(color: Colors.grey)),
-                          Text("₹$subtotal",
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold))
-                        ]),
-                    if (_discountAmount > 0)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text("Discount",
-                                  style: TextStyle(color: Colors.green)),
-                              Text("- ₹$_discountAmount",
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green))
-                            ]),
-                      ),
-                    const Divider(height: 20),
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Total",
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text("₹$finalTotal",
-                              style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue))
-                        ]),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
+              // Checkout Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: isGuest
+                    ? ElevatedButton.icon(
+                        onPressed: () async {
+                          // Navigate to login and wait for success (true)
+                          final result = await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                              builder: (_) => const PhoneAuthScreen(),
+                            ),
+                          );
+                          
+                          // If login successful
+                          if (result == true && mounted) {
+                             setState(() => _isLoading = true);
+                             
+                             // 1. Reload cart to get migrated items
+                             await _loadCart();
+                             
+                             // 2. Navigate to Checkout immediately
+                             if (mounted && _cartItems.isNotEmpty) {
+                                // Extract vendorId from first item (all items should be from same vendor)
+                                final vendorId = _cartItems.first['vendor_id'] ?? '';
+                                final total = _calculateTotal();
+                                
+                                Navigator.push(
+                                  context, 
+                                  MaterialPageRoute(
+                                    builder: (_) => CheckoutScreen(
+                                      cartItems: _cartItems,
+                                      subtotal: total,
+                                      vendorId: vendorId,
+                                    )
+                                  )
+                                );
+                             }
+                             
+                             setState(() => _isLoading = false);
+                          }
+                        },
+                        icon: const Icon(Icons.login, size: 20),
+                        label: const Text(
+                          "LOGIN TO CHECKOUT",
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9759),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      )
+                    : ElevatedButton(
                         onPressed: () {
                           if (vendorId == null) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text("Error: No Vendor Identified")));
-                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Error: No vendor found")),
+                            );
                             return;
                           }
 
-                          if (mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => CheckoutScreen(
-                                  cartItems: cartDataList,
-                                  subtotal: finalTotal,
-                                  vendorId:
-                                      vendorId!, // Critical for Order Routing
-                                ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CheckoutScreen(
+                                cartItems: _cartItems,
+                                subtotal: total,
+                                vendorId: vendorId,
                               ),
-                            );
-                          }
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue[800],
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10))),
-                        child: const Text("PROCEED TO CHECKOUT",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
+                          backgroundColor: const Color(0xFF0D9759),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          "PROCEED TO CHECKOUT",
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCartItem(Map<String, dynamic> item) {
+    final String name = item['name'] ?? 'Unknown Product';
+    final double price = (item['price'] ?? 0).toDouble();
+    final int quantity = (item['quantity'] ?? 1);
+    final String imageUrl = item['imageUrl'] ?? '';
+    final String productId = item['product_id'] ?? '';
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Product Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image, color: Colors.grey),
                       ),
                     )
+                  : Container(
+                      width: 60,
+                      height: 60,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.image, color: Colors.grey),
+                    ),
+            ),
+            const SizedBox(width: 12),
+
+            // Product Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "₹$price",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0D9759),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Quantity Controls
+            Column(
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => _updateQuantity(productId, quantity - 1),
+                      icon: const Icon(Icons.remove_circle_outline),
+                      color: const Color(0xFF0D9759),
+                      iconSize: 24,
+                    ),
+                    Text(
+                      '$quantity',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _updateQuantity(productId, quantity + 1),
+                      icon: const Icon(Icons.add_circle_outline),
+                      color: const Color(0xFF0D9759),
+                      iconSize: 24,
+                    ),
                   ],
                 ),
-              )
-            ],
-          );
-        },
+                TextButton.icon(
+                  onPressed: () => _removeItem(productId),
+                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  label: const Text(
+                    'Remove',
+                    style: TextStyle(fontSize: 12, color: Colors.red),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

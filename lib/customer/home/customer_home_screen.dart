@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/hero_category_service.dart';
 import '../../services/session_service.dart';
+import '../../services/banner_service.dart';
+import '../../models/banner_model.dart';
 import '../category/category_products_screen.dart';
 import '../widgets/floating_cart_button.dart';
+import '../widgets/banner_slider.dart';
 import '../onboarding/change_location_screen.dart';
 import '../cart_screen.dart';
+import '../product/enhanced_product_detail.dart';
+import '../widgets/draggable_cart_wrapper.dart';
+import '../widgets/customer_header.dart';
+import '../widgets/global_search_bar.dart';
 
 class NewCustomerHomeScreen extends StatefulWidget {
   const NewCustomerHomeScreen({super.key});
@@ -17,10 +26,12 @@ class NewCustomerHomeScreen extends StatefulWidget {
 
 class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
   final HeroCategoryService _heroService = HeroCategoryService();
+  final BannerService _bannerService = BannerService();
   
   String? _vendorId;
   String? _selectedArea;
   List<Map<String, dynamic>> _heroCategories = [];
+  List<BannerModel> _banners = [];
   bool _isLoading = true;
 
   @override
@@ -36,10 +47,6 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
       String? area = prefs.getString('current_area');
       String? pincode = prefs.getString('current_pincode');
 
-      print('🏠 Home Screen - Loading session...');
-      print('   VendorId: $vendorId');
-      print('   Area: $area');
-      print('   Pincode: $pincode');
 
       // If no local session, try loading from Firestore
       if (vendorId == null) {
@@ -70,13 +77,22 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
         _selectedArea = area ?? 'Your Area';
       });
 
-      // Fetch hero categories
-      final heroCategories = await _heroService.getVendorHeroCategories(vendorId);
-      print('✅ Loaded ${heroCategories.length} hero categories');
+      // Fetch admin hero categories (NOT vendor-specific)
+      final heroCategories = await _heroService.getAdminHeroCategories();
+      print('✅ Loaded ${heroCategories.length} admin hero categories');
 
       setState(() {
         _heroCategories = heroCategories;
         _isLoading = false;
+      });
+
+      // Load banners (stream)
+      _bannerService.getActiveBanners().listen((banners) {
+        if (mounted) {
+          setState(() {
+            _banners = banners;
+          });
+        }
       });
     } catch (e) {
       print('❌ Error loading home data: $e');
@@ -84,106 +100,139 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
     }
   }
 
+  void _handleBannerTap(BannerModel banner) async {
+    switch (banner.hyperlinkType) {
+      case 'category':
+        // Get vendor ID from current session
+        if (_vendorId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => NewCategoryProductsScreen(
+                categoryName: banner.hyperlinkValue,
+                vendorId: _vendorId!,
+              ),
+            ),
+          );
+        }
+        break;
+
+      case 'product':
+        // Fetch product data from Firestore
+        try {
+          final productDoc = await FirebaseFirestore.instance
+              .collection('master_products')
+              .doc(banner.hyperlinkValue)
+              .get();
+
+          if (productDoc.exists && mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EnhancedProductDetailScreen(
+                  productId: banner.hyperlinkValue,
+                  productData: productDoc.data() ?? {},
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          print('Error loading product: $e');
+        }
+        break;
+
+      case 'external':
+        final url = Uri.parse(banner.hyperlinkValue);
+        launchUrl(url, mode: LaunchMode.externalApplication);
+        break;
+
+      case 'none':
+      default:
+        // Do nothing
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(),
-            
-            // Search Bar
-            _buildSearchBar(),
-            
-            // Content
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _vendorId == null
-                      ? _buildNoVendorView()
-                      : _heroCategories.isEmpty
-                          ? _buildEmptyView()
-                          : _buildHeroCategoriesGrid(),
-            ),
-          ],
+      body: DraggableCartWrapper(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              CustomerHeader(
+                selectedArea: _selectedArea ?? 'Select Location',
+                onLocationTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ChangeLocationScreen()),
+                  );
+                  _loadData();
+                },
+                onCartTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CartScreen()),
+                  );
+                },
+              ),
+              
+              // Search Bar
+              const GlobalSearchBar(),
+              
+              // Content
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : CustomScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        slivers: [
+                          // Global Banner Slider - Shows even if vendor is not yet selected
+                          if (_banners.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: BannerSlider(
+                                banners: _banners,
+                                onBannerTap: _handleBannerTap,
+                              ),
+                            ),
+                          
+                          // Main Content (Hero Categories or Location Prompt)
+                          if (_vendorId == null)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _buildNoVendorView(),
+                            )
+                          else if (_heroCategories.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _buildEmptyView(),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final heroCategory = _heroCategories[index];
+                                    return _buildHeroCategorySection(heroCategory);
+                                  },
+                                  childCount: _heroCategories.length,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: const FloatingCartButton(),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          // App Icon/Logo Placeholder
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D9759),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.shopping_bag, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 12),
-          
-          // Location
-          Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                // Navigate to location selection
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChangeLocationScreen()),
-                );
-                // Reload data after returning
-                _loadData();
-              },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        _selectedArea ?? 'Select Location',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Icon(Icons.keyboard_arrow_down, size: 20),
-                    ],
-                  ),
-                  const Text(
-                    'Delivery in 20 minutes',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // Cart Icon
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
-              );
-            },
-            icon: const Icon(Icons.shopping_cart_outlined),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildSearchBar() {
     return Container(
@@ -217,16 +266,7 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
     );
   }
 
-  Widget _buildHeroCategoriesGrid() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: _heroCategories.length,
-      itemBuilder: (context, index) {
-        final heroCategory = _heroCategories[index];
-        return _buildHeroCategorySection(heroCategory);
-      },
-    );
-  }
+
 
   Widget _buildHeroCategorySection(Map<String, dynamic> heroCategory) {
     final String name = heroCategory['name'] ?? 'Unnamed';
@@ -409,4 +449,5 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
       ),
     );
   }
+
 }

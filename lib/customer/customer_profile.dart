@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../main.dart'; // Import AuthWrapper
 import 'customer_orders.dart';
 import 'manage_addresses.dart';
+import 'wishlist_screen.dart';
 import '../auth/login_screen.dart';
 import '../auth/phone_auth_screen.dart';
+import '../auth/seller_registration_screen.dart';
+import '../services/session_service.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -402,11 +406,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
   // --- 4. LOGOUT ---
   void _logout() async {
+    // Clear forced customer mode
+    await SessionService().setCustomerMode(false);
+    
     await FirebaseAuth.instance.signOut();
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const PhoneAuthScreen()), // Changed from LoginScreen
+        MaterialPageRoute(builder: (_) => const AuthWrapper()), 
         (route) => false,
       );
     }
@@ -419,7 +426,56 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         print('DEBUG PROFILE: Providers=${user!.providerData.map((e) => e.providerId).toList()}');
     }
     if (user == null) {
-      return const Scaffold(body: Center(child: Text("Please Login")));
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          title: const Text("My Profile"),
+          backgroundColor: const Color(0xFF0D9759),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.person_outline, size: 80, color: Colors.grey[400]),
+                const SizedBox(height: 24),
+                const Text(
+                  "Login to View Profile",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Access your profile, orders, and saved addresses",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PhoneAuthScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.login),
+                  label: const Text("LOGIN",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9759),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return Scaffold(
@@ -502,6 +558,12 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         MaterialPageRoute(
                             builder: (_) => const CustomerOrdersScreen()));
                   }),
+                  _buildMenuItem(Icons.favorite_outline, "My Wishlist", () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const WishlistScreen()));
+                  }),
                   _buildMenuItem(Icons.location_on_outlined, "Manage Addresses",
                       () {
                     Navigator.push(
@@ -513,6 +575,12 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   if (user!.providerData.any((p) => p.providerId == 'password'))
                     _buildMenuItem(
                         Icons.lock_outline, "Change Password", _changePassword),
+                  _buildMenuItem(Icons.storefront, "Become a Seller", () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SellerRegistrationScreen()));
+                  }),
                 ]),
 
                 const SizedBox(height: 20),

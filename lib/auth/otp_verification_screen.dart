@@ -4,17 +4,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pinput/pinput.dart';
 import 'dart:async';
 import '../customer/onboarding/pincode_gate.dart';
+import '../utils/cart_helper.dart';
+import '../services/session_service.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phoneNumber;
   final String verificationId; // For development only
   final int? resendToken;
+  final VoidCallback? onLoginSuccess; // Optional callback after login
 
   const OTPVerificationScreen({
     super.key,
     required this.phoneNumber,
     required this.verificationId,
     this.resendToken,
+    this.onLoginSuccess,
   });
 
   @override
@@ -64,19 +68,18 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       // Create or update user in Firestore only if new
       if (userCredential.additionalUserInfo?.isNewUser == true) {
         await _createOrUpdateUser(user.uid, widget.phoneNumber);
-      } else {
-        // Double check existence in background or just proceed
-        // Ideally we assume existing user has doc. 
-        // For robustness, we could fire-and-forget logic here, but let's be fast.
       }
 
+      // **CRITICAL**: Migrate guest cart to Firestore
+      debugPrint('🛒 Migrating guest cart to Firestore...');
+      await CartHelper.migrateGuestCartToFirestore(user.uid);
+
+      // FORCE CUSTOMER MODE (To prevent routing to Seller/Admin dashboard)
+      await SessionService().setCustomerMode(true);
+
       if (mounted) {
-        // Navigate to onboarding
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const PincodeGateScreen()),
-          (route) => false,
-        );
+        // Return true to indicate successful login
+        Navigator.pop(context, true);
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage;

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/session_service.dart';
 import '../../services/service_area_service.dart';
 import '../customer_dashboard.dart';
@@ -14,7 +13,6 @@ class PincodeGateScreen extends StatefulWidget {
 
 class _PincodeGateScreenState extends State<PincodeGateScreen> {
   final _sessionService = SessionService();
-  final _serviceAreaService = ServiceAreaService();
   bool _isChecking = true;
 
   @override
@@ -24,11 +22,11 @@ class _PincodeGateScreenState extends State<PincodeGateScreen> {
   }
 
   Future<void> _checkSession() async {
-    // Check if user has already completed onboarding
+    // Check if user has already completed onboarding (guest or logged in)
     final hasCompleted = await _sessionService.hasCompletedOnboarding();
     
     if (hasCompleted && mounted) {
-      // Navigate directly to home
+      // Navigate directly to home (works for both guest and logged-in users)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const CustomerDashboard()),
@@ -264,6 +262,11 @@ class _PincodeEntryScreenState extends State<PincodeEntryScreen> {
                   controller: _pincodeController,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
+                  onChanged: (value) {
+                    if (value.length == 6) {
+                      _validateAndProceed();
+                    }
+                  },
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

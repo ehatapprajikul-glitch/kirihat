@@ -6,6 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../utils/cart_helper.dart';
 import '../cart_screen.dart';
 import '../../services/home_layout_service.dart';
+import '../../services/wishlist_service.dart';
+import '../widgets/floating_cart_button.dart';
+import '../widgets/draggable_cart_wrapper.dart';
 
 class EnhancedProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -23,6 +26,7 @@ class EnhancedProductDetailScreen extends StatefulWidget {
 
 class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScreen> {
   final HomeLayoutService _layoutService = HomeLayoutService();
+  final WishlistService _wishlistService = WishlistService();
   int _currentImageIndex = 0;
   int _quantity = 1;
   bool _isInWishlist = false;
@@ -36,26 +40,20 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
   }
 
   Future<void> _checkWishlistStatus() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
 
     try {
-      var doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('wishlist')
-          .doc(widget.productId)
-          .get();
-      
-      if (mounted) setState(() => _isInWishlist = doc.exists);
+      final inList = await _wishlistService.isInWishlist(userId, widget.productId);
+      if (mounted) setState(() => _isInWishlist = inList);
     } catch (e) {
       debugPrint("Error checking wishlist: $e");
     }
   }
 
   Future<void> _toggleWishlist() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please login to add to wishlist")),
       );
@@ -63,34 +61,17 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
     }
 
     try {
-      var wishlistRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('wishlist')
-          .doc(widget.productId);
+      final wasAdded = await _wishlistService.toggleWishlist(
+        userId,
+        widget.productId,
+        sourceVendorId: widget.productData['vendor_id'],
+      );
 
-      if (_isInWishlist) {
-        await wishlistRef.delete();
-        if (mounted) {
-          setState(() => _isInWishlist = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Removed from wishlist")),
-          );
-        }
-      } else {
-        await wishlistRef.set({
-          'product_id': widget.productId,
-          'name': widget.productData['name'] ?? '',
-          'price': widget.productData['price'] ?? 0,
-          'imageUrl': _getFirstImage(),
-          'added_at': FieldValue.serverTimestamp(),
-        });
-        if (mounted) {
-          setState(() => _isInWishlist = true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Added to wishlist")),
-          );
-        }
+      if (mounted) {
+        setState(() => _isInWishlist = wasAdded);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(wasAdded ? "❤️ Added to wishlist" : "Removed from wishlist")),
+        );
       }
     } catch (e) {
       debugPrint("Error toggling wishlist: $e");
@@ -191,31 +172,34 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Scrollable Content
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image Carousel
-                  _buildImageCarousel(images),
-                  
-                  // Product Info
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Name & Unit
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+
+      bottomNavigationBar: _buildStickyBottomBar(),
+      body: DraggableCartWrapper(
+        child: Column(
+          children: [
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Image Carousel
+                    _buildImageCarousel(images),
+                    
+                    // Product Info
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Name & Unit
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
                         if (unit.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
@@ -228,8 +212,11 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
                         ],
                         const SizedBox(height: 16),
 
-                        // Price
-                        Row(
+                        // Price - Wrapped to prevent overflow
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               '₹$price',
@@ -240,7 +227,6 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
                               ),
                             ),
                             if (mrp > price) ...[
-                              const SizedBox(width: 12),
                               Text(
                                 '₹$mrp',
                                 style: TextStyle(
@@ -249,7 +235,6 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
                                   decoration: TextDecoration.lineThrough,
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -301,7 +286,7 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
                         // Related Products
                         if (_relatedProducts.isNotEmpty) _buildRelatedProducts(),
                         
-                        const SizedBox(height: 80), // Space for sticky bar
+                        // const SizedBox(height: 80), // NO LONGER NEEDED as bottom bar is separate
                       ],
                     ),
                   ),
@@ -309,10 +294,10 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
               ),
             ),
           ),
-
-          // Sticky Bottom Bar
-          _buildStickyBottomBar(),
+          
+          // REMOVED _buildStickyBottomBar() from here
         ],
+      ),
       ),
     );
   }
@@ -485,37 +470,86 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
       ),
       child: Row(
         children: [
-          // Add to Cart Button
+          // Add to Cart / Quantity Control
           Expanded(
-            child: ElevatedButton(
-              onPressed: () async {
-                final success = await CartHelper.addToCart(context, widget.productData);
-                if (success && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Added to cart'),
-                      backgroundColor: Color(0xFF0D9759),
-                      duration: Duration(seconds: 1),
+            child: StreamBuilder<int>(
+              stream: CartHelper.watchCartItemQuantity(widget.productData['id']),
+              builder: (context, snapshot) {
+                final int quantity = snapshot.data ?? 0;
+                
+                if (quantity > 0) {
+                  // Show Quantity Controls
+                  return Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9759),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Decrease
+                        IconButton(
+                          icon: const Icon(Icons.remove, color: Colors.white),
+                          onPressed: () {
+                            CartHelper.updateCartItemQuantity(
+                              context, 
+                              widget.productData['id'], 
+                              quantity - 1
+                            );
+                          },
+                        ),
+                        // Quantity
+                        Text(
+                          '$quantity',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        // Increase
+                        IconButton(
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          onPressed: () {
+                            CartHelper.updateCartItemQuantity(
+                              context, 
+                              widget.productData['id'], 
+                              quantity + 1
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   );
                 }
+
+                // Show Add to Cart Button
+                return ElevatedButton(
+                  onPressed: () async {
+                    final success = await CartHelper.addToCart(context, widget.productData);
+                    if (success && mounted) {
+                      // Success message handled by helper
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0D9759),
+                    side: const BorderSide(color: Color(0xFF0D9759), width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Add to Cart',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF0D9759),
-                side: const BorderSide(color: Color(0xFF0D9759), width: 2),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Add to Cart',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
             ),
           ),
           

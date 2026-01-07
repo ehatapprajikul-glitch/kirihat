@@ -42,30 +42,40 @@ class _AreaSelectionScreenState extends State<AreaSelectionScreen> {
 
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
+      final isGuest = userId == null;
       
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
       // Resolve vendors for the selected area
-      // Note: We need ServiceAreaService instance
       final serviceAreaService = ServiceAreaService();
       final vendorIds = await serviceAreaService.findVendorsForArea(widget.pincode, _selectedArea!);
       
       if (vendorIds.isEmpty) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('No active vendors for this area currently.')));
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('No active vendors for this area currently.')));
+         }
          setState(() => _isLoading = false);
          return;
       }
 
-      // Save session
-      await _sessionService.saveSession(
-        userId: userId,
-        pincode: widget.pincode,
-        area: _selectedArea!,
-        vendorIds: vendorIds,
-      );
+      // Save session (guest or logged-in)
+      if (isGuest) {
+        // Guest mode - save without userId
+        await _sessionService.saveGuestSession(
+          pincode: widget.pincode,
+          area: _selectedArea!,
+          vendorIds: vendorIds,
+        );
+        print('✅ Guest session saved');
+      } else {
+        // Logged-in mode
+        await _sessionService.saveSession(
+          userId: userId!,
+          pincode: widget.pincode,
+          area: _selectedArea!,
+          vendorIds: vendorIds,
+        );
+        print('✅ User session saved');
+      }
 
       if (mounted) {
         // Navigate to customer dashboard
@@ -203,6 +213,7 @@ class _AreaSelectionScreenState extends State<AreaSelectionScreen> {
                                 setState(() {
                                   _selectedArea = area;
                                 });
+                                _confirmSelection(); // Auto-forward
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(

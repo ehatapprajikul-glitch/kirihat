@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/session_service.dart';
 import 'home/customer_home_screen.dart';
 import 'category_products.dart';
@@ -22,6 +23,15 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   void initState() {
     super.initState();
     _loadSession();
+    
+    // Listen for auth state changes to rebuild UI immediately
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (mounted) {
+        setState(() {
+          // Trigger rebuild to update UI for guest/logged-in state
+        });
+      }
+    });
   }
 
   Future<void> _loadSession() async {
@@ -73,8 +83,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       },
       child: Scaffold(
         body: IndexedStack(
+          key: ValueKey(FirebaseAuth.instance.currentUser?.uid), // Force rebuild when user changes
           index: _selectedIndex,
-          children: screens,
+          children: screens, // screens list is not const now
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,

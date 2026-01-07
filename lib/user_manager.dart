@@ -152,6 +152,10 @@ class _UserManagerScreenState extends State<UserManagerScreen> {
                   child: Text("Rider (Delivery)"),
                 ),
                 DropdownMenuItem(
+                  value: 'seller',
+                  child: Text("Seller (Product Supplier)"),
+                ),
+                DropdownMenuItem(
                   value: 'admin',
                   child: Text("Admin (Partner)"),
                 ),

@@ -119,21 +119,45 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildEmptyCart() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          const Text(
-            "Your cart is empty",
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Add items to get started",
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_cart_outlined, size: 100, color: Colors.grey[300]),
+            const SizedBox(height: 24),
+            const Text(
+              "Your cart is empty",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Looks like you haven't added anything yet",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.shopping_bag),
+              label: const Text("Start Shopping"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9759),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

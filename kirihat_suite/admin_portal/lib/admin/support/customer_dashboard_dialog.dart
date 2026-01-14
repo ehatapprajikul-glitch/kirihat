@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:kirihat_core/services/service_area_service.dart';
 
 class CustomerDashboardDialog extends StatefulWidget {
   final String? userId;
@@ -133,16 +136,8 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                           ],
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () => _showCreateOrderDialog(context, widget.userId!, widget.customerName, userData),
-                        icon: const Icon(Icons.add_shopping_cart, size: 18),
-                        label: const Text('Create Order'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF0D9759),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        ),
-                      ),
+                      // Create Order button removed
+
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
@@ -776,64 +771,7 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
   void _showAddresses(BuildContext context, String userId) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          width: 600,
-          height: 500,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Text(
-                    'Saved Addresses',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: FutureBuilder<QuerySnapshot>(
-                  future: FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(userId)
-                      .collection('addresses')
-                      .get(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (snapshot.data!.docs.isEmpty) {
-                      return const Center(child: Text('No saved addresses'));
-                    }
-
-                    return ListView.builder(
-                      itemCount: snapshot.data!.docs.length,
-                      itemBuilder: (context, index) {
-                        var addr = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-                        return Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.location_on, color: Colors.orange),
-                            title: Text(addr['label'] ?? 'Address ${index + 1}'),
-                            subtitle: Text(addr['full_address'] ?? '${addr['city']}, ${addr['state']}'),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (context) => _AddressManagementDialog(userId: userId),
     );
   }
 
@@ -946,153 +884,632 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
   }
 
   void _showCreateOrderDialog(BuildContext context, String userId, String customerName, Map<String, dynamic> userData) {
-    final amountController = TextEditingController();
-    final itemsController = TextEditingController();
-    final addressController = TextEditingController();
-    final phoneController = TextEditingController(text: userData['phone'] ?? '');
-    String paymentMethod = 'COD';
+    // Removed
+  }
+}
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Row(
-              children: [
-                const Icon(Icons.add_shopping_cart, color: Color(0xFF0D9759)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Create Order for $customerName'),
+class _AddressManagementDialog extends StatefulWidget {
+  final String userId;
+
+  const _AddressManagementDialog({required this.userId});
+
+  @override
+  State<_AddressManagementDialog> createState() => _AddressManagementDialogState();
+}
+
+class _AddressManagementDialogState extends State<_AddressManagementDialog> {
+  final _formKey = GlobalKey<FormState>();
+  
+  // Logic & State
+  bool _isAdding = false;
+  String? _editingId;
+  bool _isLoading = false;
+  bool _isFetchingPin = false;
+  List<String> _availableAreas = [];
+  String? _selectedArea;
+  final ServiceAreaService _serviceAreaService = ServiceAreaService();
+
+  // Controllers
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _altPhoneController = TextEditingController();
+  final _houseController = TextEditingController();
+  final _streetController = TextEditingController();
+  final _landmarkController = TextEditingController();
+  final _marketController = TextEditingController();
+  final _districtController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pinController = TextEditingController();
+  
+  bool _isDefault = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _altPhoneController.dispose();
+    _houseController.dispose();
+    _streetController.dispose();
+    _landmarkController.dispose();
+    _marketController.dispose();
+    _districtController.dispose();
+    _stateController.dispose();
+    _pinController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: 900, // Widened for detailed form
+        height: 700,
+        constraints: const BoxConstraints(maxHeight: 800),
+        child: Column(
+          children: [
+             // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0D9759),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
+                  ),
                 ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: itemsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Items Description *',
-                      hintText: 'e.g., 2x Rice, 1x Sugar',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Total Amount (₹) *',
-                      border: OutlineInputBorder(),
-                      prefixText: '₹',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone Number *',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: addressController,
-                    decoration: const InputDecoration(
-                      labelText: 'Delivery Address *',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: paymentMethod,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Method',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'COD', child: Text('Cash on Delivery')),
-                      DropdownMenuItem(value: 'UPI', child: Text('UPI/Online')),
-                      DropdownMenuItem(value: 'Paid', child: Text('Already Paid')),
-                    ],
-                    onChanged: (value) {
-                      setState(() => paymentMethod = value!);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (itemsController.text.isEmpty || 
-                      amountController.text.isEmpty ||
-                      phoneController.text.isEmpty ||
-                      addressController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please fill all required fields')),
-                    );
-                    return;
-                  }
-
-                  try {
-                    double amount = double.parse(amountController.text);
-                    
-                    await FirebaseFirestore.instance.collection('orders').add({
-                      'order_id': 'ADMIN-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-                      'customer_id': userId,
-                      'customer_name': customerName,
-                      'customer_phone': phoneController.text.trim(),
-                      'items': [
-                        {
-                          'name': itemsController.text.trim(),
-                          'quantity': 1,
-                          'price': amount,
-                        }
-                      ],
-                      'product_total': amount,
-                      'delivery_fee': 0,
-                      'total_amount': amount,
-                      'payment_method': paymentMethod,
-                      'payment_status': paymentMethod == 'Paid' ? 'Paid' : 'Pending',
-                      'delivery_mode': 'Standard',
-                      'status': 'Pending',
-                      'delivery_address': addressController.text.trim(),
-                      'created_at': FieldValue.serverTimestamp(),
-                      'created_by_admin': true,
-                      'is_settled': false,
-                    });
-
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Order created successfully!'),
-                        backgroundColor: Colors.green,
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.white),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Manage Addresses',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9759),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
+                  ],
                 ),
-                child: const Text('CREATE ORDER'),
               ),
-            ],
-          );
-        },
+
+              Expanded(
+                child: Row(
+                  children: [
+                    // --- LEFT: ADDRESS LIST ---
+                    Expanded(
+                      flex: 4,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(right: BorderSide(color: Colors.grey.shade300)),
+                          color: Colors.grey.shade50,
+                        ),
+                        child: Column(
+                          children: [
+                             Padding(
+                               padding: const EdgeInsets.all(12),
+                               child: ElevatedButton.icon(
+                                 onPressed: _resetForm,
+                                 icon: const Icon(Icons.add),
+                                 label: const Text('Add New Address'),
+                                 style: ElevatedButton.styleFrom(
+                                   backgroundColor: const Color(0xFF0D9759),
+                                   foregroundColor: Colors.white,
+                                   minimumSize: const Size(double.infinity, 45),
+                                 ),
+                               ),
+                             ),
+                             Expanded(child: _buildAddressList()),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // --- RIGHT: ADDRESS FORM ---
+                    Expanded(
+                      flex: 6,
+                      child: _isLoading 
+                        ? const Center(child: CircularProgressIndicator())
+                        : SingleChildScrollView(
+                          padding: const EdgeInsets.all(24),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isAdding 
+                                      ? 'Add New Address' 
+                                      : _editingId != null 
+                                          ? 'Edit Address' 
+                                          : 'Select or Add Address',
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 24),
+                                
+                                if (_isAdding || _editingId != null) ...[
+                                  // --- Contact Details ---
+                                  const Text("Contact Details", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                  const SizedBox(height: 12),
+                                  _buildTextField(_nameController, "Receiver's Full Name *", Icons.person, isMandatory: true),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildTextField(_phoneController, "Mobile Number *", Icons.phone, isMandatory: true, isNumber: true)),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: _buildTextField(_altPhoneController, "Alt Mobile", Icons.phone_android, isNumber: true)),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  // --- Address Details ---
+                                  const Text("Address Details", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                  const SizedBox(height: 12),
+                                  
+                                  // Pincode & Service Area
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // PIN Code
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _pinController,
+                                          keyboardType: TextInputType.number,
+                                          maxLength: 6,
+                                          onChanged: (val) {
+                                            if (val.length == 6) _fetchPinDetails(val);
+                                          },
+                                          validator: (val) => (val == null || val.length != 6) ? "Invalid PIN" : null,
+                                          decoration: InputDecoration(
+                                            labelText: "PIN Code *",
+                                            prefixIcon: const Icon(Icons.pin_drop, color: Color(0xFF0D9759)),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                            counterText: "",
+                                            suffixIcon: _isFetchingPin
+                                                ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2))
+                                                : null,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Service Area
+                                      Expanded(
+                                        child: DropdownButtonFormField<String>(
+                                          value: _selectedArea,
+                                          decoration: InputDecoration(
+                                            labelText: "Service Area *",
+                                            prefixIcon: const Icon(Icons.location_city, color: Color(0xFF0D9759)),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                          ),
+                                          items: _availableAreas.map((area) {
+                                            return DropdownMenuItem(value: area, child: Text(area));
+                                          }).toList(),
+                                          onChanged: _availableAreas.isEmpty ? null : (val) => setState(() => _selectedArea = val),
+                                          validator: (val) => val == null ? "Required" : null,
+                                          hint: Text(_availableAreas.isEmpty ? "Enter PIN first" : "Select Area"),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 16),
+                                  
+                                  // House & Street
+                                  _buildTextField(_houseController, "House No / Building *", Icons.home, isMandatory: true),
+                                  const SizedBox(height: 16),
+                                  _buildTextField(_streetController, "Street / Area / Colony *", Icons.add_road, isMandatory: true),
+                                  
+                                  const SizedBox(height: 16),
+                                  
+                                  // Landmark & Market
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildTextField(_landmarkController, "Landmark *", Icons.store, isMandatory: true)),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: _buildTextField(_marketController, "Nearby Market *", Icons.shopping_basket, isMandatory: true)),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 16),
+                                  
+                                  // District & State (Read-only)
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildTextField(_districtController, "District", Icons.map, isReadOnly: true)),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: _buildTextField(_stateController, "State", Icons.flag, isReadOnly: true)),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  // Actions
+                                  CheckboxListTile(
+                                    value: _isDefault,
+                                    onChanged: (val) => setState(() => _isDefault = val!),
+                                    title: const Text('Set as Default Address'),
+                                    activeColor: const Color(0xFF0D9759),
+                                    contentPadding: EdgeInsets.zero,
+                                    controlAffinity: ListTileControlAffinity.leading,
+                                  ),
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (_editingId != null)
+                                        TextButton.icon(
+                                          onPressed: () => _deleteAddress(_editingId!),
+                                          icon: const Icon(Icons.delete, size: 18),
+                                          label: const Text('Delete'),
+                                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                        ),
+                                      const SizedBox(width: 12),
+                                      ElevatedButton(
+                                        onPressed: _saveAddress,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF0D9759),
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                        ),
+                                        child: Text(
+                                          _editingId == null ? 'SAVE ADDRESS' : 'UPDATE ADDRESS',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ] else ...[
+                                  Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.touch_app, size: 64, color: Colors.grey.shade300),
+                                        const SizedBox(height: 16),
+                                        const Text(
+                                          'Select an address to edit\nor click "Add New Address"',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
+  
+  // --- UI Helpers ---
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, 
+      {bool isMandatory = false, bool isReadOnly = false, bool isNumber = false}) {
+    return TextFormField(
+      controller: controller,
+      readOnly: isReadOnly,
+      keyboardType: isNumber ? TextInputType.phone : TextInputType.text,
+      maxLength: (isNumber && label.contains("Mobile")) ? 10 : null,
+      validator: (val) {
+        if (isMandatory && (val == null || val.trim().isEmpty)) return "$label is required";
+        if (isNumber && label.contains("Mobile") && val != null && val.isNotEmpty && val.length != 10) return "Must be 10 digits";
+        return null;
+      },
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: const Color(0xFF0D9759)),
+        filled: isReadOnly,
+        fillColor: isReadOnly ? Colors.grey[100] : Colors.white,
+        counterText: "",
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildAddressList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .collection('addresses')
+          .orderBy('created_at', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        
+        var docs = snapshot.data!.docs;
+        if (docs.isEmpty) return const Center(child: Text('No addresses found'));
+
+        return ListView.separated(
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            var data = docs[index].data() as Map<String, dynamic>;
+            bool isDefault = data['is_default'] == true; // Keeping older flag for fallback
+            // Check if default via user doc would be better but expensive here.
+            
+            bool isSelected = _editingId == docs[index].id;
+
+            return ListTile(
+              selected: isSelected,
+              selectedTileColor: const Color(0xFF0D9759).withOpacity(0.1),
+              onTap: () => _loadAddressForEdit(docs[index].id, data),
+              leading: CircleAvatar(
+                backgroundColor: isDefault ? const Color(0xFF0D9759) : Colors.grey.shade200,
+                child: Icon(Icons.location_on, color: isDefault ? Colors.white : Colors.grey),
+              ),
+              title: Text(
+                data['landmark'] ?? 'Address ${index + 1}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(data['name'] ?? 'Unknown User', style: const TextStyle(fontSize: 12)),
+                  Text(
+                    '${data['house_no']}, ${data['street']}\n${data['service_area'] ?? data['city']} - ${data['pincode']}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+              isThreeLine: true,
+            );
+          },
+        );
+      },
+    );
+  }
+  
+  // --- Logic Implementations ---
+  
+  void _resetForm() {
+    setState(() {
+      _isAdding = true;
+      _editingId = null;
+      _selectedArea = null;
+      _availableAreas = [];
+      
+      _nameController.clear();
+      _phoneController.clear();
+      _altPhoneController.clear();
+      _houseController.clear();
+      _streetController.clear();
+      _landmarkController.clear();
+      _marketController.clear();
+      _districtController.clear();
+      _stateController.clear();
+      _pinController.clear();
+      
+      _isDefault = false;
+    });
+  }
+
+  void _loadAddressForEdit(String id, Map<String, dynamic> data) async {
+    // If we have pincode, we might need to fetch areas to populate dropdown
+    String pin = data['pincode'] ?? '';
+    if (pin.length == 6) {
+      await _fetchPinDetails(pin, preserveSelection: true);
+    }
+
+    setState(() {
+       _isAdding = false;
+       _editingId = id;
+       
+       _nameController.text = data['name'] ?? '';
+       _phoneController.text = data['phone'] ?? '';
+       _altPhoneController.text = data['alt_phone'] ?? '';
+       _houseController.text = data['house_no'] ?? '';
+       _streetController.text = data['street'] ?? '';
+       _landmarkController.text = data['landmark'] ?? '';
+       _marketController.text = data['nearby_market'] ?? '';
+       _districtController.text = data['district'] ?? '';
+       _stateController.text = data['state'] ?? '';
+       _pinController.text = pin;
+       
+       // Try to select the area from data
+       String? area = data['service_area'];
+       if (area != null && _availableAreas.contains(area)) {
+         _selectedArea = area;
+       } else if (_availableAreas.isNotEmpty) {
+         _selectedArea = _availableAreas.first; // Fallback
+       } else {
+         _selectedArea = null; // Should ideally prevent editing if area invalid
+         if (area != null) {
+            _availableAreas = [area]; // Hack to show current val even if not in fetch
+            _selectedArea = area;
+         }
+       }
+       
+       // _isDefault logic handled via 'current_address' check usually
+       _isDefault = data['is_default'] == true;
+    });
+  }
+
+  Future<void> _fetchPinDetails(String pin, {bool preserveSelection = false}) async {
+    if (pin.length != 6) return;
+    
+    // Remember current if we want to keep it
+    final previousSelection = _selectedArea;
+    
+    if (mounted) setState(() => _isFetchingPin = true);
+    
+    try {
+      // 1. India Post API
+      final url = Uri.parse('https://api.postalpincode.in/pincode/$pin');
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data[0]['Status'] == 'Success') {
+          final postOffice = data[0]['PostOffice'][0];
+          if (mounted) {
+            setState(() {
+              _districtController.text = postOffice['District'];
+              _stateController.text = postOffice['State'];
+            });
+          }
+        }
+      }
+      
+      // 2. Service Areas
+      final serviceAreas = await _serviceAreaService.getServiceAreasForPincode(pin);
+      
+      Set<String> areas = {};
+      for (var zone in serviceAreas) {
+        if (zone['areas'] != null) {
+          areas.addAll(List<String>.from(zone['areas']));
+        }
+      }
+      final areasList = areas.toList()..sort();
+      
+      if (mounted) {
+        setState(() {
+          _availableAreas = areasList;
+          _isFetchingPin = false;
+          
+          if (preserveSelection && previousSelection != null && areasList.contains(previousSelection)) {
+             _selectedArea = previousSelection;
+          } else if (areasList.length == 1) {
+             _selectedArea = areasList.first;
+          } else {
+             _selectedArea = null;
+          }
+        });
+        
+        if (areasList.isEmpty && !preserveSelection) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No service available in this pincode')));
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isFetchingPin = false);
+      print("Error fetching PIN: $e");
+    }
+  }
+
+  Future<void> _saveAddress() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedArea == null) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select Service Area')));
+       return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      var collection = FirebaseFirestore.instance.collection('users').doc(widget.userId).collection('addresses');
+      
+      Map<String, dynamic> data = {
+        'name': _nameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'alt_phone': _altPhoneController.text.trim(),
+        'house_no': _houseController.text.trim(),
+        'street': _streetController.text.trim(),
+        'landmark': _landmarkController.text.trim(),
+        'nearby_market': _marketController.text.trim(),
+        'service_area': _selectedArea,
+        'district': _districtController.text.trim(),
+        'state': _stateController.text.trim(),
+        'pincode': _pinController.text.trim(),
+        'is_default': _isDefault,
+        'updated_at': FieldValue.serverTimestamp(),
+      };
+
+      // Save Address
+      if (_editingId != null) {
+        await collection.doc(_editingId).update(data);
+      } else {
+        data['created_at'] = FieldValue.serverTimestamp();
+        await collection.add(data);
+      }
+
+      // Handle Default
+      if (_isDefault) {
+         // Set as current_address in user profile
+         await FirebaseFirestore.instance.collection('users').doc(widget.userId).set({
+            'current_address': data
+         }, SetOptions(merge: true));
+         
+         // Unset other defaults in collection
+         var defaults = await collection.where('is_default', isEqualTo: true).get();
+         for (var doc in defaults.docs) {
+           if (_editingId != null && doc.id == _editingId) continue;
+           await doc.reference.update({'is_default': false});
+         }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address saved successfully')));
+        _resetForm(); // Reset to "Add New" state
+        setState(() => _isLoading = false);
+      }
+
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  Future<void> _deleteAddress(String id) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Address'),
+        content: const Text('Are you sure you want to delete this address?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirm) {
+        setState(() => _isLoading = true);
+        
+        // 1. Get Address Data to check if default
+        var doc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).collection('addresses').doc(id).get();
+        var addressData = doc.data();
+        
+        // 2. Delete
+        await doc.reference.delete();
+        
+        // 3. Check and clean up defaults
+        if (addressData != null) {
+           var userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
+           if (userDoc.exists && userDoc.data()!.containsKey('current_address')) {
+              var current = userDoc.data()!['current_address'] as Map<String, dynamic>;
+              // Heuristic match
+              if (current['created_at'] == addressData['created_at'] || current['full_address'] == addressData['full_address']) {
+                  // It was the default. Clear it.
+                  await userDoc.reference.update({'current_address': FieldValue.delete()});
+                  
+                  // Optional: promote next one? leaving as delete-only for now for safety.
+              }
+           }
+        }
+      
+      if (mounted) {
+        _resetForm();
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address deleted')));
+      }
+    }
+  }
+
 }

@@ -4,6 +4,37 @@ import '../models/warehouse_model.dart';
 class WarehouseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // ==================== WAREHOUSE LOCATIONS ====================
+
+  Future<List<WarehouseModel>> getWarehouses() async {
+    try {
+      final snapshot = await _db.collection('warehouses').orderBy('name').get();
+      return snapshot.docs
+          .map((doc) => WarehouseModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print('Error getting warehouses: $e');
+      return [];
+    }
+  }
+
+  Stream<List<WarehouseModel>> streamWarehouses() {
+    return _db.collection('warehouses').orderBy('name').snapshots().map((snapshot) =>
+        snapshot.docs.map((doc) => WarehouseModel.fromMap(doc.data(), doc.id)).toList());
+  }
+
+  Future<void> addWarehouse(WarehouseModel warehouse) async {
+    await _db.collection('warehouses').add(warehouse.toMap());
+  }
+
+  Future<void> updateWarehouse(WarehouseModel warehouse) async {
+    await _db.collection('warehouses').doc(warehouse.id).update(warehouse.toMap());
+  }
+
+  Future<void> deleteWarehouse(String id) async {
+    await _db.collection('warehouses').doc(id).delete();
+  }
+
   // ==================== WAREHOUSE MANAGEMENT ====================
   
   Future<List<WarehouseStockModel>> getWarehouseInventory() async {

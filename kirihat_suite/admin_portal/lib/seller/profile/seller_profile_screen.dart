@@ -24,6 +24,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   final _ownerNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
+  final _cityCtrl = TextEditingController();
+  final _stateCtrl = TextEditingController();
+  final _pincodeCtrl = TextEditingController();
 
   bool _isEditing = false;
 
@@ -39,6 +42,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     _ownerNameCtrl.text = _seller.ownerName;
     _phoneCtrl.text = _seller.phone;
     _addressCtrl.text = _seller.address;
+    _cityCtrl.text = _seller.city;
+    _stateCtrl.text = _seller.state;
+    _pincodeCtrl.text = _seller.pincode;
   }
 
   Future<void> _uploadDocument(String docType) async {
@@ -84,6 +90,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         'owner_name': _ownerNameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),
+        'city': _cityCtrl.text.trim(),
+        'state': _stateCtrl.text.trim(),
+        'pincode': _pincodeCtrl.text.trim(),
       };
 
       final success = await _sellerService.updateSeller(_seller.id, updates);
@@ -93,7 +102,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             businessName: updates['business_name'],
             ownerName: updates['owner_name'],
             phone: updates['phone'],
+
             address: updates['address'],
+            city: updates['city'],
+            state: updates['state'],
+            pincode: updates['pincode'],
           );
           _isEditing = false;
           _isLoading = false;
@@ -268,6 +281,16 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           _buildTextField('Phone', _phoneCtrl, enabled: _isEditing),
           const SizedBox(height: 12),
           _buildTextField('Address', _addressCtrl, enabled: _isEditing, maxLines: 2),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildTextField('City', _cityCtrl, enabled: _isEditing)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildTextField('State', _stateCtrl, enabled: _isEditing)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildTextField('Pincode', _pincodeCtrl, enabled: _isEditing),
         ],
       ),
     );

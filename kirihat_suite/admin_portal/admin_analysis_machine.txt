@@ -1,0 +1,5 @@
+﻿WARNING|STATIC_WARNING|UNUSED_IMPORT|E:\\Developing\\new\\kirihat_suite\\admin_portal\\lib\\seller\\products\\add_product_screen.dart|1|8|17|Unused import: 'dart:typed_data'.
+INFO|LINT|PREFER_FINAL_FIELDS|E:\\Developing\\new\\kirihat_suite\\admin_portal\\lib\\seller\\products\\add_product_screen.dart|44|17|15|The private field _imageUrls could be 'final'.
+INFO|LINT|UNNECESSARY_TO_LIST_IN_SPREADS|E:\\Developing\\new\\kirihat_suite\\admin_portal\\lib\\seller\\products\\add_product_screen.dart|657|20|6|Unnecessary use of 'toList' in a spread.
+INFO|HINT|DEPRECATED_MEMBER_USE|E:\\Developing\\new\\kirihat_suite\\admin_portal\\lib\\seller\\products\\add_product_screen.dart|717|17|5|'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre.
+INFO|HINT|DEPRECATED_MEMBER_USE|E:\\Developing\\new\\kirihat_suite\\admin_portal\\lib\\seller\\products\\add_product_screen.dart|759|17|5|'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre.

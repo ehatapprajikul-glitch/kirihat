@@ -157,12 +157,20 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
+           itemBuilder: (context, index) {
              final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-             final amount = (data['total_amount'] ?? 0).toDouble();
+             final OrderId = data['order_id'] ?? "Unknown";
              final status = data['status'];
              // Only show delivered or money-related statuses
              if (status != 'Delivered' && status != 'Completed') return const SizedBox.shrink();
+
+             // Calculate seller's share
+             final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+             final myItems = items.where((item) => item['seller_id'] == widget.seller.id).toList();
+             double myTotal = 0;
+             for (var item in myItems) {
+                myTotal += ((item['selling_price'] ?? item['price'] ?? 0) * (item['quantity'] ?? 1));
+             }
 
              return Card(
                margin: const EdgeInsets.only(bottom: 12),
@@ -173,10 +181,10 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                    backgroundColor: Colors.green.shade50,
                    child: const Icon(Icons.arrow_downward, color: Colors.green),
                  ),
-                 title: Text('Order Payment #${data['order_id'] ?? "Unknown"}'),
+                 title: Text('Order Payment #$OrderId'),
                  subtitle: Text(DateFormat('MMM dd, yyyy').format((data['created_at'] as Timestamp).toDate())),
                  trailing: Text(
-                   '+ ₹$amount',
+                   '+ ₹${NumberFormat("#,##0").format(myTotal)}',
                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
                  ),
                ),

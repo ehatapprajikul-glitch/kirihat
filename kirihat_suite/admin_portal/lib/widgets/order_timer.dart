@@ -1,10 +1,9 @@
-import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 class OrderTimer extends StatefulWidget {
-  final Timestamp createdAt;
-  final String deliveryMode; // 'Standard' or 'Instant'
+  final DateTime createdAt;
+  final String deliveryMode;
   final String status;
 
   const OrderTimer({
@@ -20,18 +19,23 @@ class OrderTimer extends StatefulWidget {
 
 class _OrderTimerState extends State<OrderTimer> {
   late Timer _timer;
-  Duration _timeLeft = Duration.zero;
-  Color _timerColor = Colors.green;
-  bool _isExpired = false;
+  Duration _elapsed = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _calculateTime();
-    // Update every minute to save resources, or second for precision
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) _calculateTime();
+    _updateElapsed();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _updateElapsed();
+        });
+      }
     });
+  }
+
+  void _updateElapsed() {
+    _elapsed = DateTime.now().difference(widget.createdAt);
   }
 
   @override
@@ -40,86 +44,135 @@ class _OrderTimerState extends State<OrderTimer> {
     super.dispose();
   }
 
-  void _calculateTime() {
-    DateTime created = widget.createdAt.toDate();
-    DateTime now = DateTime.now();
-    DateTime deadline;
-
-    // 1. SET DEADLINE BASED ON MODE
-    if (widget.deliveryMode == 'Instant') {
-      deadline = created.add(const Duration(minutes: 20));
-    } else {
-      deadline = created.add(const Duration(hours: 2));
-    }
-
-    // 2. CALCULATE DIFFERENCE
-    Duration diff = deadline.difference(now);
-
-    if (diff.isNegative) {
-      setState(() {
-        _isExpired = true;
-        _timeLeft = Duration.zero;
-        _timerColor = Colors.red;
-      });
-    } else {
-      // 3. DETERMINE COLOR
-      double totalMinutes = (widget.deliveryMode == 'Instant') ? 20.0 : 120.0;
-      double remainingMinutes = diff.inMinutes.toDouble();
-      Color color = Colors.green;
-
-      if (remainingMinutes < (totalMinutes * 0.25)) {
-        color = Colors.red; // Last 25%
-      } else if (remainingMinutes < (totalMinutes * 0.5)) {
-        color = Colors.orange; // Last 50%
-      }
-
-      setState(() {
-        _isExpired = false;
-        _timeLeft = diff;
-        _timerColor = color;
-      });
-    }
-  }
-
-  String _formatDuration(Duration d) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    String twoDigitMinutes = twoDigits(d.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(d.inSeconds.remainder(60));
-    return "${twoDigits(d.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
-  }
-
   @override
   Widget build(BuildContext context) {
-    // If order is done, don't show timer
-    if (widget.status == 'Delivered' || widget.status == 'Cancelled') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-            color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
-        child: Text(widget.status,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-      );
+    // Don't show timer for completed/cancelled orders
+    if (widget.status == 'Delivered' || 
+        widget.status == 'Completed' || 
+        widget.status == 'Cancelled') {
+      return _buildCompletedInfo();
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: _timerColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: _timerColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.timer, size: 14, color: _timerColor),
-          const SizedBox(width: 4),
-          Text(
-            _isExpired ? "LATE" : _formatDuration(_timeLeft),
-            style: TextStyle(
-                color: _timerColor, fontWeight: FontWeight.bold, fontSize: 12),
+    final isUrgent = _isUrgent();
+    final timeLeft = _getTimeLeft();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.access_time,
+          size: 14,
+          color: isUrgent ? Colors.red : Colors.grey[600],
+        ),
+        const SizedBox(width: 4),
+        Text(
+          _formatElapsed(),
+          style: TextStyle(
+            fontSize: 12,
+            color: isUrgent ? Colors.red : Colors.grey[600],
+            fontWeight: isUrgent ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        if (timeLeft != null) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: isUrgent ? Colors.red.shade50 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: isUrgent ? Colors.red : Colors.orange,
+              ),
+            ),
+            child: Text(
+              timeLeft,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isUrgent ? Colors.red : Colors.orange,
+              ),
+            ),
           ),
         ],
-      ),
+      ],
     );
+  }
+
+  Widget _buildCompletedInfo() {
+    String text;
+    IconData icon;
+    Color color;
+
+    switch (widget.status) {
+      case 'Delivered':
+      case 'Completed':
+        text = 'Delivered';
+        icon = Icons.check_circle;
+        color = Colors.green;
+        break;
+      case 'Cancelled':
+        text = 'Cancelled';
+        icon = Icons.cancel;
+        color = Colors.red;
+        break;
+      default:
+        text = widget.status;
+        icon = Icons.info;
+        color = Colors.grey;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatElapsed() {
+    final hours = _elapsed.inHours;
+    final minutes = _elapsed.inMinutes.remainder(60);
+    
+    if (hours > 0) {
+      return '${hours}h ${minutes}m ago';
+    } else if (minutes > 0) {
+      return '${minutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  bool _isUrgent() {
+    if (widget.deliveryMode == 'Express') {
+      // Express delivery: 30 minutes
+      return _elapsed.inMinutes > 30;
+    } else {
+      // Standard delivery: 2 hours
+      return _elapsed.inHours > 2;
+    }
+  }
+
+  String? _getTimeLeft() {
+    final targetMinutes = widget.deliveryMode == 'Express' ? 30 : 120;
+    final remainingMinutes = targetMinutes - _elapsed.inMinutes;
+    
+    if (remainingMinutes <= 0) {
+      return 'OVERDUE';
+    }
+    
+    if (remainingMinutes <= 10) {
+      return '$remainingMinutes min left';
+    }
+    
+    return null; // Don't show time left if more than 10 minutes
   }
 }

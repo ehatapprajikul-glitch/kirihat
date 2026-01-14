@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:kirihat_core/kirihat_core.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -11,8 +13,9 @@ class RiderHomeScreen extends StatefulWidget {
 
 class _RiderHomeScreenState extends State<RiderHomeScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
-  bool _isOnline = true;
+  String _dutyStatus = 'offline'; // online, busy, offline
   String? _realRiderId;
+  RiderModel? _riderData;
 
   @override
   void initState() {
@@ -31,8 +34,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           .limit(1)
           .get();
       if (snapshot.docs.isNotEmpty) {
+        final doc = snapshot.docs.first;
         setState(() { 
-          _realRiderId = snapshot.docs.first.id;
+          _realRiderId = doc.id;
+          _riderData = RiderModel.fromFirestore(doc);
+          _dutyStatus = _riderData?.dutyStatus ?? 'offline';
           _isLoadingProfile = false;
         });
       } else {
@@ -46,10 +52,17 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const statusColors = <String, MaterialColor>{
+      'online': Colors.green,
+      'busy': Colors.orange,
+      'offline': Colors.grey,
+    };
+    final MaterialColor statusColor = statusColors[_dutyStatus] ?? Colors.grey;
+
     return Scaffold(
       backgroundColor: Colors.blue[50],
       appBar: AppBar(
-        backgroundColor: _isOnline ? Colors.blue[700] : Colors.grey[700],
+        backgroundColor: statusColor[700],
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,11 +77,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           ],
         ),
         actions: [
-          Switch(
-            value: _isOnline,
-            activeThumbColor: Colors.greenAccent,
-            onChanged: (val) => setState(() => _isOnline = val),
-          ),
+          _buildDutyStatusToggle(),
           const SizedBox(width: 10),
         ],
       ),
@@ -93,11 +102,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor:
-                        _isOnline ? Colors.green[100] : Colors.grey[200],
+                    backgroundColor: statusColor.withOpacity(0.1),
                     child: Icon(
-                        _isOnline ? Icons.power_settings_new : Icons.power_off,
-                        color: _isOnline ? Colors.green : Colors.grey,
+                        _dutyStatus == 'online' ? Icons.power_settings_new : 
+                        (_dutyStatus == 'busy' ? Icons.notifications_active : Icons.power_off),
+                        color: statusColor,
                         size: 30),
                   ),
                   const SizedBox(width: 20),
@@ -107,11 +116,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                       Text("Status",
                           style:
                               TextStyle(color: Colors.grey[600], fontSize: 14)),
-                      Text(_isOnline ? "YOU ARE ONLINE" : "YOU ARE OFFLINE",
+                      Text(_dutyStatus.toUpperCase(),
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: _isOnline ? Colors.green : Colors.grey)),
+                              color: statusColor)),
                     ],
                   ),
                 ],
@@ -247,6 +256,142 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               )),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDutyStatusToggle() {
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        if (value == 'online' && _dutyStatus != 'online') {
+          _verifyPresenceAtVendor();
+        } else if (value != _dutyStatus) {
+          _updateDutyStatus(value);
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: 'online', child: Text('Go Online')),
+        const PopupMenuItem(value: 'busy', child: Text('Mark Busy')),
+        const PopupMenuItem(value: 'offline', child: Text('Go Offline')),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _dutyStatus == 'online' ? Colors.greenAccent 
+                      : (_dutyStatus == 'busy' ? Colors.orangeAccent : Colors.grey),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _dutyStatus.toUpperCase(),
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            const Icon(Icons.arrow_drop_down, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateDutyStatus(String status) async {
+    if (_realRiderId == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('riders').doc(_realRiderId).update({
+        'duty_status': status,
+        'is_online': status == 'online',
+        'last_active': FieldValue.serverTimestamp(),
+      });
+      setState(() => _dutyStatus = status);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  void _verifyPresenceAtVendor() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Verify Presence'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: Column(
+            children: [
+              const Text('Scan the QR code at the vendor location to go online.'),
+              const SizedBox(height: 20),
+              Expanded(
+                child: MobileScanner(
+                  onDetect: (capture) {
+                    final List<Barcode> barcodes = capture.barcodes;
+                    for (final barcode in barcodes) {
+                      final rawValue = barcode.rawValue;
+                      debugPrint("Scanned QR: $rawValue");
+                      if (rawValue == null) continue;
+
+                      // Parse dynamic QR: vendorId|timestamp
+                      final parts = rawValue.split('|');
+                      final scannedVendorId = parts[0];
+                      debugPrint("Parsed VendorID: $scannedVendorId, Target: ${_riderData?.vendorId}");
+                      
+                      if (scannedVendorId == _riderData?.vendorId) {
+                        // Validate timestamp if present
+                        if (parts.length > 1) {
+                          try {
+                            final qrTime = DateTime.parse(parts[1]);
+                            final diff = DateTime.now().difference(qrTime).inMinutes.abs();
+                            debugPrint("QR Time: $qrTime, Diff: $diff mins");
+                            
+                            if (diff > 65) {
+                              debugPrint("QR Expired");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('QR Code expired! Please scan a fresh code.'), backgroundColor: Colors.red),
+                              );
+                              return;
+                            }
+                          } catch (e) {
+                            debugPrint("Error parsing QR timestamp: $e");
+                          }
+                        }
+
+                        debugPrint("Verification Successful!");
+                        Navigator.pop(context);
+                        _updateDutyStatus('online');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Verified! You are now online.'), backgroundColor: Colors.green),
+                        );
+                        return;
+                      } else {
+                        debugPrint("VendorID Mismatch!");
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Mismatch! Correct Vendor ID: ${_riderData?.vendorId?.substring(0,5)}...'),
+                            backgroundColor: Colors.orange,
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ],
       ),
     );
   }

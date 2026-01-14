@@ -4,6 +4,9 @@ class SellerProductRequest {
   final String id;
   final String sellerId;
   final Map<String, dynamic> productData;
+  final Map<String, dynamic>? specifications; // Dynamic category-specific specs
+  final List<String>? keywords; // SEO keywords
+  final String? templateVersion; // Specification template version used
   final String status; // pending, approved, rejected, revision_needed
   final DateTime submittedAt;
   final DateTime? reviewedAt;
@@ -15,6 +18,9 @@ class SellerProductRequest {
     required this.id,
     required this.sellerId,
     required this.productData,
+    this.specifications,
+    this.keywords,
+    this.templateVersion,
     this.status = 'pending',
     required this.submittedAt,
     this.reviewedAt,
@@ -28,6 +34,13 @@ class SellerProductRequest {
       id: id,
       sellerId: map['seller_id'] ?? '',
       productData: Map<String, dynamic>.from(map['product_data'] ?? {}),
+      specifications: map['specifications'] != null
+          ? Map<String, dynamic>.from(map['specifications'])
+          : null,
+      keywords: map['keywords'] != null
+          ? List<String>.from(map['keywords'])
+          : null,
+      templateVersion: map['template_version'],
       status: map['status'] ?? 'pending',
       submittedAt: (map['submitted_at'] as Timestamp).toDate(),
       reviewedAt: map['reviewed_at'] != null
@@ -43,6 +56,9 @@ class SellerProductRequest {
     return {
       'seller_id': sellerId,
       'product_data': productData,
+      'specifications': specifications,
+      'keywords': keywords,
+      'template_version': templateVersion,
       'status': status,
       'submitted_at': Timestamp.fromDate(submittedAt),
       'reviewed_at': reviewedAt != null ? Timestamp.fromDate(reviewedAt!) : null,

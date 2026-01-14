@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'vendor_riders.dart';
 import '../auth/login_screen.dart';
 import 'vendor_zones.dart';
-import 'vendor_commission.dart';
+// import 'vendor_commission.dart'; // Deleted
 import 'vendor_settlements.dart';
 import 'vendor_location_setup.dart';
 
@@ -112,16 +112,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -274,15 +265,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                         MaterialPageRoute(
                             builder: (_) => const VendorZonesScreen())),
                   ),
-                  _buildSettingsTile(
-                    icon: Icons.settings_input_component,
-                    title: "Commission Logic",
-                    subtitle: "Set Rider Pay X + Y",
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const VendorCommissionScreen())),
-                  ),
+                  // Commission Rules button removed as it's now managed by Admin
                   _buildSettingsTile(
                     icon: Icons.notifications,
                     title: "Notifications",
@@ -303,24 +286,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                             builder: (_) => const VendorSettlementsScreen())),
                   ),
 
-                  // 4. LOGOUT
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 30),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _logout,
-                        icon: const Icon(Icons.logout, color: Colors.red),
-                        label: const Text("Log Out",
-                            style: TextStyle(color: Colors.red)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.red),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
-                  ),
+
                 ],
               ),
             ),

@@ -1,0 +1,13 @@
+﻿Analyzing enhanced_product_detail.dart...
+
+warning - enhanced_product_detail.dart:15:8 - Unused import: '../widgets/floating_cart_button.dart'. Try removing the import directive. - unused_import
+warning - enhanced_product_detail.dart:37:7 - The value of the field '_quantity' isn't used. Try removing the field, or using it. - unused_field
+warning - enhanced_product_detail.dart:225:10 - The declaration '_getFirstImage' isn't referenced. Try removing the declaration of '_getFirstImage'. - unused_element
+warning - enhanced_product_detail.dart:247:11 - The value of the local variable 'name' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - enhanced_product_detail.dart:249:11 - The value of the local variable 'mrp' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - enhanced_product_detail.dart:250:11 - The value of the local variable 'unit' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - enhanced_product_detail.dart:251:11 - The value of the local variable 'description' isn't used. Try removing the variable or using it. - unused_local_variable
+   info - enhanced_product_detail.dart:37:7 - The private field _quantity could be 'final'. Try making the field 'final'. - prefer_final_fields
+   info - enhanced_product_detail.dart:313:24 - Unnecessary use of 'toList' in a spread. Try removing the invocation of 'toList'. - unnecessary_to_list_in_spreads
+
+9 issues found.

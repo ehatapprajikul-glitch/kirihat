@@ -1,10 +1,46 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/home_layout_model.dart';
 
 class HomeLayoutService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Get home layouts for a specific vendor (Single Vendor Mode)
-  Stream<List<Map<String, dynamic>>> getVendorLayouts(String vendorId) {
+  /// Get admin global layouts (vendor_id = null)
+  Stream<List<LayoutModel>> getAdminLayouts() {
+    return _firestore
+        .collection('home_layouts')
+        .where('vendor_id', isEqualTo: null)
+        .where('active', isEqualTo: true)
+        .orderBy('position')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => LayoutModel.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Get merged layouts (admin + vendor override)
+  /// Returns layouts where vendor_id is null (admin) OR matches the provided vendorId
+  Stream<List<LayoutModel>> getMergedLayouts(String vendorId) {
+    return _firestore
+        .collection('home_layouts')
+        .where('active', isEqualTo: true)
+        .orderBy('position')
+        .snapshots()
+        .map((snapshot) {
+      final layouts = snapshot.docs
+          .map((doc) => LayoutModel.fromFirestore(doc))
+          .where((layout) => 
+              layout.vendorId == null || 
+              layout.vendorId == vendorId)
+          .toList();
+      
+      // Sort by position
+      layouts.sort((a, b) => a.position.compareTo(b.position));
+      return layouts;
+    });
+  }
+
+  /// Get vendor layouts for a specific vendor (Single Vendor Mode)
+  Stream<List<LayoutModel>> getVendorLayouts(String vendorId) {
     return _firestore
         .collection('home_layouts')
         .where('vendor_id', isEqualTo: vendorId)
@@ -12,17 +48,7 @@ class HomeLayoutService {
         .orderBy('position')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          'type': data['type'] ?? 'product_row',
-          'position': data['position'] ?? 0,
-          'title': data['title'] ?? '',
-          'data': data['data'] ?? {},
-          'vendor_id': data['vendor_id'],
-        };
-      }).toList();
+      return snapshot.docs.map((doc) => LayoutModel.fromFirestore(doc)).toList();
     });
   }
 

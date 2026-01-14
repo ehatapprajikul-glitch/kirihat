@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:kirihat_core/services/notification_service.dart';
+import 'order/vendor_orders.dart';
 
 class VendorNotificationsScreen extends StatelessWidget {
   const VendorNotificationsScreen({super.key});
@@ -38,14 +40,49 @@ class VendorNotificationsScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 48),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Something went wrong",
+                      style: TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 16),
+                    if (snapshot.error.toString().contains('index'))
+                      const Text(
+                        "Looks like a missing index! Copy the link above to create it.",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_off_outlined, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.notifications_off_outlined,
+                      size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
-                  Text('No notifications yet', style: TextStyle(color: Colors.grey[600])),
+                  Text('No notifications yet',
+                      style: TextStyle(color: Colors.grey[600])),
                 ],
               ),
             );
@@ -91,9 +128,17 @@ class VendorNotificationsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  onTap: () {
+                  onTap: () async {
                     if (!isRead) NotificationService.markAsRead(doc.id);
-                    // Navigate to details if needed in future
+                    await SystemSound.play(SystemSoundType.click);
+
+                    if (data['orderId'] != null) {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => VendorOrdersScreen(
+                                  initialOrderId: data['orderId'])));
+                    }
                   },
                 ),
               );

@@ -15,6 +15,7 @@ import 'onboarding/change_location_screen.dart';
 import 'cart_screen.dart';
 import 'product/enhanced_product_detail.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
+import 'widgets/product_search_delegate.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
   final String categoryName; // "All Products" by default usually
@@ -447,7 +448,17 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
               ),
 
               // Search
-              const GlobalSearchBar(),
+              GlobalSearchBar(
+                onTap: () {
+                  showSearch(
+                    context: context,
+                    delegate: ProductSearchDelegate(
+                      products: _displayProducts, // Search within currently filtered/loaded products
+                      categoryName: _selectedType == 'All' ? null : _selectedId, // Show context in search UI
+                    ),
+                  );
+                },
+              ),
 
               // Body
               Expanded(

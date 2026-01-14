@@ -3,9 +3,18 @@ import 'package:kirihat_core/models/seller_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'add_product_screen.dart';
-import 'add_category_screen.dart';
 import 'vendor_product_detail.dart';
+
+// New inventory system imports
+import 'inventory/models/inventory_filter.dart';
+import 'inventory/services/inventory_service.dart';
+import 'inventory/widgets/inventory_dashboard.dart';
+import 'inventory/widgets/filter_bar.dart';
+import 'inventory/widgets/bulk_action_bar.dart';
+import 'inventory/widgets/product_list_item.dart';
+import 'inventory/widgets/stock_adjustment_dialog.dart';
+import 'inventory/widgets/add_category_dialog.dart';
+import 'inventory/widgets/add_product_dialog.dart';
 
 class VendorInventoryScreen extends StatefulWidget {
   const VendorInventoryScreen({super.key});
@@ -20,11 +29,19 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
   final User? user = FirebaseAuth.instance.currentUser;
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
+  
+  // New inventory system state
+  final InventoryService _inventoryService = InventoryService();
+  InventoryFilter _currentFilter = InventoryFilter.defaults();
+  bool _isSelectionMode = false;
+  final Set<String> _selectedProducts = {};
+  List<String> _categories = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadCategories(); // Load categories for filter dropdown
   }
 
   @override
@@ -102,6 +119,222 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
     }
   }
 
+  // --- NEW HELPER METHODS ---
+  
+  // Load categories for filter dropdown
+  Future<void> _loadCategories() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('categories')
+          .orderBy('name')
+          .get();
+      
+      if (mounted) {
+        setState(() {
+          _categories = snapshot.docs
+              .map((doc) => (doc.data()['name'] ?? '').toString())
+              .where((name) => name.isNotEmpty)
+              .toSet()
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+    }
+  }
+
+  // Handle stock adjustment for a single product
+  Future<void> _handleStockAdjustment(String productId, String productName, int currentStock, int adjustment) async {
+    try {
+      await _inventoryService.adjustStock(productId, adjustment, reason: 'Quick adjustment');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Stock updated for $productName')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating stock: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // Show stock adjustment dialog
+  void _showStockAdjustmentDialog(String productId, String productName, int currentStock) {
+    showDialog(
+      context: context,
+      builder: (context) => StockAdjustmentDialog(
+        productName: productName,
+        currentStock: currentStock,
+        onAdjust: (adjustment) {
+          _handleStockAdjustment(productId, productName, currentStock, adjustment);
+        },
+      ),
+    );
+  }
+
+  // Handle bulk delete
+  Future<void> _handleBulkDelete() async {
+    if (_selectedProducts.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Products'),
+        content: Text('Delete ${_selectedProducts.length} selected products?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && user != null) {
+      try {
+        await _inventoryService.bulkDelete(_selectedProducts.toList(), user!.uid);
+        
+        if (mounted) {
+          setState(() {
+            _selectedProducts.clear();
+            _isSelectionMode = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Products deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  // Handle bulk category change
+  Future<void> _handleBulkCategoryChange() async {
+    if (_selectedProducts.isEmpty || _categories.isEmpty) return;
+
+    final selectedCategory = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Category'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _categories.map((category) {
+            return ListTile(
+              title: Text(category),
+              onTap: () => Navigator.pop(context, category),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+
+    if (selectedCategory != null && user != null) {
+      try {
+        await _inventoryService.bulkUpdateCategory(
+          _selectedProducts.toList(),
+          selectedCategory,
+          user!.uid,
+        );
+        
+        if (mounted) {
+          setState(() {
+            _selectedProducts.clear();
+            _isSelectionMode = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Category updated to $selectedCategory')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  // Handle bulk stock adjustment
+  Future<void> _handleBulkStockAdjustment() async {
+    if (_selectedProducts.isEmpty) return;
+
+    final adjustment = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        int value = 0;
+        return AlertDialog(
+          title: const Text('Adjust Stock'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Adjust stock for ${_selectedProducts.length} products'),
+              const SizedBox(height: 16),
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Adjustment (+/-)',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (val) => value = int.tryParse(val) ?? 0,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, value),
+              child: const Text('Apply'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (adjustment != null && adjustment != 0 && user != null) {
+      try {
+        final adjustments = {
+          for (var id in _selectedProducts) id: adjustment
+        };
+        await _inventoryService.bulkAdjustStock(adjustments, user!.uid);
+        
+        if (mounted) {
+          setState(() {
+            _selectedProducts.clear();
+            _isSelectionMode = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Stock adjusted by $adjustment')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+
   // --- SAFE ICON BUILDER (Handles URL vs Emoji) ---
   Widget _buildCategoryIcon(String? iconData) {
     if (iconData == null || iconData.isEmpty) {
@@ -164,7 +397,7 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
           FloatingActionButton.extended(
             heroTag: "catBtn",
             onPressed: () => showDialog(
-                context: context, builder: (_) => const AddCategoryScreen()),
+                context: context, builder: (_) => const AddCategoryDialog()),
             label: const Text("New Category"),
             icon: const Icon(Icons.category),
             backgroundColor: Colors.blueGrey,
@@ -172,8 +405,8 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
           const SizedBox(height: 10),
           FloatingActionButton.extended(
             heroTag: "prodBtn",
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const AddProductScreen())),
+            onPressed: () => showDialog(
+                context: context, builder: (_) => const AddProductDialog()),
             label: const Text("New Product"),
             icon: const Icon(Icons.add),
             backgroundColor: Colors.deepOrange,
@@ -246,6 +479,35 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
   Widget _buildItemsTab() {
     return Column(
       children: [
+        // Dashboard - Show inventory metrics
+        if (user?.uid != null)
+          InventoryDashboard(vendorId: user!.uid),
+        
+        // Filter Bar
+        if (_categories.isNotEmpty)
+          FilterBar(
+            currentFilter: _currentFilter,
+            onFilterChanged: (newFilter) {
+              setState(() => _currentFilter = newFilter);
+            },
+            categories: _categories,
+          ),
+        
+        // Bulk Action Bar (shown when in selection mode)
+        if (_isSelectionMode)
+          BulkActionBar(
+            selectedCount: _selectedProducts.length,
+            onCancel: () {
+              setState(() {
+                _isSelectionMode = false;
+                _selectedProducts.clear();
+              });
+            },
+            onDelete: _handleBulkDelete,
+            onChangeCategory: _handleBulkCategoryChange,
+            onAdjustStock: _handleBulkStockAdjustment,
+          ),
+        
         Padding(
           padding: const EdgeInsets.all(10),
           child: TextField(
@@ -286,6 +548,7 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
 
               var docs = snapshot.data!.docs;
 
+              // Apply search filter
               var filtered = docs.where((d) {
                 var data = d.data() as Map<String, dynamic>;
                 String name = (data['name'] ?? "").toString().toLowerCase();
@@ -294,6 +557,9 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
                 return name.contains(_searchQuery) ||
                     category.contains(_searchQuery);
               }).toList();
+              
+              // Apply inventory filter (stock status, category, price, etc.)
+              filtered = _currentFilter.applyToList(filtered);
 
               if (filtered.isEmpty) {
                 return const Center(

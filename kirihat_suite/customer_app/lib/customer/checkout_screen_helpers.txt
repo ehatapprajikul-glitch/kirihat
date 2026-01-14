@@ -1,0 +1,13 @@
+  bool shouldShowNudge() {
+    double minFree = (_deliveryMode == 'Instant') ? _minFreeInstantDelivery : _minFreeDelivery;
+    bool enabled = (_deliveryMode == 'Instant') ? _freeInstantDeliveryEnabled : _freeDeliveryEnabled;
+
+    if (!enabled || minFree <= 0 || widget.subtotal >= minFree) {
+      return false;
+    }
+    return true;
+  }
+
+  double getNudgeAmount() {
+    return (_deliveryMode == 'Instant') ? _minFreeInstantDelivery : _minFreeDelivery;
+  }

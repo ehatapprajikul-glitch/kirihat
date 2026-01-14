@@ -1,21 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:kirihat_core/services/hero_category_service.dart';
 import 'package:kirihat_core/services/session_service.dart';
-import 'package:kirihat_core/services/banner_service.dart';
-import 'package:kirihat_core/models/banner_model.dart';
-import '../category/category_products_screen.dart';
+import 'package:kirihat_core/services/home_layout_service.dart';
+import 'package:kirihat_core/models/home_layout_model.dart';
 import '../widgets/floating_cart_button.dart';
-import '../widgets/banner_slider.dart';
 import '../onboarding/change_location_screen.dart';
 import '../cart_screen.dart';
-import '../product/enhanced_product_detail.dart';
 import '../widgets/draggable_cart_wrapper.dart';
 import '../widgets/customer_header.dart';
-import '../widgets/global_search_bar.dart';
+import 'widgets/layout_renderer.dart';
 
 class NewCustomerHomeScreen extends StatefulWidget {
   const NewCustomerHomeScreen({super.key});
@@ -25,13 +19,10 @@ class NewCustomerHomeScreen extends StatefulWidget {
 }
 
 class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
-  final HeroCategoryService _heroService = HeroCategoryService();
-  final BannerService _bannerService = BannerService();
+  final HomeLayoutService _layoutService = HomeLayoutService();
   
   String? _vendorId;
   String? _selectedArea;
-  List<Map<String, dynamic>> _heroCategories = [];
-  List<BannerModel> _banners = [];
   bool _isLoading = true;
 
   @override
@@ -45,8 +36,6 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
       final prefs = await SharedPreferences.getInstance();
       String? vendorId = prefs.getString('assigned_vendor_id');
       String? area = prefs.getString('current_area');
-      String? pincode = prefs.getString('current_pincode');
-
 
       // If no local session, try loading from Firestore
       if (vendorId == null) {
@@ -57,10 +46,8 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
           final restored = await sessionService.loadSessionFromFirestore(user.uid);
           
           if (restored) {
-            // Reload from SharedPreferences after sync
             vendorId = prefs.getString('assigned_vendor_id');
             area = prefs.getString('current_area');
-            pincode = prefs.getString('current_pincode');
             print('✅ Session restored from cloud!');
           }
         }
@@ -75,81 +62,13 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
       setState(() {
         _vendorId = vendorId;
         _selectedArea = area ?? 'Your Area';
-      });
-
-      // Fetch admin hero categories (NOT vendor-specific)
-      final heroCategories = await _heroService.getAdminHeroCategories();
-      print('✅ Loaded ${heroCategories.length} admin hero categories');
-
-      setState(() {
-        _heroCategories = heroCategories;
         _isLoading = false;
       });
 
-      // Load banners (stream)
-      _bannerService.getActiveBanners().listen((banners) {
-        if (mounted) {
-          setState(() {
-            _banners = banners;
-          });
-        }
-      });
+      print('✅ Vendor ID loaded: $vendorId');
     } catch (e) {
       print('❌ Error loading home data: $e');
       setState(() => _isLoading = false);
-    }
-  }
-
-  void _handleBannerTap(BannerModel banner) async {
-    switch (banner.hyperlinkType) {
-      case 'category':
-        // Get vendor ID from current session
-        if (_vendorId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => NewCategoryProductsScreen(
-                categoryName: banner.hyperlinkValue,
-                vendorId: _vendorId!,
-              ),
-            ),
-          );
-        }
-        break;
-
-      case 'product':
-        // Fetch product data from Firestore
-        try {
-          final productDoc = await FirebaseFirestore.instance
-              .collection('master_products')
-              .doc(banner.hyperlinkValue)
-              .get();
-
-          if (productDoc.exists && mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => EnhancedProductDetailScreen(
-                  productId: banner.hyperlinkValue,
-                  productData: productDoc.data() ?? {},
-                ),
-              ),
-            );
-          }
-        } catch (e) {
-          print('Error loading product: $e');
-        }
-        break;
-
-      case 'external':
-        final url = Uri.parse(banner.hyperlinkValue);
-        launchUrl(url, mode: LaunchMode.externalApplication);
-        break;
-
-      case 'none':
-      default:
-        // Do nothing
-        break;
     }
   }
 
@@ -179,275 +98,186 @@ class _NewCustomerHomeScreenState extends State<NewCustomerHomeScreen> {
                 },
               ),
               
-              // Search Bar
-              const GlobalSearchBar(),
-              
               // Content
               Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : CustomScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        slivers: [
-                          // Global Banner Slider - Shows even if vendor is not yet selected
-                          if (_banners.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: BannerSlider(
-                                banners: _banners,
-                                onBannerTap: _handleBannerTap,
-                              ),
-                            ),
-                          
-                          // Main Content (Hero Categories or Location Prompt)
-                          if (_vendorId == null)
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: _buildNoVendorView(),
-                            )
-                          else if (_heroCategories.isEmpty)
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: _buildEmptyView(),
-                            )
-                          else
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              sliver: SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final heroCategory = _heroCategories[index];
-                                    return _buildHeroCategorySection(heroCategory);
-                                  },
-                                  childCount: _heroCategories.length,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                child: _buildContent(),
               ),
             ],
           ),
         ),
       ),
+      floatingActionButton: const FloatingCartButton(),
     );
   }
 
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
+    if (_vendorId == null) {
+      return _buildLocationPrompt();
+    }
 
-  Widget _buildSearchBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.search, color: Colors.grey),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Search bar',
-                border: InputBorder.none,
-                hintStyle: TextStyle(color: Colors.grey),
-              ),
-              onTap: () {
-                // TODO: Navigate to search screen
-              },
-              readOnly: true,
-            ),
-          ),
-          const Icon(Icons.mic, color: Colors.grey),
-        ],
-      ),
-    );
-  }
+    // Dynamic layout from Firestore
+    return StreamBuilder<List<LayoutModel>>(
+      stream: _layoutService.getMergedLayouts(_vendorId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
+        if (snapshot.hasError) {
+          print('❌ Error loading layouts: ${snapshot.error}');
+          return _buildErrorState();
+        }
 
+        final layouts = snapshot.data ?? [];
 
-  Widget _buildHeroCategorySection(Map<String, dynamic> heroCategory) {
-    final String name = heroCategory['name'] ?? 'Unnamed';
-    final List<String> categoryIds = List<String>.from(heroCategory['category_ids'] ?? []);
+        // If no layouts, show empty state
+        if (layouts.isEmpty) {
+          return _buildEmptyLayoutState();
+        }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Hero Category Title
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Text(
-            name,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-
-        // Categories Grid
-        FutureBuilder<List<Map<String, dynamic>>>(
-          future: _heroService.getCategoriesWithInventory(
-            vendorId: _vendorId!,
-            categoryIds: categoryIds,
-          ),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(),
-                ),
+        // Render layouts dynamically
+        return RefreshIndicator(
+          onRefresh: _loadData,
+          child: ListView.builder(
+            itemCount: layouts.length,
+            itemBuilder: (context, index) {
+              return LayoutRenderer(
+                layout: layouts[index],
+                vendorId: _vendorId!,
               );
-            }
-
-            final categories = snapshot.data!;
-
-            if (categories.isEmpty) {
-              return const SizedBox.shrink();
-            }
-
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.85,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                return _buildCategoryCard(categories[index]);
-              },
-            );
-          },
-        ),
-
-        const SizedBox(height: 32),
-      ],
-    );
-  }
-
-  Widget _buildCategoryCard(Map<String, dynamic> category) {
-    final String name = category['name'] ?? 'Unnamed';
-    final String? iconUrl = category['icon'];
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => NewCategoryProductsScreen(
-              categoryName: name,
-              vendorId: _vendorId!,
-            ),
+            },
           ),
         );
       },
-      child: Column(
-        children: [
-          // Image Container
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-                image: iconUrl != null && iconUrl.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(iconUrl),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
+    );
+  }
+
+  Widget _buildLocationPrompt() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.location_off,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Select Your Location',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-              child: iconUrl == null || iconUrl.isEmpty
-                  ? const Center(
-                      child: Icon(
-                        Icons.category,
-                        size: 40,
-                        color: Colors.grey,
-                      ),
-                    )
-                  : null,
             ),
-          ),
-          const SizedBox(height: 8),
-          // Category Name
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 8),
+            const Text(
+              'Choose your delivery area to see available products',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChangeLocationScreen()),
+                );
+                _loadData();
+              },
+              icon: const Icon(Icons.location_on),
+              label: const Text('Choose Location'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9759),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildNoVendorView() {
+  Widget _buildErrorState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.location_off, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          const Text(
-            'No vendor available',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Please select your delivery area',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () async {
-              // Navigate to location selection
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChangeLocationScreen()),
-              );
-              // Reload data after returning
-              _loadData();
-            },
-            icon: const Icon(Icons.location_on),
-            label: const Text('Select Area'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D9759),
-              foregroundColor: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 60,
+              color: Colors.red,
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load home screen',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please check your connection and try again',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9759),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyView() {
+  Widget _buildEmptyLayoutState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.category, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          const Text(
-            'No categories available',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'The vendor hasn\'t set up their catalog yet',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.dashboard_customize_outlined,
+              size: 60,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Home layout not configured',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'The admin hasn\'t set up the home screen layout yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }
-
 }

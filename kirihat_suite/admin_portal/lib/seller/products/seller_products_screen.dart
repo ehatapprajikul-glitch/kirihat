@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/services/seller_service.dart';
 import 'package:kirihat_core/models/seller_product_request.dart';
-import 'add_product_screen.dart';
+import 'enhanced_add_product_screen.dart';
+import 'widgets/draft_manager_widget.dart';
 
 class SellerProductsScreen extends StatefulWidget {
   final SellerModel seller;
@@ -58,7 +59,7 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => AddProductScreen(seller: widget.seller),
+                            builder: (context) => EnhancedAddProductScreen(seller: widget.seller),
                           ),
                         );
                       },
@@ -84,7 +85,7 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
                   tabs: const [
                     Tab(text: 'My Products'),
                     Tab(text: 'Requests'),
-                    Tab(text: 'Quick Add'),
+                    Tab(text: 'Drafts'),
                   ],
                 ),
               ],
@@ -98,7 +99,7 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
               children: [
                 _buildMyProductsTab(),
                 _buildRequestsTab(),
-                _buildQuickAddTab(),
+                DraftManagerWidget(seller: widget.seller),
               ],
             ),
           ),
@@ -141,7 +142,7 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
                      Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AddProductScreen(seller: widget.seller),
+                        builder: (context) => EnhancedAddProductScreen(seller: widget.seller),
                       ),
                     );
                   },
@@ -239,6 +240,26 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              // Edit Button
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 20, color: Colors.blue),
+                                tooltip: "Edit Product",
+                                onPressed: () {
+                                     Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => EnhancedAddProductScreen(
+                                              seller: widget.seller,
+                                              productToEdit: {
+                                                'id': snapshot.data!.docs[index].id,
+                                                ...data,
+                                              },
+                                          ),
+                                        ),
+                                      );
+                                },
+                              )
                             ],
                           ),
                         ],
@@ -258,6 +279,31 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
     return StreamBuilder<List<SellerProductRequest>>(
       stream: SellerService().getSellerProductRequests(widget.seller.id),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                   const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                   const SizedBox(height: 16),
+                   Text('Error loading requests: ${snapshot.error}'),
+                   if (snapshot.error.toString().contains('index'))
+                     const Padding(
+                       padding: EdgeInsets.only(top: 8.0),
+                       child: Text(
+                         'A required database index is missing. Please check the console for the index creation link.',
+                         textAlign: TextAlign.center,
+                         style: TextStyle(color: Colors.red),
+                       ),
+                     ),
+                ],
+              ),
+            ),
+          );
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: Color(0xFF0D9759)));
         }
@@ -385,6 +431,35 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
                             const SizedBox(height: 4),
                             Text(request.adminNotes!),
                           ],
+                        ),
+                      ),
+                    ),
+                  
+                  if (request.status == 'rejected' || request.status == 'revision_needed')
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EnhancedAddProductScreen(
+                                  seller: widget.seller,
+                                  productToEdit: request.productData,
+                                  requestToResubmitId: request.id,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.edit_note),
+                          label: const Text('Edit & Resubmit Request'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: statusColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                         ),
                       ),
                     ),

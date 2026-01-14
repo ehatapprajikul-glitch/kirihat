@@ -280,7 +280,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                           .get(),
                       builder: (context, vendorDoc) {
                         if (vendorDoc.hasData && vendorDoc.data!.exists) {
-                          return Text((vendorDoc.data!.data() as Map<String, dynamic>)['name'] ?? 'N/A');
+                          return Text((vendorDoc.data!.data() as Map<String, dynamic>)['business_name'] ?? (vendorDoc.data!.data() as Map<String, dynamic>)['shop_name'] ?? 'N/A');
                         }
                         return const Text('N/A');
                       },
@@ -370,7 +370,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                             backgroundColor: Colors.blue,
                             child: Icon(Icons.store, color: Colors.white),
                           ),
-                          title: Text(data['name'] ?? 'Unknown'),
+                          title: Text(data['business_name'] ?? data['shop_name'] ?? 'Unknown'),
                           subtitle: Text('$orderCount orders completed'),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,

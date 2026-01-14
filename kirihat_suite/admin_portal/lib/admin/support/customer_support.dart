@@ -729,7 +729,7 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
     if (query.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter email, phone, or order ID'),
+          content: Text('Please enter phone, email, or order ID'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -737,36 +737,11 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
     }
 
     try {
-      // Check if query looks like an order ID (contains ORD or ADMIN)
-      if (query.toUpperCase().contains('ORD') || query.toUpperCase().contains('ADMIN')) {
-        // Search for order
-        var orders = await FirebaseFirestore.instance
-            .collection('orders')
-            .where('order_id', isEqualTo: query.toUpperCase())
-            .limit(1)
-            .get();
+      // 1. Try Order Search first (since ID is usually specific)
+      bool orderFound = await _searchOrder(query);
+      if (orderFound) return;
 
-        if (orders.docs.isNotEmpty) {
-          var orderData = orders.docs.first.data();
-          var customerId = orderData['customer_id'];
-          
-          // Fetch customer data
-          var customerDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(customerId)
-              .get();
-          
-          if (customerDoc.exists) {
-            var customerData = customerDoc.data()!;
-            _showOrderDetailsDialog(orders.docs.first.id, orderData, customerData['name'] ?? 'Customer');
-          } else {
-            _showOrderDetailsDialog(orders.docs.first.id, orderData, 'Unknown Customer');
-          }
-          return;
-        }
-      }
-
-      // Otherwise search for customer by email/phone as before
+      // 2. Try Customer Search
       await _searchCustomer(query);
       
     } catch (e) {
@@ -778,74 +753,131 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
     }
   }
 
+  Future<bool> _searchOrder(String query) async {
+      try {
+        // Try searching by order_id exact match
+        // Also try searching by trimming or case insensitive
+        var orders = await FirebaseFirestore.instance
+            .collection('orders')
+            .where('order_id', isEqualTo: query.toUpperCase())
+            .limit(1)
+            .get();
+
+        if (orders.docs.isNotEmpty) {
+          var orderData = orders.docs.first.data();
+          var customerId = orderData['customer_id'];
+          
+          // Fetch customer data
+          String customerName = orderData['customer_name'] ?? 'Unknown Customer';
+          if (customerId != null) {
+              var customerDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(customerId)
+                  .get();
+              if (customerDoc.exists) {
+                customerName = customerDoc.data()?['name'] ?? customerName;
+              }
+          }
+          
+          if (mounted) {
+             _showOrderDetailsDialog(orders.docs.first.id, orderData, customerName);
+          }
+          return true;
+        }
+        
+        // Try exact match on doc ID
+        var orderDoc = await FirebaseFirestore.instance.collection('orders').doc(query).get();
+        if (orderDoc.exists) {
+             var orderData = orderDoc.data()!;
+             var customerId = orderData['customer_id'];
+             String customerName = orderData['customer_name'] ?? 'Unknown Customer';
+             
+             if (customerId != null) {
+                  var cDoc = await FirebaseFirestore.instance.collection('users').doc(customerId).get();
+                  if (cDoc.exists) customerName = cDoc.data()?['name'] ?? customerName;
+             }
+
+             if (mounted) {
+                 _showOrderDetailsDialog(orderDoc.id, orderData, customerName);
+             }
+             return true;
+        }
+
+        return false;
+      } catch (e) {
+        debugPrint('Order search error: $e');
+        return false;
+      }
+  }
+
   Future<void> _searchCustomer(String query) async {
-    if (query.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter email or phone number'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
     try {
-      // Search by email first
-      var usersByEmail = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isEqualTo: query)
-          .limit(1)
-          .get();
+      // Clean query
+      String rawQuery = query.trim();
+      
+      // 1. Search by Email
+      if (rawQuery.contains('@')) {
+        var usersByEmail = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: rawQuery)
+            .limit(1)
+            .get();
 
-      if (usersByEmail.docs.isNotEmpty) {
-        var userData = usersByEmail.docs.first.data();
-        _showCustomerDashboard(
-          context,
-          usersByEmail.docs.first.id,
-          userData['name'] ?? 'Customer',
-        );
-        return;
+        if (usersByEmail.docs.isNotEmpty) {
+          var userData = usersByEmail.docs.first.data();
+          if (mounted) {
+              _showCustomerDashboard(
+                context,
+                usersByEmail.docs.first.id,
+                userData['name'] ?? 'Customer',
+              );
+          }
+          return;
+        }
       }
 
-      // Search by phone
-      var usersByPhone = await FirebaseFirestore.instance
-          .collection('users')
-          .where('phone', isEqualTo: query)
-          .limit(1)
-          .get();
+      // 2. Search by Phone (Robust)
+      // If it looks like a phone number (mostly digits/plus)
+      if (RegExp(r'^[0-9+]+$').hasMatch(rawQuery)) {
+          // Generate variants
+          List<String> variants = [rawQuery]; // Exact input
+          
+          if (rawQuery.startsWith('+91')) {
+              // Try without prefix
+              variants.add(rawQuery.substring(3));
+          } else if (rawQuery.length == 10) {
+              // Try with prefix
+              variants.add('+91$rawQuery');
+          }
 
-      if (usersByPhone.docs.isNotEmpty) {
-        var userData = usersByPhone.docs.first.data();
-        _showCustomerDashboard(
-          context,
-          usersByPhone.docs.first.id,
-          userData['name'] ?? 'Customer',
-        );
-        return;
-      }
+          for (String phone in variants) {
+              // Check 'phone' field
+              var q1 = await FirebaseFirestore.instance.collection('users').where('phone', isEqualTo: phone).limit(1).get();
+              if (q1.docs.isNotEmpty) {
+                  var userData = q1.docs.first.data();
+                  if (mounted) {
+                    _showCustomerDashboard(context, q1.docs.first.id, userData['name'] ?? 'Customer');
+                  }
+                  return;
+              }
 
-      // Try phoneNumber field as fallback
-      var usersByPhoneNumber = await FirebaseFirestore.instance
-          .collection('users')
-          .where('phoneNumber', isEqualTo: query)
-          .limit(1)
-          .get();
-
-      if (usersByPhoneNumber.docs.isNotEmpty) {
-        var userData = usersByPhoneNumber.docs.first.data();
-        _showCustomerDashboard(
-          context,
-          usersByPhoneNumber.docs.first.id,
-          userData['name'] ?? 'Customer',
-        );
-        return;
+              // Check 'phoneNumber' field
+              var q2 = await FirebaseFirestore.instance.collection('users').where('phoneNumber', isEqualTo: phone).limit(1).get();
+              if (q2.docs.isNotEmpty) {
+                  var userData = q2.docs.first.data();
+                  if (mounted) {
+                    _showCustomerDashboard(context, q2.docs.first.id, userData['name'] ?? 'Customer');
+                  }
+                  return;
+              }
+          }
       }
 
       // No customer found
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No customer found with this email or phone'),
+            content: Text('No order or customer found with this search'),
             backgroundColor: Colors.red,
           ),
         );

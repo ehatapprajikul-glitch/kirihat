@@ -16,12 +16,24 @@ import 'customer/customer_dashboard.dart';
 
 // IMPORT THE GATES
 import 'customer/onboarding/pincode_gate.dart';
+import 'package:kirihat_core/services/product_display_settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Check for preview mode (Web URL parameters)
+  // This allows the Admin Portal to open the app with ?mode=preview
+  final uri = Uri.base;
+  final isPreview = uri.queryParameters['mode'] == 'preview';
+  
+  if (isPreview) {
+    debugPrint('🚀 Initializing App in PREVIEW MODE');
+    await ProductDisplaySettingsService().initialize(isPreview: true);
+  }
+
   runApp(const MyApp());
 }
 

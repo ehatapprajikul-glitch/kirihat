@@ -4,8 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'product/enhanced_product_detail.dart';
 import 'address_screen.dart';
-import '../widgets/order_timer.dart'; // Import Timer Widget
+import '../widgets/order_timer.dart';
 import 'package:kirihat_core/services/notification_service.dart';
+import '../services/invoice_service.dart';
+import 'widgets/unique_order_status_tracker.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   final DocumentSnapshot orderDoc;
@@ -196,43 +198,93 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     }
   }
 
-  // --- 4. RETURN LOGIC ---
-  void _showReturnDialog() {
-    Timestamp? deliveredAt =
-        (widget.orderDoc.data() as Map<String, dynamic>)['delivered_at'];
-    if (deliveredAt != null) {
-      final diff = DateTime.now().difference(deliveredAt.toDate()).inDays;
-      if (diff > 2) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Return period (2 days) has expired.")));
-        }
-        return;
-      }
+  Future<Map<String, dynamic>> _fetchItemPolicy(Map<String, dynamic> item, String? globalVendorId) async {
+    debugPrint('🔍 === FETCHING ITEM POLICY ===');
+    debugPrint('🔍 Item data: $item');
+    
+    // 1. Check snapshot (Order Item has data)
+    if (item.containsKey('return_policy_type') && item['return_policy_type'] != null) {
+      debugPrint('✅ Found policy in order snapshot');
+      return {
+        'return_policy_type': item['return_policy_type'],
+        'return_window_days': item['return_window_days'] ?? 0
+      };
     }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Return Product"),
-        content: const Text("Do you want to return this product?"),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context), child: const Text("No")),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await widget.orderDoc.reference
-                  .update({'status': 'Return Requested'});
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Return Request Raised!")));
-              }
-            },
-            child: const Text("Yes, Return"),
-          )
-        ],
-      ),
+    // 2. Fallback: Fetch from Vendor Inventory
+    String? vendorId = item['seller_id'] ?? globalVendorId;
+    String? productId = item['product_id'] ?? item['id'];
+
+    debugPrint('🔍 Vendor ID: $vendorId');
+    debugPrint('🔍 Product ID: $productId');
+
+    if (vendorId == null || productId == null) {
+      debugPrint('⚠️ Missing vendor or product ID');
+      return {'return_policy_type': 'No Return', 'return_window_days': 0};
+    }
+
+    try {
+      debugPrint('🔍 Querying vendor_inventory...');
+      final query = await FirebaseFirestore.instance
+          .collection('vendor_inventory')
+          .where('vendor_id', isEqualTo: vendorId)
+          .where('product_id', isEqualTo: productId)
+          .limit(1)
+          .get();
+
+      debugPrint('🔍 Query results: ${query.docs.length} documents');
+
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        debugPrint('✅ Found policy in vendor_inventory: $data');
+        return {
+          'return_policy_type': data['return_policy_type'] ?? 'No Return',
+          'return_window_days': data['return_window_days'] ?? 0
+        };
+      } else {
+        debugPrint('⚠️ No matching document found in vendor_inventory');
+      }
+    } catch (e) {
+      debugPrint("❌ Error fetching policy fallback: $e");
+    }
+
+    return {'return_policy_type': 'No Return', 'return_window_days': 0};
+  }
+
+  // Helper method to check if product ID is valid
+  bool _isValidProductId(dynamic productId) {
+    if (productId == null) return false;
+    final idString = productId.toString().trim();
+    return idString.isNotEmpty && idString.toLowerCase() != 'null';
+  }
+
+  // Helper to navigate to product details with proper validation
+  void _navigateToProduct(Map<String, dynamic> item) {
+    // Try multiple possible ID fields
+    final productId = item['product_id'] ?? item['id'];
+    
+    if (!_isValidProductId(productId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Product details are not available for this item"),
+          duration: Duration(seconds: 2),
+        )
+      );
+      return;
+    }
+
+    // Ensure we have the minimum required data
+    final productData = Map<String, dynamic>.from(item);
+    
+    // Navigate to product details
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EnhancedProductDetailScreen(
+          productId: productId.toString(),
+          productData: productData,
+        )
+      )
     );
   }
 
@@ -247,25 +299,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ? DateFormat('dd MMM yyyy, hh:mm a').format(ts.toDate())
         : "Unknown";
 
-    // --- FIX: DISPLAY ID LOGIC ---
-    // If 'order_id' exists in DB, use it.
-    // If not, generate a KIRI- ID from the document ID.
+    // --- DISPLAY ID LOGIC ---
     String displayOrderId;
     if (data['order_id'] != null && data['order_id'].toString().isNotEmpty) {
       displayOrderId = data['order_id'].toString();
     } else {
-      // Fallback: Create "KIRI-ABC123" using the first 6 chars of Doc ID
       displayOrderId =
           "KIRI-${widget.orderDoc.id.substring(0, 6).toUpperCase()}";
     }
-    // -----------------------------
 
     // --- SAFE ADDRESS EXTRACTION ---
     Map<String, dynamic> address = data['delivery_address'] ?? {};
     String shippingName =
         address['name'] ?? address['guardian_name'] ?? "Customer";
 
-    // Filter null/empty/"null"
     List<String> validParts = [
       address['house_no']?.toString(),
       address['street']?.toString(),
@@ -292,9 +339,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     if (shippingFull.isEmpty) {
       shippingFull = "Address details unavailable";
     }
-    // ------------------------------------------
 
-    // Delivery PIN & Mode
     String deliveryPin = data['delivery_pin']?.toString() ?? "1234";
     String deliveryMode = data['delivery_mode'] ?? 'Standard';
 
@@ -410,7 +455,14 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ORDER STATUS CARD
+                  // ORDER STATUS CARD - Removed, replaced with tracker below
+
+                  // UNIQUE ORDER STATUS TRACKER
+                  UniqueOrderStatusTracker(orderData: data),
+                  
+                  const SizedBox(height: 16),
+
+                  // ORDER INFO CARD WITH TIMER
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -424,16 +476,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Order #$displayOrderId", // UPDATED HERE
+                                Text("Order #$displayOrderId",
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold)),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: OrderTimer(
-                                    createdAt: ts ?? Timestamp.now(),
-                                    deliveryMode: deliveryMode,
-                                    status: status,
-                                  ),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today,
+                                        size: 14, color: Colors.grey),
+                                    const SizedBox(width: 6),
+                                    Text("Placed: $dateStr",
+                                        style: const TextStyle(
+                                            color: Colors.grey, fontSize: 12)),
+                                  ],
                                 ),
                               ],
                             ),
@@ -446,19 +502,21 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 12),
                         const Divider(),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today,
-                                size: 16, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text("Placed on: $dateStr",
-                                style: const TextStyle(color: Colors.grey)),
-                          ],
-                        ),
+                        const SizedBox(height: 8),
+                        
+                        // DELIVERY COUNTDOWN TIMER
+                        if (status != 'Delivered' && status != 'Cancelled')
+                          OrderTimer(
+                            createdAt: ts ?? Timestamp.now(),
+                            deliveryMode: deliveryMode,
+                            status: status,
+                          ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 16),
 
                   // ITEMS LIST
@@ -472,56 +530,195 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       var item = items[index];
+                      final productId = item['product_id'] ?? item['id'];
+                      final hasValidProductId = _isValidProductId(productId);
+                      
                       return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => EnhancedProductDetailScreen(
-                                      productData: item,
-                                      productId: "unknown")));
-                        },
+                        onTap: hasValidProductId ? () => _navigateToProduct(item) : null,
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8)),
-                          child: Row(
+                          child: Column(
                             children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(4),
-                                  image: (item['imageUrl'] != null)
-                                      ? DecorationImage(
-                                          image: NetworkImage(item['imageUrl']),
-                                          fit: BoxFit.cover)
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(item['name'] ?? "Product",
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w600)),
-                                    Text("x${item['quantity']}",
-                                        style: const TextStyle(
-                                            color: Colors.grey)),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(4),
+                                      image: (item['imageUrl'] != null)
+                                          ? DecorationImage(
+                                              image: NetworkImage(item['imageUrl']),
+                                              fit: BoxFit.cover)
+                                          : null,
+                                    ),
+                                    child: (item['imageUrl'] == null)
+                                        ? const Icon(Icons.image, color: Colors.grey)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(item['name'] ?? "Product",
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w600)),
+                                        Text("x${item['quantity']}",
+                                            style: const TextStyle(
+                                                color: Colors.grey)),
+                                      ],
+                                    ),
+                                  ),
+                                  Text("₹${item['price'] * item['quantity']}",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  if (hasValidProductId) ...[
+                                    const SizedBox(width: 10),
+                                    const Icon(Icons.arrow_forward_ios,
+                                        size: 12, color: Colors.grey)
                                   ],
-                                ),
+                                ],
                               ),
-                              Text("₹${item['price'] * item['quantity']}",
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 10),
-                              const Icon(Icons.arrow_forward_ios,
-                                  size: 12, color: Colors.grey)
+                              // Return/Replace Action Button
+                              if (status == 'Delivered') 
+                                FutureBuilder<Map<String, dynamic>>(
+                                  future: _fetchItemPolicy(item, data['vendor_id']),
+                                  builder: (context, policySnapshot) {
+                                    if (!policySnapshot.hasData) {
+                                      debugPrint('⏳ Waiting for policy data...');
+                                      return const Padding(
+                                        padding: EdgeInsets.only(top: 12),
+                                        child: Center(
+                                          child: SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    
+                                    final policy = policySnapshot.data!;
+                                    String policyType = policy['return_policy_type'] ?? 'No Return';
+                                    int windowDays = policy['return_window_days'] ?? 0;
+                                    
+                                    debugPrint('🔍 Policy Type: $policyType');
+                                    debugPrint('🔍 Window Days: $windowDays');
+                                    
+                                    if (policyType == 'No Return') {
+                                      debugPrint('⚠️ No return policy - hiding button');
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    // Calculate Expiry - Use delivered_at as primary
+                                    DateTime? deliveredAt;
+                                    
+                                    // Use delivered_at as the primary field
+                                    if (data['delivered_at'] != null) {
+                                      deliveredAt = (data['delivered_at'] as Timestamp).toDate();
+                                      debugPrint('✅ Using delivered_at: $deliveredAt');
+                                    } else if (data['delivery_time'] != null) {
+                                      deliveredAt = (data['delivery_time'] as Timestamp).toDate();
+                                      debugPrint('⚠️ Fallback to delivery_time: $deliveredAt');
+                                    } else if (data['updated_at'] != null && status == 'Delivered') {
+                                      // Last fallback to updated_at if status is Delivered
+                                      deliveredAt = (data['updated_at'] as Timestamp).toDate();
+                                      debugPrint('⚠️ Using updated_at as fallback: $deliveredAt');
+                                    }
+                                    
+                                    if (deliveredAt == null) {
+                                      debugPrint('⚠️ No delivery timestamp found - showing button anyway');
+                                      // Show button anyway if no timestamp (shouldn't block returns)
+                                      String btnLabel = policyType == 'Replace Only' ? 'Replace' : 'Return / Replace';
+                                      
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 12),
+                                        child: SizedBox(
+                                          width: double.infinity,
+                                          child: OutlinedButton.icon(
+                                            icon: const Icon(Icons.assignment_return, size: 16),
+                                            label: Text(btnLabel),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(0xFF0D9759),
+                                              side: const BorderSide(color: Color(0xFF0D9759)),
+                                            ),
+                                            onPressed: () {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text("Return/Replace Request Initiated"))
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    final expiryDate = deliveredAt.add(Duration(days: windowDays));
+                                    final now = DateTime.now();
+                                    final daysLeft = expiryDate.difference(now).inDays;
+                                    
+                                    debugPrint('🔍 Delivered at: $deliveredAt');
+                                    debugPrint('🔍 Expiry date: $expiryDate');
+                                    debugPrint('🔍 Days left: $daysLeft');
+                                    
+                                    if (now.isAfter(expiryDate)) {
+                                      debugPrint('⚠️ Return window expired');
+                                      return const Padding(
+                                        padding: EdgeInsets.only(top: 12),
+                                        child: Text(
+                                          'Return/Replace window expired',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      );
+                                    }
+
+                                    String btnLabel = policyType == 'Replace Only' ? 'Replace' : 'Return / Replace';
+                                    
+                                    debugPrint('✅ Showing return button: $btnLabel');
+                                    
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Column(
+                                        children: [
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: OutlinedButton.icon(
+                                              icon: const Icon(Icons.assignment_return, size: 16),
+                                              label: Text(btnLabel),
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: const Color(0xFF0D9759),
+                                                side: const BorderSide(color: Color(0xFF0D9759)),
+                                              ),
+                                              onPressed: () {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text("Return/Replace Request Initiated"))
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '$daysLeft day${daysLeft != 1 ? 's' : ''} left to return/replace',
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                ),
                             ],
                           ),
                         ),
@@ -547,9 +744,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           "Change Address",
                           Colors.blue,
                           () => _changeAddress(address)),
-                      const SizedBox(height: 10),
-                      _buildActionButton(Icons.headset_mic, "Request Callback",
-                          Colors.orange, _requestCallback),
                     ],
 
                     // SHIPPED ACTIONS
@@ -565,20 +759,26 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
                     // DELIVERED ACTIONS
                     if (status == 'Delivered') ...[
-                      _buildActionButton(Icons.undo, "Return Product",
-                          Colors.orange, _showReturnDialog),
-                      const SizedBox(height: 10),
                       _buildActionButton(
                           Icons.download, "Download Invoice", Colors.black, () {
+                        final invoiceData = Map<String, dynamic>.from(data);
+                        // Prioritize the display order ID, fallback to document ID
+                        invoiceData['order_id'] = data['order_id'] ?? widget.orderDoc.id;
+                        InvoiceService.generateInvoice(invoiceData);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content:
-                                      Text("Invoice download started...")));
+                                      Text("Opening Invoice...")));
                         }
                       }),
                     ],
                   ],
+
+                  // PERMANENT ACTIONS (For all statuses including Cancelled)
+                  const SizedBox(height: 10),
+                  _buildActionButton(Icons.headset_mic, "Request Callback",
+                      Colors.orange, _requestCallback),
 
                   const SizedBox(height: 20),
 
@@ -614,6 +814,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                 const Text("Tax (GST)"),
                                 Text(
                                     "₹${(data['tax_amount'] ?? 0).toStringAsFixed(2)}")
+                              ]),
+                        if ((data['low_cart_fee'] ?? 0) > 0)
+                          Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text("Small Order Fee"),
+                                Text("₹${data['low_cart_fee']}")
+                              ]),
+                        if ((data['platform_fee'] ?? 0) > 0)
+                          Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text("Platform Fee"),
+                                Text("₹${data['platform_fee']}")
                               ]),
                         const Divider(),
                         Row(

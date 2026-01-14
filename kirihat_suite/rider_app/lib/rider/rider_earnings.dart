@@ -14,6 +14,7 @@ class RiderEarningsScreen extends StatefulWidget {
 class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   String? _realRiderId;
+  Stream<QuerySnapshot>? _ordersStream;
   bool _isLoading = true;
 
   @override
@@ -38,6 +39,11 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
         if (snapshot.docs.isNotEmpty) {
           setState(() {
             _realRiderId = snapshot.docs.first.id;
+            _ordersStream = FirebaseFirestore.instance
+                .collection('orders')
+                .where('rider_id', isEqualTo: _realRiderId)
+                .where('status', isEqualTo: 'Delivered')
+                .snapshots();
             _isLoading = false;
           });
         } else {
@@ -67,11 +73,7 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
         elevation: 0,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('orders')
-            .where('rider_id', isEqualTo: _realRiderId)
-            .where('status', isEqualTo: 'Delivered')
-            .snapshots(),
+        stream: _ordersStream,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -129,10 +131,12 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
             }
           }
 
-          // Sort docs for Recent List (Newest First)
+          // Sort docs for Recent List (Newest First) - Safety backup
           docs.sort((a, b) {
-            Timestamp t1 = (a.data() as Map)['delivered_at'] ?? Timestamp.now();
-            Timestamp t2 = (b.data() as Map)['delivered_at'] ?? Timestamp.now();
+            var dataA = a.data() as Map<String, dynamic>;
+            var dataB = b.data() as Map<String, dynamic>;
+            Timestamp t1 = dataA['delivered_at'] ?? dataA['created_at'] ?? Timestamp.now();
+            Timestamp t2 = dataB['delivered_at'] ?? dataB['created_at'] ?? Timestamp.now();
             return t2.compareTo(t1);
           });
 

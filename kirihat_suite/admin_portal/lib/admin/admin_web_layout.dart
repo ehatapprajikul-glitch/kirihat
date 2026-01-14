@@ -7,19 +7,21 @@ import 'dashboard/customer_monitor.dart';
 import 'dashboard/vendor_monitor.dart';
 import 'dashboard/rider_monitor.dart';
 import 'coupons/coupon_management.dart';
+import 'fees/vendor_fee_settings.dart'; 
 import 'commission/commission_settings.dart';
 import 'notifications/notification_composer.dart';
 import 'support/customer_support.dart';
 import 'monitoring/data_monitoring.dart';
 import 'analytics/analytics_reports.dart';
 import 'settings/platform_settings.dart';
+import 'settings/product_display_settings.dart';
 import 'catalog/master_products_screen.dart';
-import 'catalog/product_requests_screen.dart';
 import 'catalog/product_requests_screen.dart';
 import 'catalog/category_management_screen.dart';
 import 'catalog/hero_category_management.dart';
 import 'catalog/hero_banner_management.dart';
 import 'catalog/subcategory_management.dart';
+import 'catalog/hierarchical_category_management.dart';
 import 'catalog/unified_collection_management.dart';
 import 'riders/rider_requests_screen.dart';
 import 'sellers/seller_management_screen.dart';
@@ -27,7 +29,12 @@ import 'logistics/incoming_shipments_screen.dart';
 import 'warehouse/warehouse_dashboard.dart';
 import 'warehouse/warehouse_inventory_screen.dart';
 import 'warehouse/receive_shipments_screen.dart';
+import 'warehouse/warehouse_setup_screen.dart'; // New Import
 import 'warehouse/vendor_requests_management_screen.dart';
+import 'catalog/category_specification_manager.dart';
+import 'catalog/price_override_requests_screen.dart';
+import 'setup/system_initialization_screen.dart';
+import 'layout_manager/home_layout_manager_screen.dart';
 
 class AdminWebLayout extends StatefulWidget {
   const AdminWebLayout({super.key});
@@ -63,6 +70,8 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
         return const RiderMonitor();
       case 'coupons':
         return const CouponManagement();
+      case 'vendor_fees':
+        return const VendorFeeSettings();
       case 'commission':
         return const CommissionSettings();
       case 'notifications':
@@ -75,6 +84,8 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
         return const AnalyticsReports();
       case 'settings':
         return const PlatformSettings();
+      case 'product_display_settings':
+        return const ProductDisplaySettings();
       case 'master_products':
         return const MasterProductsScreen();
       case 'product_requests':
@@ -89,18 +100,30 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
         return const CategoryManagementScreen();
       case 'subcategories':
         return const SubcategoryManagementScreen();
+      case 'hierarchical_categories':
+        return const HierarchicalCategoryManagement();
       case 'rider_requests':
         return const RiderRequestsScreen();
       case 'incoming_shipments':
         return const IncomingShipmentsScreen();
       case 'warehouse_dashboard':
-        return const WarehouseDashboard();
+        return WarehouseDashboard(onNavigate: (page) => setState(() => _selectedPage = page));
+      case 'warehouse_setup':
+         return const WarehouseSetupScreen();
       case 'warehouse_inventory':
         return const WarehouseInventoryScreen();
       case 'receive_shipments':
         return const ReceiveShipmentsScreen();
       case 'vendor_requests':
         return const VendorRequestsManagementScreen();
+      case 'category_specifications':
+        return const CategorySpecificationManager();
+      case 'price_overrides':
+        return const PriceOverrideRequestsScreen();
+      case 'system_setup':
+        return const SystemInitializationScreen();
+      case 'home_layouts':
+        return const HomeLayoutManagerScreen();
       default:
         return const Center(child: Text('Page Not Found'));
     }

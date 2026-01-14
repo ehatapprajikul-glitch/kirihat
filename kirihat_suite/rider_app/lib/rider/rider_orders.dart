@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:kirihat_core/services/notification_service.dart';
-import '../widgets/order_timer.dart'; // Ensure this matches your project structure
+import '../widgets/order_timer.dart';
 
 class RiderOrdersScreen extends StatefulWidget {
   const RiderOrdersScreen({super.key});
@@ -71,6 +72,11 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
     };
 
     try {
+      // IF STARTING TRIP -> LOG TIME
+      if (newStatus == 'Out for Delivery') {
+        dataToUpdate['out_for_delivery_at'] = FieldValue.serverTimestamp();
+      }
+
       // IF DELIVERING -> CALCULATE COMMISSION
       if (newStatus == 'Delivered') {
         dataToUpdate['delivered_at'] = FieldValue.serverTimestamp();
@@ -130,6 +136,7 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
 
       if (newStatus == 'Cancelled') {
         dataToUpdate['cancellation_reason'] = cancelReason;
+        dataToUpdate['cancelled_at'] = FieldValue.serverTimestamp();
       }
 
       // EXECUTE UPDATE
@@ -287,6 +294,81 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
     );
   }
 
+  void _showGlobalScanner() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Scan Order Label'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 350,
+          child: MobileScanner(
+            onDetect: (capture) async {
+              final List<Barcode> barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                final String? code = barcode.rawValue;
+                if (code != null) {
+                  // Find order in current list
+                  Navigator.pop(context); // Close scanner
+                  _handleScannedOrder(code);
+                  return;
+                }
+              }
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ],
+      ),
+    );
+  }
+
+  void _handleScannedOrder(String scannedCode) async {
+    try {
+      // Find the order by its human-readable order_id field
+      final snapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('order_id', isEqualTo: scannedCode.trim())
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final doc = snapshot.docs.first;
+        final data = doc.data();
+
+        if (data['rider_id'] != _realRiderId) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("This order is not assigned to you."), backgroundColor: Colors.orange),
+          );
+          return;
+        }
+
+        final status = data['status'];
+        if (status == 'Shipped') {
+          // AUTO START TRIP
+          await _updateStatus(doc, "Out for Delivery");
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Trip Started automatically!"), backgroundColor: Colors.blue),
+          );
+        } else if (status == 'Out for Delivery') {
+          // AUTO OPEN PIN PANEL
+          _showDeliveryDialog(doc);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Order status: $status")),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Order not found. Please scan a valid label."), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
   // --- 4. UTILS ---
   void _callCustomer(String? phone) async {
     if (phone == null) return;
@@ -319,7 +401,13 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text("My Deliveries"),
-          backgroundColor: Colors.blue,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner),
+              onPressed: () => _showGlobalScanner(),
+              tooltip: "Scan to Delivery",
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: "New Tasks"),

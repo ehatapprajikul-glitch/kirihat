@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../auth/phone_auth_screen.dart';
-import 'package:kirihat_core/utils/cart_helper.dart';
+import 'cart_badge.dart';
 
 class CustomerHeader extends StatelessWidget {
   final String selectedArea;
@@ -71,8 +71,8 @@ class CustomerHeader extends StatelessWidget {
           // Login Button (for guests only)
           _buildLoginButton(context),
           
-          // Cart Icon with Badge
-          _buildCartWithBadge(),
+          // Cart Icon with Badge - Using reusable widget
+          CartBadge(onTap: onCartTap),
         ],
       ),
     );
@@ -105,106 +105,5 @@ class CustomerHeader extends StatelessWidget {
       );
     }
     return const SizedBox.shrink(); // Return an empty widget if user is logged in
-  }
-
-  Widget _buildCartWithBadge() {
-    final user = FirebaseAuth.instance.currentUser;
-    
-    // Guest mode - use FutureBuilder to get cart count
-    if (user == null) {
-      return FutureBuilder<int>(
-        future: CartHelper.getCartCount(),
-        builder: (context, snapshot) {
-          int count = snapshot.data ?? 0;
-          
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                onPressed: onCartTap,
-                icon: const Icon(Icons.shopping_cart_outlined),
-              ),
-              if (count > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF0D9759),
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      );
-    }
-
-    // Logged-in mode - use StreamBuilder
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('cart')
-          .snapshots(),
-      builder: (context, snapshot) {
-        int count = 0;
-        if (snapshot.hasData) {
-          for (var doc in snapshot.data!.docs) {
-            count += (doc.data() as Map<String, dynamic>)['quantity'] as int? ?? 1;
-          }
-        }
-
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            IconButton(
-              onPressed: onCartTap,
-              icon: const Icon(Icons.shopping_cart_outlined),
-            ),
-            if (count > 0)
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0D9759),
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Text(
-                    '$count',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
   }
 }

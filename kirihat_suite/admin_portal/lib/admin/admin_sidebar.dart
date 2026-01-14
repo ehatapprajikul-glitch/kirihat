@@ -98,19 +98,34 @@ class AdminSidebar extends StatelessWidget {
                   page: 'hero_banners',
                 ),
                 _buildNavItem(
+                  icon: Icons.dashboard_customize,
+                  label: 'Home Layouts',
+                  page: 'home_layouts',
+                ),
+                _buildNavItem(
                   icon: Icons.view_module,
                   label: 'Collection Manager',
                   page: 'unified_collections',
                 ),
                 _buildNavItem(
-                  icon: Icons.category,
-                  label: 'Categories',
-                  page: 'categories',
+                  icon: Icons.account_tree,
+                  label: 'Categories (Hierarchical)',
+                  page: 'hierarchical_categories',
                 ),
                 _buildNavItem(
-                  icon: Icons.category_outlined,
-                  label: 'Subcategories',
-                  page: 'subcategories',
+                  icon: Icons.settings,
+                  label: 'Category Specifications',
+                  page: 'category_specifications',
+                ),
+                _buildNavItem(
+                  icon: Icons.request_quote,
+                  label: 'Price Override Requests',
+                  page: 'price_overrides',
+                ),
+                _buildNavItem(
+                  icon: Icons.build,
+                  label: 'System Setup',
+                  page: 'system_setup',
                 ),
 
                 _buildSectionHeader('Logistics'),
@@ -125,6 +140,11 @@ class AdminSidebar extends StatelessWidget {
                   icon: Icons.warehouse,
                   label: 'Warehouse Dashboard',
                   page: 'warehouse_dashboard',
+                ),
+                _buildNavItem(
+                  icon: Icons.domain_add,
+                  label: 'Warehouse Setup',
+                  page: 'warehouse_setup',
                 ),
                 _buildNavItem(
                   icon: Icons.inventory,
@@ -147,6 +167,11 @@ class AdminSidebar extends StatelessWidget {
                   icon: Icons.local_offer,
                   label: 'Discount Coupons',
                   page: 'coupons',
+                ),
+                _buildNavItem(
+                  icon: Icons.price_change,
+                  label: 'Fee Settings',
+                  page: 'vendor_fees', // New page ID
                 ),
                 _buildNavItem(
                   icon: Icons.attach_money,
@@ -208,6 +233,11 @@ class AdminSidebar extends StatelessWidget {
                   icon: Icons.settings,
                   label: 'Platform Settings',
                   page: 'settings',
+                ),
+                _buildNavItem(
+                  icon: Icons.tablet_android,
+                  label: 'Product Display Settings',
+                  page: 'product_display_settings',
                 ),
               ],
             ),

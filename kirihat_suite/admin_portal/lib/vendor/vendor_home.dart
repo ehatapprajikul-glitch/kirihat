@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'my_listed_products.dart';
-import 'vendor_sales_analytics.dart';
+import 'Business/vendor_sales_analytics.dart';
+import '../auth/login_screen.dart';
 
 class VendorHomeScreen extends StatefulWidget {
   const VendorHomeScreen({super.key});
@@ -30,6 +31,35 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
         date.day == now.day;
   }
 
+  Future<void> _logout() async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true), 
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Logout')
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirm) {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+         Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Determine screen width for responsive grid
@@ -51,23 +81,38 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Column(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Hello, ${currentUser?.displayName ?? 'Vendor'}!",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Hello, ${currentUser?.displayName ?? 'Vendor'}!",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Here's what's happening today.",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Here's what's happening today.",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
+                IconButton(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  tooltip: 'Logout',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    padding: const EdgeInsets.all(12),
                   ),
                 ),
               ],

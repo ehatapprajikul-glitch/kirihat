@@ -71,7 +71,9 @@ class _ProductCardState extends State<ProductCard> {
     String imageUrl = widget.product['imageUrl'] ?? '';
     double price = (widget.product['price'] ?? 0).toDouble();
     double? mrp = widget.product['mrp'] != null ? (widget.product['mrp'] as num).toDouble() : null;
-    int stock = widget.product['stock_quantity'] ?? 0;
+    int stock = (widget.product['stock_quantity'] ?? 0) is int 
+        ? widget.product['stock_quantity'] 
+        : (widget.product['stock_quantity'] ?? 0).toInt();
     String unit = widget.product['unit'] ?? '';
     bool isAvailableInCurrentVendor = widget.product['isAvailableInCurrentVendor'] ?? true;
     
@@ -79,7 +81,7 @@ class _ProductCardState extends State<ProductCard> {
     bool isOOS = stock <= 0 || !isAvailableInCurrentVendor;
 
     bool hasDiscount = mrp != null && mrp > price && mrp > 0;
-    int discountAmount = hasDiscount ? (mrp - price).round() : 0;
+    int discountAmount = hasDiscount ? ((mrp! - price).toDouble()).round() : 0;
 
     return GestureDetector(
       onTap: widget.onTap,

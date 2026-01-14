@@ -161,12 +161,14 @@ class HeroCategoryService {
     }
   }
 
-  /// Get subcategories for a category
+  /// Get subcategories for a category (from same categories collection)
   Future<List<Map<String, dynamic>>> getSubcategories(String categoryId) async {
     try {
       final snapshot = await _firestore
-          .collection('subcategories')
-          .where('category_id', isEqualTo: categoryId)
+          .collection('categories')
+          .where('parent_id', isEqualTo: categoryId)
+          .where('isActive', isEqualTo: true)
+          .orderBy('sort_order')
           .get();
 
       return snapshot.docs.map((doc) {

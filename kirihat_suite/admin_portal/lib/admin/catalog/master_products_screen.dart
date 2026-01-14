@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'master_product_form.dart' as comprehensive;
+import 'admin_master_product_editor.dart';
 
 class MasterProductsScreen extends StatefulWidget {
   const MasterProductsScreen({super.key});
@@ -28,10 +28,10 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Master Product Catalog',
               style: TextStyle(
                 fontSize: 24,
@@ -39,16 +39,7 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
                 color: Color(0xFF1E293B),
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: () => _showProductForm(context, null),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Product'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D9759),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              ),
-            ),
+            // Add Product Button Removed
           ],
         ),
         const SizedBox(height: 24),
@@ -226,11 +217,6 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
 
               return LayoutBuilder(
                 builder: (context, constraints) {
-                  // Responsive validation: 
-                  // > 1400: 5 cols
-                  // > 1100: 4 cols
-                  // > 800: 3 cols
-                  // < 800: 2 cols
                   int crossAxisCount = 4;
                   double width = constraints.maxWidth;
                   if (width > 1400) {
@@ -275,11 +261,7 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
             'No products found',
             style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => _showProductForm(context, null),
-            child: const Text('Add First Product'),
-          ),
+          // Add First Product Button Removed
         ],
       ),
     );
@@ -301,7 +283,7 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
         children: [
           // Image Area
           Expanded(
-             flex: 4, // 55% image (increased from ~50%)
+             flex: 4, 
              child: Stack(
                children: [
                  Container(
@@ -344,9 +326,9 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
           
           // Content Area
           Expanded(
-            flex: 3, // 45% content (increased from ~40%)
+            flex: 3, 
             child: Padding(
-              padding: const EdgeInsets.all(10), // Reduced from 12
+              padding: const EdgeInsets.all(10), 
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -415,13 +397,21 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
   }
 
   void _showProductForm(BuildContext context, Map<String, dynamic>? product) {
+    if (product == null) return; 
+    
+    // Ensure product has key details
+    String docId = product['id'] ?? product['docId']; 
+    
     showDialog(
       context: context,
       builder: (context) => Dialog(
         child: Container(
-          width: 900,
-          constraints: const BoxConstraints(maxHeight: 800),
-          child: comprehensive.ComprehensiveMasterProductForm(product: product),
+          width: 1000, 
+          height: 850,
+          child: AdminMasterProductEditor(
+              docId: docId, 
+              product: product
+          ),
         ),
       ),
     );

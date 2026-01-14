@@ -49,7 +49,7 @@ class SellerService {
     try {
       final querySnapshot = await _firestore
           .collection('orders')
-          .where('vendor_id', isEqualTo: sellerId)
+          .where('seller_ids', arrayContains: sellerId) // Updated query
           .where('status', isEqualTo: 'Delivered') // Only count delivered for revenue
           .get();
 
@@ -63,7 +63,7 @@ class SellerService {
       // Calculate Pending Orders count for badge
       final pendingSnapshot = await _firestore
           .collection('orders')
-          .where('vendor_id', isEqualTo: sellerId)
+          .where('seller_ids', arrayContains: sellerId) // Updated query
           .where('status', isEqualTo: 'Pending')
           .count()
           .get();
@@ -83,7 +83,7 @@ class SellerService {
   Stream<QuerySnapshot> getSellerOrders(String sellerId, {int limit = 10}) {
     return _firestore
         .collection('orders')
-        .where('vendor_id', isEqualTo: sellerId)
+        .where('seller_ids', arrayContains: sellerId) // Updated query
         .orderBy('created_at', descending: true)
         .limit(limit)
         .snapshots();
@@ -338,6 +338,131 @@ class SellerService {
     }
   }
 
+  // Resubmit rejected/revision request
+  Future<bool> resubmitProductRequest(
+    String requestId,
+    Map<String, dynamic> newData,
+  ) async {
+    try {
+      // newData comes from EnhancedAddProductScreen and contains flattened structure + 'specifications' + 'keywords'.
+      // However, the original structure has 'product_data' (map) and other root fields.
+      // We must reconstruct the 'product_data' map and update it.
+      
+      // Extract root-level fields if they exist in newData (EnhancedAddProductScreen puts them there)
+      final specifications = newData['specifications'];
+      final keywords = newData['keywords'];
+      
+      // The rest is basically product_data, but EnhancedAddProductScreen sends a combined map.
+      // Ideally, we should update the 'product_data' field with the full map.
+      // And also update root fields 'specifications' and 'keywords' to ensure they are insync.
+      
+      // Note: Admin view reads from 'product_data'. Model reads 'product_data' and root 'specifications'.
+      // Best approach: Update 'product_data' with the whole map (it's okay if it has duplicate top-level keys inside),
+      // AND update root fields.
+      
+      await _firestore.collection('seller_product_requests').doc(requestId).update({
+        'product_data': newData, // Update the nested map which admin sees
+        'specifications': specifications, // Update root specs
+        'keywords': keywords, // Update root keywords
+        'status': 'pending',
+        'submitted_at': FieldValue.serverTimestamp(),
+        'admin_notes': FieldValue.delete(), // Clear rejection notes on resubmit
+      });
+      return true;
+    } catch (e) {
+      print('Error resubmitting request: $e');
+      return false;
+    }
+  }
+
+  // --- Product Draft Management (Multiple Drafts) ---
+
+  // Save product draft (creates new or updates existing)
+  Future<String?> saveProductDraft(
+    String sellerId,
+    Map<String, dynamic> draftData, {
+    String? draftId, // If provided, updates existing draft
+  }) async {
+    try {
+      // Generate title from product name or use "Untitled Draft"
+      final draftTitle = (draftData['name'] != null && draftData['name'].toString().isNotEmpty)
+          ? draftData['name'].toString()
+          : 'Untitled Draft';
+
+      if (draftId != null) {
+        // Update existing draft
+        await _firestore
+            .collection('seller_product_drafts')
+            .doc(draftId)
+            .update({
+          'draft_title': draftTitle,
+          'draft_data': draftData,
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+        return draftId;
+      } else {
+        // Create new draft
+        final docRef = await _firestore.collection('seller_product_drafts').add({
+          'seller_id': sellerId,
+          'draft_title': draftTitle,
+          'draft_data': draftData,
+          'created_at': FieldValue.serverTimestamp(),
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+        return docRef.id;
+      }
+    } catch (e) {
+      print('Error saving product draft: $e');
+      return null;
+    }
+  }
+
+  // Get all product drafts for seller
+  Stream<QuerySnapshot> getAllProductDrafts(String sellerId) {
+    return _firestore
+        .collection('seller_product_drafts')
+        .where('seller_id', isEqualTo: sellerId)
+        .orderBy('updated_at', descending: false) // Changed to match Firebase index
+        .snapshots();
+  }
+
+  // Get specific product draft by ID
+  Future<Map<String, dynamic>?> getProductDraftById(String draftId) async {
+    try {
+      final doc = await _firestore
+          .collection('seller_product_drafts')
+          .doc(draftId)
+          .get();
+
+      if (!doc.exists) return null;
+
+      return {
+        'id': doc.id,
+        'draft_title': doc.data()?['draft_title'],
+        'draft_data': doc.data()?['draft_data'],
+        'created_at': doc.data()?['created_at'],
+        'updated_at': doc.data()?['updated_at'],
+      };
+    } catch (e) {
+      print('Error getting product draft: $e');
+      return null;
+    }
+  }
+
+  // Delete product draft
+  Future<bool> deleteProductDraft(String draftId) async {
+    try {
+      await _firestore
+          .collection('seller_product_drafts')
+          .doc(draftId)
+          .delete();
+      return true;
+    } catch (e) {
+      print('Error deleting product draft: $e');
+      return false;
+    }
+  }
+
   // Update seller stats
   Future<void> updateSellerStats(String sellerId) async {
     try {
@@ -406,6 +531,17 @@ class SellerService {
               .where((w) => w.city.toLowerCase().trim() == normalizedCity && w.active)
               .toList();
         });
+  }
+
+  // Get ALL warehouses (for search/directory)
+  Stream<List<WarehouseModel>> getAllWarehouses() {
+    return _firestore
+        .collection('warehouses')
+        .where('active', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => WarehouseModel.fromMap(doc.data(), doc.id))
+            .toList());
   }
 
   // Seed test warehouses (Temporary for development)
@@ -498,6 +634,7 @@ class SellerService {
         'received_at': FieldValue.serverTimestamp(),
       });
       
+      
       // TODO: Here we should technically update the WAREHOUSE INVENTORY 
       // by adding the items from the shipment to the warehouse stock.
       // For now, we just mark it as received.
@@ -506,5 +643,76 @@ class SellerService {
       print('Error receiving shipment: $e');
       throw e;
     }
+  }
+
+  // --- Product Management (with Price & Stock Sync) ---
+
+  // Update product (for Seller/Admin) with cascading updates to Vendor Inventory
+  Future<bool> updateProduct(String productId, Map<String, dynamic> updates) async {
+    try {
+      // 1. Update Master Product
+      await _firestore.collection('master_products').doc(productId).update({
+        ...updates,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+
+      // 2. Sync changes to Vendor Inventories
+      // Specifically check if Price or MRP changed
+      bool priceChanged = updates.containsKey('price') || updates.containsKey('selling_price') || updates.containsKey('mrp');
+      
+      if (priceChanged) {
+        await _syncPriceToVendorInventory(productId, updates);
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error updating product: $e');
+      return false;
+    }
+  }
+
+  // Helper to sync price changes to all vendors carrying the product
+  Future<void> _syncPriceToVendorInventory(String productId, Map<String, dynamic> masterUpdates) async {
+     try {
+       // Find all vendor inventory items for this product
+       final inventorySnapshot = await _firestore
+           .collection('vendor_inventory')
+           .where('productId', isEqualTo: productId)
+           .get();
+
+       if (inventorySnapshot.docs.isEmpty) return;
+
+       // Prepare batch update
+       final batch = _firestore.batch();
+       
+       double? newSellingPrice = masterUpdates['selling_price'] ?? masterUpdates['price']; // Handle both key names
+       double? newMrp = masterUpdates['mrp'];
+
+       for (var doc in inventorySnapshot.docs) {
+           Map<String, dynamic> inventoryUpdate = {};
+           
+           if (newSellingPrice != null) {
+               // Only update if no specific override lock exists (if you implement locking later)
+               // For now, we assume Master Price update overrides old vendor price unless it's a "special" override.
+               // Ensuring we use 'price' as the key for vendor_inventory as per schema convention
+               inventoryUpdate['price'] = newSellingPrice; 
+           }
+           
+           if (newMrp != null) {
+               inventoryUpdate['mrp'] = newMrp; // Assuming 'mrp' exists in vendor_inventory
+           }
+           
+           if (inventoryUpdate.isNotEmpty) {
+               batch.update(doc.reference, inventoryUpdate);
+           }
+       }
+
+       await batch.commit();
+       print("Synced price for ${inventorySnapshot.docs.length} vendor inventory items.");
+
+     } catch (e) {
+       print("Error syncing price to vendor inventory: $e");
+       // Don't fail the whole operation if sync fails, but log it.
+     }
   }
 }

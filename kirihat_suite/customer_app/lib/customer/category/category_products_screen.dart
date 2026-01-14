@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/services/hero_category_service.dart';
@@ -6,7 +7,10 @@ import '../../widgets/product_card.dart';
 import '../product/enhanced_product_detail.dart';
 import '../widgets/floating_cart_button.dart';
 import '../widgets/draggable_cart_wrapper.dart';
+import '../widgets/product_search_delegate.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
+
+enum SortOption { priceAsc, priceDesc, discount, name }
 
 class NewCategoryProductsScreen extends StatefulWidget {
   final String categoryName;
@@ -30,12 +34,16 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
   List<Map<String, dynamic>> _filteredProducts = []; // Filtered by subcategory
   Set<String> _subcategories = {}; // Unique subcategories
   Map<String, String> _subcategoryIcons = {}; // Subcategory name -> icon URL
+  Map<String, int> _subcategoryProductCounts = {}; // Subcategory -> product count
   String? _categoryIcon; // Parent category icon
   
   String _selectedSubcategory = 'All';
   bool _isLoading = true;
-  bool _isFiltering = false; // Loading state for subcategory switch
   int _cartCount = 0;
+  
+  // Sorting & Filtering State
+  SortOption _currentSort = SortOption.priceAsc;
+  bool _showInStockOnly = false;
 
   @override
   void initState() {
@@ -48,7 +56,7 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
     setState(() => _isLoading = true);
     
     try {
-      // 1. Get Category ID from Name (needed to fetch subcategories)
+      // 1. Get Parent Category ID and data
       final categoryQuery = await FirebaseFirestore.instance
           .collection('categories')
           .where('name', isEqualTo: widget.categoryName)
@@ -65,11 +73,21 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
       final categoryData = categoryQuery.docs.first.data();
       final fetchedCategoryIcon = categoryData['icon'] as String?;
 
-      // 2. Fetch Subcategories for this Category WITH ICONS
+      // 2. Fetch Subcategories (categories with parent_id = current category)
+      // Using the same 'categories' collection with nested structure
       final subcatsQuery = await FirebaseFirestore.instance
-          .collection('subcategories')
-          .where('category_id', isEqualTo: categoryId)
-          .get();
+          .collection('categories')
+          .where('parent_id', isEqualTo: categoryId)
+          .where('isActive', isEqualTo: true)
+          .orderBy('sort_order')
+          .get()
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              print('⏱️ Subcategory fetch timed out');
+              throw TimeoutException('Failed to load subcategories');
+            },
+          );
 
       final List<String> fetchedSubcategories = [];
       final Map<String, String> subcategoryIconsMap = {};
@@ -80,41 +98,65 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
         if (name != null && name.isNotEmpty) {
           fetchedSubcategories.add(name);
           // Store icon URL if exists
-          if (data['icon_url'] != null) {
-            subcategoryIconsMap[name] = data['icon_url'];
+          if (data['icon'] != null) {
+            subcategoryIconsMap[name] = data['icon'];
           }
         }
       }
 
-      // 3. Build Vendor Inventory Map (for availability overlay)
-      Map<String, Map<String, dynamic>> inventoryMap = {};
-      try {
-        final inventorySnap = await FirebaseFirestore.instance
-            .collection('vendor_inventory')
-            .where('vendor_id', isEqualTo: widget.vendorId)
-            .get();
-
-        for (var doc in inventorySnap.docs) {
-          final data = doc.data();
-          final productId = data['product_id'];
-          if (productId != null) {
-            inventoryMap[productId] = {
-              'price': data['selling_price'],
-              'stock_quantity': data['stock_quantity'] ?? 0,
-              'isAvailable': data['isAvailable'] ?? true,
-            };
-          }
-        }
-      } catch (e) {
-        print('Error loading inventory: $e');
-      }
-
-      // 4. Fetch Products from MASTER_PRODUCTS (admin-controlled)
+      // 3. Fetch Products from MASTER_PRODUCTS (admin-controlled)
       final masterProductsSnap = await FirebaseFirestore.instance
           .collection('master_products')
           .where('category', isEqualTo: widget.categoryName)
           .get();
 
+      if (masterProductsSnap.docs.isEmpty) {
+        print('⚠️ No products found in category: ${widget.categoryName}');
+        if (mounted) {
+          setState(() {
+            _allProducts = [];
+            _filterProducts();
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // 4. Build inventory map ONLY for products in this category (OPTIMIZED)
+      // Extract product IDs from master products
+      final productIds = masterProductsSnap.docs.map((doc) => doc.id).toList();
+      
+      Map<String, Map<String, dynamic>> inventoryMap = {};
+      
+      // Fetch inventory in batches of 10 (Firestore 'in' query limit)
+      for (int i = 0; i < productIds.length; i += 10) {
+        final batch = productIds.skip(i).take(10).toList();
+        try {
+          final inventorySnap = await FirebaseFirestore.instance
+              .collection('vendor_inventory')
+              .where('vendor_id', isEqualTo: widget.vendorId)
+              .where('product_id', whereIn: batch)
+              .get();
+
+          for (var doc in inventorySnap.docs) {
+            final data = doc.data();
+            final productId = data['product_id'];
+            if (productId != null) {
+              inventoryMap[productId] = {
+                'price': data['selling_price'],
+                'stock_quantity': data['stock_quantity'] ?? 0,
+                'isAvailable': data['isAvailable'] ?? true,
+              };
+            }
+          }
+        } catch (e) {
+          print('❌ Error loading inventory batch: $e');
+        }
+      }
+
+      print('✅ Loaded inventory for ${inventoryMap.length}/${productIds.length} products');
+
+      // 5. Build products list with vendor inventory overlay
       List<Map<String, dynamic>> fetchedProducts = [];
 
       for (var doc in masterProductsSnap.docs) {
@@ -151,8 +193,22 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
         });
       }
     } catch (e) {
-      print('Error loading category data: $e');
-      if (mounted) setState(() => _isLoading = false);
+      print('❌ Error loading category data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        // Show user-friendly error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to load products. Please check your connection.'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _loadData,
+            ),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -164,6 +220,48 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
           .where((p) => p['subcategory'] == _selectedSubcategory)
           .toList();
     }
+    
+    // Apply in-stock filter
+    if (_showInStockOnly) {
+      _filteredProducts = _filteredProducts
+          .where((p) => (p['stock_quantity'] ?? 0) > 0 && 
+                        (p['isAvailableInCurrentVendor'] ?? false))
+          .toList();
+    }
+    
+    // Apply sorting
+    _sortProducts();
+    
+    // Calculate product counts per subcategory
+    _subcategoryProductCounts.clear();
+    for (var subcategory in _subcategories) {
+      final count = _allProducts.where((p) => p['subcategory'] == subcategory).length;
+      _subcategoryProductCounts[subcategory] = count;
+    }
+  }
+  
+  void _sortProducts() {
+    switch (_currentSort) {
+      case SortOption.priceAsc:
+        _filteredProducts.sort((a, b) => 
+          ((a['price'] ?? 0) as num).compareTo((b['price'] ?? 0) as num));
+        break;
+      case SortOption.priceDesc:
+        _filteredProducts.sort((a, b) => 
+          ((b['price'] ?? 0) as num).compareTo((a['price'] ?? 0) as num));
+        break;
+      case SortOption.discount:
+        _filteredProducts.sort((a, b) {
+          final discountA = ((a['mrp'] ?? 0) as num) - ((a['price'] ?? 0) as num);
+          final discountB = ((b['mrp'] ?? 0) as num) - ((b['price'] ?? 0) as num);
+          return discountB.compareTo(discountA);
+        });
+        break;
+      case SortOption.name:
+        _filteredProducts.sort((a, b) => 
+          (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString()));
+        break;
+    }
   }
 
   Future<void> _loadCartCount() async {
@@ -173,20 +271,11 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
     }
   }
 
-  void _onSubcategorySelected(String subcategory) async {
+  void _onSubcategorySelected(String subcategory) {
     setState(() {
       _selectedSubcategory = subcategory;
-      _isFiltering = true; // Trigger loading state
+      _filterProducts();
     });
-
-    // Short delay to ensure UI clears old products before showing new ones
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    _filterProducts();
-
-    if (mounted) {
-      setState(() => _isFiltering = false);
-    }
   }
 
   @override
@@ -200,7 +289,15 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: ProductSearchDelegate(
+                  products: _allProducts,
+                  categoryName: widget.categoryName,
+                ),
+              );
+            },
             icon: const Icon(Icons.search),
           ),
         ],
@@ -208,34 +305,98 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : DraggableCartWrapper(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isSmallMobile = constraints.maxWidth < 380;
-                  final sidebarWidth = isSmallMobile ? 70.0 : 90.0;
-                  
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left Sidebar - Subcategories
-                      SizedBox(
-                        width: sidebarWidth,
-                        child: _buildSubcategorySidebar(isSmallMobile),
-                      ),
-                      
-                      // Right - Products Grid
-                      Expanded(
-                        child: Container(
-                          color: Colors.white,
-                          child: _isFiltering
-                              ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9759)))
-                              : (_filteredProducts.isEmpty
-                                  ? _buildEmptyState()
-                                  : _buildProductsGrid(constraints.maxWidth - sidebarWidth)),
+              child: Column(
+                children: [
+                  // Sorting & Filtering Bar
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    color: Colors.grey[50],
+                    child: Row(
+                      children: [
+                        // Sort Dropdown
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: DropdownButton<SortOption>(
+                              value: _currentSort,
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              icon: const Icon(Icons.arrow_drop_down, size: 20),
+                              style: const TextStyle(fontSize: 13, color: Colors.black87),
+                              items: const [
+                                DropdownMenuItem(value: SortOption.priceAsc, 
+                                  child: Text('Price: Low to High')),
+                                DropdownMenuItem(value: SortOption.priceDesc, 
+                                  child: Text('Price: High to Low')),
+                                DropdownMenuItem(value: SortOption.discount, 
+                                  child: Text('Discount %')),
+                                DropdownMenuItem(value: SortOption.name, 
+                                  child: Text('Name: A-Z')),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    _currentSort = value;
+                                    _filterProducts();
+                                  });
+                                }
+                              },
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                        const SizedBox(width: 8),
+                        // In-Stock Filter
+                        FilterChip(
+                          label: const Text('In Stock', style: TextStyle(fontSize: 12)),
+                          selected: _showInStockOnly,
+                          onSelected: (selected) {
+                            setState(() {
+                              _showInStockOnly = selected;
+                              _filterProducts();
+                            });
+                          },
+                          selectedColor: const Color(0xFF0D9759).withOpacity(0.2),
+                          checkmarkColor: const Color(0xFF0D9759),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Product Grid with Sidebar
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isSmallMobile = constraints.maxWidth < 380;
+                        final sidebarWidth = isSmallMobile ? 100.0 : 120.0;
+                        
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Left Sidebar - Subcategories
+                            SizedBox(
+                              width: sidebarWidth,
+                              child: _buildSubcategorySidebar(isSmallMobile),
+                            ),
+                            
+                            // Right - Products Grid
+                            Expanded(
+                              child: Container(
+                                color: Colors.white,
+                                child: _filteredProducts.isEmpty
+                                    ? _buildEmptyState()
+                                    : _buildProductsGrid(constraints.maxWidth - sidebarWidth),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
     );
@@ -338,6 +499,18 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
                       color: isSelected ? const Color(0xFF0D9759) : Colors.black87,
                     ),
                   ),
+                  // Product Count
+                  if (name != 'All' && _subcategoryProductCounts.containsKey(name))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        '${_subcategoryProductCounts[name]} items',
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -409,25 +582,62 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final bool hasProducts = _allProducts.isNotEmpty;
+    final bool isFiltered = _selectedSubcategory != 'All' || _showInStockOnly;
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.category_outlined, size: 60, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          const Text(
-            'No products found',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
-          ),
-          if (_selectedSubcategory != 'All')
-             Padding(
-               padding: const EdgeInsets.only(top: 8),
-               child: Text(
-                 'in $_selectedSubcategory',
-                 style: const TextStyle(color: Colors.grey),
-               ),
-             ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isFiltered ? Icons.filter_list_off : Icons.inventory_2_outlined,
+              size: 60,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isFiltered 
+                  ? 'No products match your filters'
+                  : 'No products available',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isFiltered
+                  ? _selectedSubcategory != 'All'
+                      ? 'Try selecting "All" or a different subcategory'
+                      : 'Try removing the "In Stock" filter'
+                  : 'This vendor hasn\'t stocked items in this category yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            if (isFiltered) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedSubcategory = 'All';
+                    _showInStockOnly = false;
+                    _filterProducts();
+                  });
+                },
+                icon: const Icon(Icons.clear_all),
+                label: const Text('Clear Filters'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9759),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

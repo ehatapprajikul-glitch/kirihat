@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kirihat_core/services/warehouse_service.dart';
 
 class WarehouseDashboard extends StatefulWidget {
-  const WarehouseDashboard({super.key});
+  final Function(String) onNavigate;
+  const WarehouseDashboard({super.key, required this.onNavigate});
 
   @override
   State<WarehouseDashboard> createState() => _WarehouseDashboardState();
@@ -32,255 +33,248 @@ class _WarehouseDashboardState extends State<WarehouseDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Warehouse Management'),
-        backgroundColor: Colors.blue.shade800,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadStats,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Stats Cards
-                    _buildStatsGrid(),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Quick Actions
-                    const Text(
-                      'Quick Actions',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildQuickActions(),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Alerts
-                    if (_stats['low_stock_count'] > 0) _buildLowStockAlert(),
-                  ],
-                ),
-              ),
-            ),
-    );
-  }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
 
-  Widget _buildStatsGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.5,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildStatCard(
-          'Total Products',
-          '${_stats['total_products'] ?? 0}',
-          Icons.inventory_2,
-          Colors.blue,
+        Row(
+           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+           children: [
+             const Text(
+               'Warehouse Overview',
+               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+             ),
+             ElevatedButton.icon(
+                onPressed: () => widget.onNavigate('warehouse_setup'),
+                icon: const Icon(Icons.settings),
+                label: const Text('Configure Warehouses'),
+                style: ElevatedButton.styleFrom(
+                   backgroundColor: Colors.white,
+                   foregroundColor: const Color(0xFF1E293B),
+                   elevation: 0,
+                   side: const BorderSide(color: Color(0xFFCBD5E1))
+                ),
+             )
+           ],
         ),
-        _buildStatCard(
-          'Total Quantity',
-          '${_stats['total_quantity'] ?? 0}',
-          Icons.numbers,
-          Colors.green,
+        const SizedBox(height: 24),
+
+        // Alerts
+        if ((_stats['low_stock_count'] ?? 0) > 0) ...[
+          _buildAlertBanner(),
+          const SizedBox(height: 24),
+        ],
+
+        // Stats Grid
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.count(
+              crossAxisCount: constraints.maxWidth > 1100 ? 4 : 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 1.5,
+              children: [
+                _buildStatCard(
+                    'Total SKU',
+                    '${_stats['total_products'] ?? 0}',
+                    Icons.inventory_2,
+                    Colors.blue
+                ),
+                _buildStatCard(
+                    'Total Quantity',
+                    '${_stats['total_quantity'] ?? 0}',
+                    Icons.numbers,
+                    Colors.green
+                ),
+                _buildStatCard(
+                    'Low Stock',
+                    '${_stats['low_stock_count'] ?? 0}',
+                    Icons.warning,
+                    Colors.orange,
+                    isAlert: true
+                ),
+                _buildStatCard(
+                    'Pending Requests',
+                    '${_stats['pending_requests'] ?? 0}',
+                    Icons.pending_actions,
+                    Colors.purple
+                ),
+              ],
+            );
+          }
         ),
-        _buildStatCard(
-          'Low Stock Items',
-          '${_stats['low_stock_count'] ?? 0}',
-          Icons.warning,
-          Colors.orange,
+        
+        const SizedBox(height: 32),
+        const Text(
+          'Quick Actions',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
         ),
-        _buildStatCard(
-          'Pending Requests',
-          '${_stats['pending_requests'] ?? 0}',
-          Icons.pending_actions,
-          Colors.purple,
+        const SizedBox(height: 16),
+        
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return GridView.count(
+                 crossAxisCount: constraints.maxWidth > 1100 ? 4 : 2, // Responsive columns
+                 childAspectRatio: 2.5, // Adjusted aspect ratio
+                 crossAxisSpacing: 16,
+                 mainAxisSpacing: 16,
+                 children: [
+                    _buildActionCard(
+                      'Receive Shipments',
+                      'Process incoming stock',
+                      Icons.input,
+                      Colors.blue,
+                      () => widget.onNavigate('receive_shipments')
+                    ),
+                    _buildActionCard(
+                      'Inventory Management',
+                      'Adjust stock levels',
+                      Icons.inventory,
+                      Colors.green,
+                      () => widget.onNavigate('warehouse_inventory')
+                    ),
+                    _buildActionCard(
+                      'Vendor Requests',
+                      'Approve stock transfers',
+                      Icons.store,
+                      Colors.purple,
+                      () => widget.onNavigate('vendor_requests')
+                    ),
+                    _buildActionCard(
+                      'Incoming Shipments',
+                      'Monitor logistics',
+                      Icons.local_shipping,
+                      Colors.orange,
+                      () => widget.onNavigate('incoming_shipments')
+                    ),
+                 ],
+              );
+            }
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildAlertBanner() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: const Color(0xFFFFF7ED),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFFDBA74)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber, color: Color(0xFFC2410C)),
+          const SizedBox(width: 12),
+          Text(
+            '${_stats['low_stock_count']} items are below minimum stock level.',
+            style: const TextStyle(color: Color(0xFF9A3412), fontWeight: FontWeight.w600),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () => widget.onNavigate('warehouse_inventory'),
+             child: const Text('View Inventory'),
+             style: TextButton.styleFrom(foregroundColor: const Color(0xFFC2410C)),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color, {bool isAlert = false}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: isAlert ? Border.all(color: color.withOpacity(0.5), width: 2) : Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, size: 36, color: color),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          Container(
+             padding: const EdgeInsets.all(10),
+             decoration: BoxDecoration(
+               color: color.withOpacity(0.1),
+               borderRadius: BorderRadius.circular(10),
+             ),
+             child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActions() {
-    return Column(
-      children: [
-        _buildActionButton(
-          'Receive Shipments',
-          'View and process incoming shipments',
-          Icons.local_shipping,
-          Colors.blue,
-          () => Navigator.pushNamed(context, '/admin/warehouse/receive-shipments'),
-        ),
-        const SizedBox(height: 12),
-        _buildActionButton(
-          'Warehouse Inventory',
-          'View and manage stock levels',
-          Icons.inventory,
-          Colors.green,
-          () => Navigator.pushNamed(context, '/admin/warehouse/inventory'),
-        ),
-        const SizedBox(height: 12),
-        _buildActionButton(
-          'Vendor Requests',
-          'Process vendor stock requests',
-          Icons.store,
-          Colors.purple,
-          () => Navigator.pushNamed(context, '/admin/warehouse/vendor-requests'),
-        ),
-        const SizedBox(height: 12),
-        _buildActionButton(
-          'Distribution',
-          'Send stock to vendors',
-          Icons.send,
-          Colors.orange,
-          () => Navigator.pushNamed(context, '/admin/warehouse/distribution'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  Widget _buildActionCard(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: Colors.grey.shade200),
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+             Container(
+               width: 48, height: 48,
+               decoration: BoxDecoration(
+                 color: color.withOpacity(0.1),
+                 borderRadius: BorderRadius.circular(12)
+               ),
+               child: Icon(icon, color: color),
+             ),
+             const SizedBox(width: 16),
+             Expanded(
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 mainAxisAlignment: MainAxisAlignment.center,
+                 children: [
+                   Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                   Text(subtitle, style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                 ],
+               ),
+             ),
+             const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildLowStockAlert() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.shade300),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.warning, color: Colors.orange.shade700, size: 32),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Low Stock Alert',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_stats['low_stock_count']} products are running low on stock',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.orange.shade800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -110,6 +110,7 @@ class CartHelper {
                 ? productData['images'][0] 
                 : ''),
         'vendor_id': vendorId,
+        'seller_id': productData['seller_id'] ?? '', // Add seller_id
         'quantity': 1,
         'added_at': DateTime.now().toIso8601String(),
       });
@@ -185,6 +186,7 @@ class CartHelper {
                 ? productData['images'][0] 
                 : ''),
         'vendor_id': vendorId,
+        'seller_id': productData['seller_id'] ?? '', // Add seller_id
         'quantity': 1,
         'added_at': FieldValue.serverTimestamp(),
       });
@@ -404,6 +406,7 @@ class CartHelper {
           'price': item['price'],
           'imageUrl': item['imageUrl'],
           'vendor_id': item['vendor_id'],
+          'seller_id': item['seller_id'] ?? '', // Add seller_id
           'quantity': item['quantity'],
           'added_at': FieldValue.serverTimestamp(),
         });

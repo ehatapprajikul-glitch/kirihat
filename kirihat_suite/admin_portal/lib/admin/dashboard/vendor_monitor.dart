@@ -23,15 +23,11 @@ class VendorMonitor extends StatelessWidget {
               int totalVendors = vendorSnapshot.data?.docs.length ?? 0;
 
               return StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('products').snapshots(),
+                stream: FirebaseFirestore.instance.collection('master_products').snapshots(),
                 builder: (context, productSnapshot) {
                   int totalProducts = productSnapshot.data?.docs.length ?? 0;
-                  int lowStock = productSnapshot.data?.docs.where((doc) {
-                    var data = doc.data() as Map<String, dynamic>;
-                    int stock = (data['stock_quantity'] ?? 0) as int;
-                    int threshold = (data['low_stock_threshold'] ?? 5) as int;
-                    return stock <= threshold;
-                  }).length ?? 0;
+                  // Low stock logic disabled/commented as master_products might not track stock per item
+                  int lowStock = 0;
 
                   return Row(
                     children: [
@@ -108,7 +104,7 @@ class VendorMonitor extends StatelessWidget {
 
                     return FutureBuilder<QuerySnapshot>(
                       future: FirebaseFirestore.instance
-                          .collection('products')
+                          .collection('vendor_inventory')
                           .where('vendor_id', isEqualTo: vendorId)
                           .get(),
                       builder: (context, productSnapshot) {
@@ -118,8 +114,20 @@ class VendorMonitor extends StatelessWidget {
                           leading: const CircleAvatar(
                             child: Icon(Icons.store),
                           ),
-                          title: Text(data['name'] ?? 'Unknown'),
-                          subtitle: Text(data['email'] ?? ''),
+                          title: Text(data['business_name'] ?? data['shop_name'] ?? 'Unknown'),
+                          subtitle: FutureBuilder<DocumentSnapshot>(
+                            future: FirebaseFirestore.instance.collection('users').doc(vendorId).get(),
+                            builder: (context, userSnap) {
+                                if (data['email'] != null && data['email'].toString().isNotEmpty) {
+                                  return Text(data['email']);
+                                } 
+                                if (userSnap.hasData && userSnap.data!.exists) {
+                                  var userData = userSnap.data!.data() as Map<String, dynamic>;
+                                  return Text(userData['email'] ?? 'No Email');
+                                }
+                                return const Text('Loading email...');
+                            }
+                          ),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

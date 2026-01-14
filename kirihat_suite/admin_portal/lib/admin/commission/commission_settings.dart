@@ -9,9 +9,15 @@ class CommissionSettings extends StatefulWidget {
 }
 
 class _CommissionSettingsState extends State<CommissionSettings> {
+  // Tab 1: Global Rates
   final _baseCommissionController = TextEditingController();
   final _distanceRateController = TextEditingController();
   final _deliveryFeeShareController = TextEditingController();
+
+  // Tab 2: Rider Rules (New)
+  final _basePayXController = TextEditingController();
+  final _extraPayYController = TextEditingController();
+  final _maxOrdersController = TextEditingController();
   
   bool _isLoading = true;
   bool _isSaving = false;
@@ -19,30 +25,48 @@ class _CommissionSettingsState extends State<CommissionSettings> {
   @override
   void initState() {
     super.initState();
-    _loadGlobalSettings();
+    _loadAllSettings();
   }
 
-  Future<void> _loadGlobalSettings() async {
+  Future<void> _loadAllSettings() async {
     try {
-      var doc = await FirebaseFirestore.instance
+      // Load 'commission' doc
+      var commDoc = await FirebaseFirestore.instance
           .collection('platform_settings')
           .doc('commission')
           .get();
 
-      if (doc.exists) {
-        var data = doc.data()!;
+      // Load 'rider_rules' doc (new)
+      var rulesDoc = await FirebaseFirestore.instance
+          .collection('platform_settings')
+          .doc('rider_rules')
+          .get();
+
+      if (commDoc.exists) {
+        var data = commDoc.data()!;
         _baseCommissionController.text = (data['base_commission'] ?? 30).toString();
         _distanceRateController.text = (data['distance_rate'] ?? 10).toString();
         _deliveryFeeShareController.text = (data['delivery_fee_share'] ?? 0.5).toString();
       } else {
-        // Set defaults
         _baseCommissionController.text = '30';
         _distanceRateController.text = '10';
         _deliveryFeeShareController.text = '0.5';
       }
 
+      if (rulesDoc.exists) {
+        var data = rulesDoc.data()!;
+        _basePayXController.text = (data['base_pay_x'] ?? 40).toString();
+        _extraPayYController.text = (data['extra_pay_y'] ?? 20).toString();
+        _maxOrdersController.text = (data['max_orders_per_trip'] ?? 5).toString();
+      } else {
+        _basePayXController.text = '40';
+        _extraPayYController.text = '20';
+        _maxOrdersController.text = '5';
+      }
+
       setState(() => _isLoading = false);
     } catch (e) {
+      debugPrint("Error loading settings: $e");
       setState(() => _isLoading = false);
     }
   }
@@ -52,6 +76,9 @@ class _CommissionSettingsState extends State<CommissionSettings> {
     _baseCommissionController.dispose();
     _distanceRateController.dispose();
     _deliveryFeeShareController.dispose();
+    _basePayXController.dispose();
+    _extraPayYController.dispose();
+    _maxOrdersController.dispose();
     super.dispose();
   }
 
@@ -61,209 +88,206 @@ class _CommissionSettingsState extends State<CommissionSettings> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
+    return DefaultTabController(
+      length: 3,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Commission Configuration',
+            'Commission & Rules',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            'Configure how riders earn commissions from deliveries',
+            'Manage rider earnings, batch logic, and vendor overrides',
             style: TextStyle(color: Colors.grey[600]),
           ),
-
-          const SizedBox(height: 32),
-
-          // Global Settings Card
+          const SizedBox(height: 24),
+          
           Container(
-            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: TabBar(
+              labelColor: const Color(0xFF0D9759),
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: const Color(0xFF0D9759),
+              tabs: const [
+                Tab(text: "Commission Rates"),
+                Tab(text: "Rider Rules"),
+                Tab(text: "Vendor Overrides"),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+
+          const SizedBox(height: 24),
+
+          Expanded(
+            child: TabBarView(
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.settings, color: Color(0xFF0D9759)),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Global Commission Settings',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // Base Commission
-                TextField(
-                  controller: _baseCommissionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Base Commission (₹)',
-                    hintText: 'Fixed amount per delivery',
-                    border: OutlineInputBorder(),
-                    helperText: 'Flat rate given to rider for every delivery',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Distance Rate
-                TextField(
-                  controller: _distanceRateController,
-                  decoration: const InputDecoration(
-                    labelText: 'Distance Rate (₹/km)',
-                    hintText: 'Per kilometer rate',
-                    border: OutlineInputBorder(),
-                    helperText: 'Additional earning per kilometer traveled',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Delivery Fee Share
-                TextField(
-                  controller: _deliveryFeeShareController,
-                  decoration: const InputDecoration(
-                    labelText: 'Delivery Fee Share (0-1)',
-                    hintText: '0.5 = 50% of delivery fee',
-                    border: OutlineInputBorder(),
-                    helperText: 'Portion of delivery fee shared with rider',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Example Calculation
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.calculate, color: Colors.blue, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Example Calculation',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _calculateExample(),
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Save Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _saveSettings,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D9759),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Text('SAVE GLOBAL SETTINGS', style: TextStyle(fontSize: 16)),
-                  ),
-                ),
+                _buildCommissionRatesTab(),
+                _buildRiderRulesTab(),
+                _buildVendorOverridesTab(),
               ],
             ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Vendor-Specific Overrides
-          const Text(
-            'Vendor-Specific Commission',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Override global settings for specific vendors',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-
-          const SizedBox(height: 16),
-
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('vendors').snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(child: Text('No vendors yet')),
-                );
-              }
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: snapshot.data!.docs.length,
-                  separatorBuilder: (context, index) => const Divider(),
-                  itemBuilder: (context, index) {
-                    var doc = snapshot.data!.docs[index];
-                    var data = doc.data() as Map<String, dynamic>;
-                    return _buildVendorCommissionTile(doc.id, data);
-                  },
-                ),
-              );
-            },
           ),
         ],
       ),
+    );
+  }
+
+  // --- TAB 1: COMMISSION RATES (Existing Global Settings) ---
+  Widget _buildCommissionRatesTab() {
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+             BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Global Commission Calculation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _baseCommissionController,
+              decoration: const InputDecoration(labelText: 'Base Commission (₹)', border: OutlineInputBorder(), helperText: 'Flat earning per delivery'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _distanceRateController,
+              decoration: const InputDecoration(labelText: 'Distance Rate (₹/km)', border: OutlineInputBorder(), helperText: 'Additional earning per km'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _deliveryFeeShareController,
+              decoration: const InputDecoration(labelText: 'Delivery Fee Share (0-1)', border: OutlineInputBorder(), helperText: '0.5 = 50% of fee goes to rider'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 24),
+            _buildExampleCalculation(),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : () => _saveSettings('commission'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9759),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text('SAVE RATES'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- TAB 2: RIDER RULES (New - Migrated from Vendor App) ---
+  Widget _buildRiderRulesTab() {
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+             BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+             const Text('Batch Order & Payout Rules', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+             const Text('Define how much riders earn for single vs batch orders', style: TextStyle(color: Colors.grey)),
+             const SizedBox(height: 24),
+             
+             Row(
+               children: [
+                 Expanded(
+                   child: TextField(
+                     controller: _basePayXController,
+                     decoration: const InputDecoration(labelText: 'Base Pay X (1st Order)', border: OutlineInputBorder(), prefixText: '₹'),
+                     keyboardType: TextInputType.number,
+                   ),
+                 ),
+                 const SizedBox(width: 16),
+                 Expanded(
+                   child: TextField(
+                     controller: _extraPayYController,
+                     decoration: const InputDecoration(labelText: 'Extra Pay Y (Addt\'l Orders)', border: OutlineInputBorder(), prefixText: '₹'),
+                     keyboardType: TextInputType.number,
+                   ),
+                 ),
+               ],
+             ),
+             const Padding(
+               padding: EdgeInsets.symmetric(vertical: 8.0),
+               child: Text('Example: If X=40 and Y=20, a trip with 2 orders pays ₹60 (40+20).', style: TextStyle(fontSize: 12, color: Colors.grey)),
+             ),
+             
+             const SizedBox(height: 24),
+             TextField(
+               controller: _maxOrdersController,
+               decoration: const InputDecoration(labelText: 'Max Orders Per Trip', border: OutlineInputBorder(), helperText: 'Limit batch size for riders'),
+               keyboardType: TextInputType.number,
+             ),
+
+             const SizedBox(height: 32),
+             SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : () => _saveSettings('rider_rules'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text('SAVE RULES'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- TAB 3: VENDOR OVERRIDES (Existing) ---
+  Widget _buildVendorOverridesTab() {
+     return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('vendors').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No vendors yet'));
+        }
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: snapshot.data!.docs.length,
+            separatorBuilder: (context, index) => const Divider(),
+            itemBuilder: (context, index) {
+              var doc = snapshot.data!.docs[index];
+              var data = doc.data() as Map<String, dynamic>;
+              return _buildVendorCommissionTile(doc.id, data);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -273,61 +297,68 @@ class _CommissionSettingsState extends State<CommissionSettings> {
         backgroundColor: Color(0xFF0D9759),
         child: Icon(Icons.store, color: Colors.white),
       ),
-      title: Text(vendorData['name'] ?? 'Unknown Vendor'),
+      title: Text(vendorData['business_name'] ?? vendorData['shop_name'] ?? 'Unknown Vendor'),
       subtitle: Text(vendorData['email'] ?? ''),
       trailing: TextButton(
-        onPressed: () => _showVendorCommissionDialog(vendorId, vendorData['name']),
+        onPressed: () => _showVendorCommissionDialog(vendorId, vendorData['business_name'] ?? vendorData['shop_name'] ?? 'Unknown Vendor'),
         child: const Text('Configure'),
       ),
     );
   }
 
-  String _calculateExample() {
-    try {
-      double base = double.parse(_baseCommissionController.text);
-      double rate = double.parse(_distanceRateController.text);
-      double distance = 5.0; // Example 5km
-      double deliveryFee = 40.0; // Example delivery fee
-      double share = double.parse(_deliveryFeeShareController.text);
-
+  Widget _buildExampleCalculation() {
+     try {
+      double base = double.tryParse(_baseCommissionController.text) ?? 0;
+      double rate = double.tryParse(_distanceRateController.text) ?? 0;
+      double distance = 5.0; 
+      double deliveryFee = 40.0;
+      double share = double.tryParse(_deliveryFeeShareController.text) ?? 0;
       double total = base + (rate * distance) + (deliveryFee * share);
 
-      return 'For a 5km delivery with ₹40 delivery fee:\n'
-          'Base: ₹$base + Distance: ₹${rate * distance} (₹$rate × 5km) + '
-          'Delivery Fee Share: ₹${(deliveryFee * share).toStringAsFixed(2)} (${(share * 100).toInt()}% of ₹$deliveryFee)\n'
-          '= Rider Earns: ₹${total.toStringAsFixed(2)}';
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        child: Text(
+          'Example (5km trip, ₹40 fee):\n'
+          'Base: ₹$base + Distance: ₹${rate * distance} + Share: ₹${(deliveryFee * share).toStringAsFixed(1)}\n'
+          '= Total: ₹${total.toStringAsFixed(2)}',
+          style: const TextStyle(fontSize: 13),
+        ),
+      );
     } catch (e) {
-      return 'Enter valid numbers to see example';
+      return const SizedBox();
     }
   }
 
-  Future<void> _saveSettings() async {
+  Future<void> _saveSettings(String docId) async {
     setState(() => _isSaving = true);
-
     try {
-      await FirebaseFirestore.instance
-          .collection('platform_settings')
-          .doc('commission')
-          .set({
-        'base_commission': num.parse(_baseCommissionController.text),
-        'distance_rate': num.parse(_distanceRateController.text),
-        'delivery_fee_share': num.parse(_deliveryFeeShareController.text),
-        'updated_at': FieldValue.serverTimestamp(),
-      });
+      Map<String, dynamic> data = {};
+      
+      if (docId == 'commission') {
+         data = {
+          'base_commission': num.parse(_baseCommissionController.text),
+          'distance_rate': num.parse(_distanceRateController.text),
+          'delivery_fee_share': num.parse(_deliveryFeeShareController.text),
+        };
+      } else if (docId == 'rider_rules') {
+        data = {
+          'base_pay_x': num.parse(_basePayXController.text),
+          'extra_pay_y': num.parse(_extraPayYController.text),
+          'max_orders_per_trip': int.parse(_maxOrdersController.text),
+        };
+      }
+      
+      data['updated_at'] = FieldValue.serverTimestamp();
+
+      await FirebaseFirestore.instance.collection('platform_settings').doc(docId).set(data);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Commission settings saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved successfully!'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
       }
     } finally {
       setState(() => _isSaving = false);
@@ -339,16 +370,8 @@ class _CommissionSettingsState extends State<CommissionSettings> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Commission for $vendorName'),
-        content: const Text(
-          'Vendor-specific commission overrides coming in next update!',
-          style: TextStyle(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CLOSE'),
-          ),
-        ],
+        content: const Text('Vendor-specific commission overrides coming in next update!', style: TextStyle(fontSize: 14)),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('CLOSE'))],
       ),
     );
   }

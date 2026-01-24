@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../widgets/vendor_price_exception_dialog.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class ProductCard extends StatefulWidget {
   final String productId;
@@ -270,10 +271,10 @@ class _ProductCardState extends State<ProductCard> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                     Text("₹$sellingPrice", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                     Text(CurrencyHelper.format(sellingPrice), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                      const SizedBox(width: 4),
                      if (mrp > sellingPrice)
-                       Text("₹$mrp", style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.grey)),
+                       Text(CurrencyHelper.format(mrp), style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.grey)),
                   ],
                 ),
                 const SizedBox(height: 8),

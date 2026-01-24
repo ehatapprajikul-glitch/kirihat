@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class VendorSalesAnalytics extends StatefulWidget {
   const VendorSalesAnalytics({super.key});
@@ -189,7 +190,7 @@ class _VendorSalesAnalyticsState extends State<VendorSalesAnalytics> {
               Expanded(
                 child: _buildMetricCard(
                   'Revenue',
-                  '₹${totalRevenue.toStringAsFixed(2)}',
+                  CurrencyHelper.format(totalRevenue),
                   Icons.currency_rupee,
                   const Color(0xFF0D9759),
                 ),
@@ -232,7 +233,7 @@ class _VendorSalesAnalyticsState extends State<VendorSalesAnalytics> {
                   title: Text(entry.key),
                   subtitle: Text('${entry.value} units sold'),
                   trailing: Text(
-                    '₹${(productRevenue[entry.key] ?? 0).toStringAsFixed(2)}',
+                    CurrencyHelper.format(productRevenue[entry.key] ?? 0),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0D9759),

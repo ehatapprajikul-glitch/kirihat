@@ -8,6 +8,9 @@ import 'customer_dashboard.dart';
 import 'address_screen.dart';
 import 'package:kirihat_core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:kirihat_core/services/coupon_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -65,7 +68,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double _lowCartThreshold = 0;
   double _lowCartFee = 0;
   bool _isLoading = false;
-  bool _isAddressExpanded = true; // Address section starts expanded
+  bool _isEditingAddress = true; // Default to true until checked
 
   @override
   void initState() {
@@ -194,6 +197,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
     
     // Service area and pincode are already set from session, no need to check again
+    
+    // Switch to Summary View
+    setState(() => _isEditingAddress = false);
   }
 
   // --- 3. SHOW SAVED ADDRESS SHEET ---
@@ -447,6 +453,190 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  // Coupon State
+  final _couponController = TextEditingController();
+  Map<String, dynamic>? _activeCoupon;
+  double _couponDiscount = 0;
+  bool _isCheckingCoupon = false;
+
+  void _applyCoupon() async {
+    String code = _couponController.text.trim();
+    if (code.isEmpty) return;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please login to use coupons")));
+      return;
+    }
+
+    setState(() => _isCheckingCoupon = true);
+
+    try {
+      final result = await CouponService().validateCoupon(
+        code: code,
+        userId: user!.uid,
+        cartTotal: widget.subtotal,
+        cartItems: widget.cartItems,
+      );
+
+      setState(() {
+        _activeCoupon = result;
+        _couponDiscount = (result['discount_amount'] ?? 0).toDouble();
+        _updateTotalFee(); // Recalculate total with discount
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text("Coupon '${result['code']}' applied!"), backgroundColor: Colors.green));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+      }
+    }
+
+    setState(() => _isCheckingCoupon = false);
+  }
+
+  void _removeCoupon() {
+    setState(() {
+      _activeCoupon = null;
+      _couponDiscount = 0;
+      _couponController.clear();
+      _updateTotalFee();
+    });
+  }
+
+  // --- UI SECTION FOR COUPON ---
+  Widget _buildCouponSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.grey.shade100, blurRadius: 10, offset: const Offset(0, 4))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+               Container(
+                 padding: const EdgeInsets.all(8),
+                 decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
+                 child: const Icon(Icons.discount, color: Colors.orange, size: 20),
+               ),
+               const SizedBox(width: 12),
+               const Text("Coupons & Offers", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          if (_activeCoupon != null)
+             _buildAppliedCouponCard()
+          else
+             _buildCouponInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppliedCouponCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "'${_activeCoupon!['code']}' Applied", 
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800, fontSize: 15)
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _activeCoupon!['description'], 
+                        style: TextStyle(fontSize: 13, color: Colors.green.shade700)
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                         "You saved ${CurrencyHelper.format(_couponDiscount)}",
+                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
+                      )
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _removeCoupon,
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: const Text("REMOVE"),
+                )
+              ],
+            ),
+          ),
+          // Decorative Circles
+          Positioned(top: -10, left: -10, child: CircleAvatar(radius: 10, backgroundColor: Colors.white)),
+          Positioned(bottom: -10, left: -10, child: CircleAvatar(radius: 10, backgroundColor: Colors.white)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCouponInput() {
+    return Container(
+       decoration: BoxDecoration(
+         borderRadius: BorderRadius.circular(12),
+         border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid), // Should use DottedBorder ideally but standard border is safer without packages
+       ),
+       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+       child: Row(
+         children: [
+           Expanded(
+             child: TextField(
+               controller: _couponController,
+               decoration: const InputDecoration(
+                 hintText: "Enter Coupon Code",
+                 hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
+                 border: InputBorder.none,
+                 contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                 isDense: true,
+               ),
+               style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0),
+               textCapitalization: TextCapitalization.characters,
+             ),
+           ),
+           ElevatedButton(
+             onPressed: _isCheckingCoupon ? null : _applyCoupon,
+             style: ElevatedButton.styleFrom(
+               backgroundColor: Colors.black,
+               foregroundColor: Colors.white,
+               elevation: 0,
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+             ),
+             child: _isCheckingCoupon 
+                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                 : const Text("APPLY", style: TextStyle(fontWeight: FontWeight.bold)),
+           ),
+         ],
+       ),
+    );
+  }
+
+  // --- MODIFIED TOTAL CALCULATION ---
   void _updateTotalFee() {
     setState(() {
       // 1. DELIVERY FEE CALCULATION
@@ -469,22 +659,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       
       _appliedDeliveryFee = baseDeliveryFee;
-      _deliveryFee = baseDeliveryFee; // For backward compatibility with existing code
+      _deliveryFee = baseDeliveryFee; 
 
-      // 2. LOW CART FEE CALCULATION
+      // 2. LOW CART FEE
       double lowCartFee = 0;
       if (_lowCartEnabled && _lowCartThreshold > 0 && widget.subtotal < _lowCartThreshold) {
         lowCartFee = _lowCartFee;
       }
-      
-      // Check First Order Low Cart Waiver
       if (_isFirstOrder && _firstOrderDetailedWaiver) {
         lowCartFee = 0;
       }
-      
       _appliedLowCartFee = lowCartFee;
 
-      // 3. PLATFORM FEE CALCULATION
+      // 3. PLATFORM FEE
       double platformFee = 0;
       if (_platformFeeEnabled) {
         if (_platformFeeType == 'percent') {
@@ -494,10 +681,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
       _appliedPlatformFee = platformFee;
+      
+      // 4. COUPON VALIDATION (Re-validate if total changed?)
+      // Ideally, we should re-check min order value here if subtotal changed, but subtotal is constant in this screen.
+      // So simple subtraction is fine.
     });
   }
 
-  Future<void> _placeOrder() async {
+  Future<void> _validateAndProceed() async {
     if (!_formKey.currentState!.validate()) return;
     
     // FIX: Trust pincode gate validation - if PIN is from session, it's valid
@@ -514,6 +705,113 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
+    if (_paymentMethod == 'UPI') {
+      await _handleUpiPayment();
+    } else {
+      // COD Flow
+      await _createOrderInFirestore(paymentStatus: 'Pending');
+    }
+  }
+
+  Future<void> _handleUpiPayment() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // 1. Get Admin VPA from Firestore
+      String payeeVpa = "";
+      String payeeName = "Kiri Hat Admin";
+      
+      try {
+        var doc = await FirebaseFirestore.instance.collection('admin_settings').doc('payment').get();
+        if (doc.exists) {
+          payeeVpa = doc.data()?['upi_vpa'] ?? "";
+          payeeName = doc.data()?['payee_name'] ?? "Kiri Hat";
+        }
+      } catch (e) {
+        debugPrint("Error fetching VPA: $e");
+      }
+
+      if (payeeVpa.isEmpty) {
+        if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Online payment unavailable (VPA not configured). Please use COD.")));
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // 2. Construct UPI URI
+      final double amount = widget.subtotal + _appliedDeliveryFee + _appliedLowCartFee + _appliedPlatformFee - _couponDiscount;
+      final String txnId = "TXN${DateTime.now().millisecondsSinceEpoch}";
+      final String note = "Order from Kiri Hat";
+      
+      // UPI URI Format
+      String upiUrl = 
+          "upi://pay?pa=$payeeVpa&pn=${Uri.encodeComponent(payeeName)}&am=$amount&tr=$txnId&tn=${Uri.encodeComponent(note)}&cu=INR";
+      
+      Uri uri = Uri.parse(upiUrl);
+
+      // 3. Launch UPI App
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        
+        // 4. Show Confirmation Dialog
+        // Since we can't detect 'success' callback from intent without a native SDK,
+        // we ask the user to confirm. 
+        // Note: For higher security in production, you would check your Bank API to confirm receipt of $amount with ref $txnId.
+        if (mounted) {
+           showDialog(
+             context: context,
+             barrierDismissible: false,
+             builder: (ctx) => AlertDialog(
+               title: const Text("Confirm Payment"),
+               content: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   const Text("1. Did you complete the payment in the UPI app?"),
+                   const SizedBox(height: 10),
+                   Text("Amount: ${CurrencyHelper.format(amount)}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                   const SizedBox(height: 10),
+                   const Text("2. If yes, click 'I have Paid' to place your order.", 
+                     style: TextStyle(fontSize: 12, color: Colors.grey)),
+                 ],
+               ),
+               actions: [
+                 TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx); // Close dialog
+                      setState(() => _isLoading = false); // Cancel loader
+                    },
+                    child: const Text("Cancel / Retry", style: TextStyle(color: Colors.red))),
+                 ElevatedButton(
+                    onPressed: () {
+                       Navigator.pop(ctx); // Close dialog
+                       _createOrderInFirestore(paymentStatus: 'Paid', txnId: txnId);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                    child: const Text("I HAVE PAID"),
+                 ),
+               ],
+             ),
+           );
+        }
+      } else {
+         if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+               content: Text("No UPI app found. Please install PhonePe, GPay, or Paytm.")));
+         }
+         setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint("UPI Error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment Error: $e")));
+      }
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _createOrderInFirestore({required String paymentStatus, String? txnId}) async {
     setState(() => _isLoading = true);
 
     try {
@@ -582,7 +880,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           } catch (e) {
              debugPrint("Error snapshotting policy for $productId: $e");
              processedItem['return_policy_type'] = 'No Return';
-          }
+           }
         }
 
         if (sellerId != null && sellerId.isNotEmpty) {
@@ -603,10 +901,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'delivery_fee': _appliedDeliveryFee,
         'low_cart_fee': _appliedLowCartFee,
         'platform_fee': _appliedPlatformFee,
+        'coupon_discount': _couponDiscount, // NEW FIELD
+        'coupon_code': _activeCoupon?['code'], // NEW FIELD
+        'coupon_id': _activeCoupon?['coupon_id'], // NEW FIELD
         'is_first_order': _isFirstOrder,
-        'total_amount': widget.subtotal + _appliedDeliveryFee + _appliedLowCartFee + _appliedPlatformFee,
+        'total_amount': widget.subtotal + _appliedDeliveryFee + _appliedLowCartFee + _appliedPlatformFee - _couponDiscount,
         'payment_method': _paymentMethod,
-        'payment_status': _paymentMethod == 'UPI' ? 'Paid' : 'Pending',
+        'payment_status': paymentStatus, // SET FROM ARG
+        'start_transaction_id': txnId, // SAVE TXN ID
         'delivery_mode': _deliveryMode,
         'delivery_pin': deliveryPin,
         'status': 'Pending',
@@ -630,6 +932,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       };
 
       await FirebaseFirestore.instance.collection('orders').add(orderData);
+      
+      // Increment Coupon Usage
+      if (_activeCoupon != null && _activeCoupon!['coupon_id'] != null) {
+        try {
+           await FirebaseFirestore.instance.collection('coupons').doc(_activeCoupon!['coupon_id']).update({
+             'used_count': FieldValue.increment(1)
+           });
+        } catch (e) {
+           debugPrint("Failed to update coupon usage: $e");
+        }
+      }
       
       // DECREMENT STOCK
       // We iterate through items and update master_products directly.
@@ -681,7 +994,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       await NotificationService.sendNotification(
         vendorId: widget.vendorId,
         title: 'New Order Received',
-        message: 'Order #${orderData['order_id']} for ₹${orderData['total_amount']} placed.',
+        message: 'Order #${orderData['order_id']} for ${CurrencyHelper.format(orderData['total_amount'])} placed.',
         type: 'order_new',
         orderId: orderData['order_id'], // Might differ from doc ID, but usable for display
       );
@@ -775,13 +1088,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   const Text("Total to Pay",
                       style: TextStyle(color: Colors.grey)),
-                  Text("₹${widget.subtotal + _appliedDeliveryFee + _appliedLowCartFee + _appliedPlatformFee}",
+                  Text(CurrencyHelper.format(widget.subtotal + _appliedDeliveryFee + _appliedLowCartFee + _appliedPlatformFee - _couponDiscount),
                       style: const TextStyle(
                           fontSize: 20, fontWeight: FontWeight.bold)),
                 ],
               ),
               ElevatedButton(
-                onPressed: _isLoading ? null : _placeOrder,
+                onPressed: _isLoading ? null : _validateAndProceed,
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     padding: const EdgeInsets.symmetric(
@@ -806,117 +1119,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. DELIVERY ADDRESS SECTION - Always Visible Contact Info
+              // 1. DELIVERY ADDRESS SECTION
               const Text("Delivery Address",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
 
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8)),
-                child: Column(
-                  children: [
-                    // Contact Details - Always Visible & Editable
-                    _buildTextField(_nameCtrl, "Full Name *"),
-                    const SizedBox(height: 10),
-                    _buildTextField(_phoneCtrl, "Phone Number *", isNumber: true),
-                    const SizedBox(height: 10),
-                    _buildTextField(_altPhoneCtrl, "Alternative Phone (Optional)", isNumber: true),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // 2. ADDRESS DETAILS - Expandable Section
-              Container(
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8)),
-                child: Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    initiallyExpanded: _isAddressExpanded,
-                    onExpansionChanged: (expanded) {
-                      setState(() => _isAddressExpanded = expanded);
-                    },
-                    tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    leading: const Icon(Icons.home_outlined, color: Colors.green),
-                    title: const Text(
-                      "Address Details",
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                    ),
-                    subtitle: Text(
-                      _isAddressExpanded ? "Tap to collapse" : "Tap to expand",
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton.icon(
-                          onPressed: _showAddressSelector,
-                          icon: const Icon(Icons.bookmark_border, size: 16),
-                          label: const Text("Saved", style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                        Icon(
-                          _isAddressExpanded
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                        ),
-                      ],
-                    ),
-                    children: [
-                      Row(children: [
-                        Expanded(
-                            child: _buildTextField(_houseCtrl, "House No/Flat *")),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: _buildTextField(_pinCtrl, "Pincode *",
-                                isNumber: true, readOnly: true)),
-                      ]),
-                      const SizedBox(height: 10),
-                      _buildTextField(_streetCtrl, "Street/Area/Colony *"),
-                      const SizedBox(height: 10),
-                      _buildTextField(_landmarkCtrl, "Landmark *"),
-                      const SizedBox(height: 10),
-                      _buildTextField(_marketCtrl, "Nearby Market *"),
-                      const SizedBox(height: 10),
-                      _buildTextField(_cityCtrl, "Service Area *",
-                          readOnly: true,
-                          suffixIcon: const Icon(Icons.lock_outline,
-                              size: 16, color: Colors.grey)),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        Expanded(
-                            child: _buildTextField(_districtCtrl, "District",
-                                readOnly: true)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: _buildTextField(_stateCtrl, "State",
-                                readOnly: true)),
-                      ]),
-                      if (_isZoneFound)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Row(children: [
-                            const Icon(Icons.check_circle,
-                                size: 16, color: Colors.green),
-                            const SizedBox(width: 5),
-                            Text("Delivering to $_zoneName",
-                                style: const TextStyle(
-                                    color: Colors.green, fontSize: 12))
-                          ]),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              if (!_isEditingAddress)
+                _buildAddressSummaryCard()
+              else
+                _buildAddressEditForm(),
 
               const SizedBox(height: 20),
 
@@ -937,7 +1148,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         Text("Standard Delivery")
                       ]),
                       subtitle: Text(
-                          _standardFee == 0 ? "FREE" : "₹$_standardFee",
+                          _standardFee == 0 ? "FREE" : CurrencyHelper.format(_standardFee),
                           style: TextStyle(
                               color: _standardFee == 0
                                   ? Colors.green
@@ -958,7 +1169,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         SizedBox(width: 8),
                         Text("Instant Delivery (20 Mins)")
                       ]),
-                      subtitle: Text("₹$_instantFee",
+                      subtitle: Text(CurrencyHelper.format(_instantFee),
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       value: 'Instant',
                       groupValue: _deliveryMode,
@@ -971,6 +1182,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 20),
+              
+              // 2.5 COUPON SECTION
+              _buildCouponSection(),
 
               const SizedBox(height: 20),
 
@@ -997,6 +1213,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           setState(() => _paymentMethod = val.toString()),
                     ),
                     const Divider(height: 1),
+                    // TODO: UPI Integration is implemented but hidden for now. Uncomment to enable.
+                    /* 
                     RadioListTile(
                       title: const Row(children: [
                         Icon(Icons.qr_code, size: 18, color: Colors.blue),
@@ -1011,6 +1229,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       onChanged: (val) =>
                           setState(() => _paymentMethod = val.toString()),
                     ),
+                    */
                   ],
                 ),
               ),
@@ -1025,7 +1244,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     borderRadius: BorderRadius.circular(8)),
                 child: Column(
                   children: [
-                    _buildSummaryRow("Item Total", "₹${widget.subtotal}"),
+                    _buildSummaryRow("Item Total", CurrencyHelper.format(widget.subtotal)),
                     
                     // Delivery Fee Row
                     Row(
@@ -1035,7 +1254,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         Row(
                           children: [
                             if (_appliedDeliveryFee == 0 && _deliveryFee > 0) ...[
-                              Text("₹$_deliveryFee", 
+                              Text(CurrencyHelper.format(_deliveryFee), 
                                 style: const TextStyle(
                                   color: Colors.grey, 
                                   decoration: TextDecoration.lineThrough,
@@ -1045,7 +1264,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               const SizedBox(width: 4),
                             ],
                             Text(
-                              _appliedDeliveryFee == 0 ? "FREE" : "₹$_appliedDeliveryFee",
+                              _appliedDeliveryFee == 0 ? "FREE" : CurrencyHelper.format(_appliedDeliveryFee),
                               style: TextStyle(
                                 color: _appliedDeliveryFee == 0 ? Colors.green : Colors.black,
                                 fontWeight: _appliedDeliveryFee == 0 ? FontWeight.bold : FontWeight.normal
@@ -1058,14 +1277,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: 8),
 
                     if (_appliedLowCartFee > 0)
-                      _buildSummaryRow("Low Cart Fee", "₹$_appliedLowCartFee"),
+                      _buildSummaryRow("Low Cart Fee", CurrencyHelper.format(_appliedLowCartFee)),
                       
                     if (_appliedPlatformFee > 0)
-                       _buildSummaryRow("Platform Fee", "₹${_appliedPlatformFee.toStringAsFixed(2)}"),
+                       _buildSummaryRow("Platform Fee", CurrencyHelper.format(_appliedPlatformFee)),
+
+                    if (_couponDiscount > 0)
+                       _buildSummaryRow("Coupon Discount", "-${CurrencyHelper.format(_couponDiscount)}", isGreen: true, isBold: true),
 
                     const Divider(),
                     _buildSummaryRow(
-                        "Grand Total", "₹${widget.subtotal + _appliedDeliveryFee + _appliedLowCartFee + _appliedPlatformFee}",
+                        "Grand Total", CurrencyHelper.format(widget.subtotal + _appliedDeliveryFee + _appliedLowCartFee + _appliedPlatformFee - _couponDiscount),
                         isBold: true),
                         
                     // Free Delivery Nudge
@@ -1084,7 +1306,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             const Icon(Icons.stars, size: 16, color: Colors.green),
                             const SizedBox(width: 8),
                             Text(
-                              "Add ₹${(getNudgeAmount() - widget.subtotal).toStringAsFixed(0)} more for FREE ${_deliveryMode} Delivery",
+                              "Add ${CurrencyHelper.format(getNudgeAmount() - widget.subtotal)} more for FREE ${_deliveryMode} Delivery",
                               style: TextStyle(color: Colors.green[700], fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -1135,6 +1357,165 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         if (isOptional) return null;
         return (val == null || val.isEmpty) ? "Required" : null;
       },
+    );
+  }
+
+  Widget _buildAddressSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_on, color: Colors.green),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Delivering to ${_nameCtrl.text}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "${_houseCtrl.text}, ${_streetCtrl.text}\n${_cityCtrl.text}, ${_districtCtrl.text} - ${_pinCtrl.text}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Phone: ${_phoneCtrl.text}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _showAddressSelector,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.green,
+                  ),
+                  child: const Text("CHANGE"),
+                ),
+              ),
+              Container(width: 1, height: 24, color: Colors.grey.shade300),
+              Expanded(
+                child: TextButton(
+                  onPressed: () => setState(() => _isEditingAddress = true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                  ),
+                  child: const Text("EDIT"),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddressEditForm() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Edit Address", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+              if (_houseCtrl.text.isNotEmpty) // Only allow minimize if we have some data
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+                  onPressed: () => setState(() => _isEditingAddress = false),
+                  tooltip: "Minimize",
+                ),
+            ],
+          ),
+          const Divider(),
+          const SizedBox(height: 10),
+          _buildTextField(_nameCtrl, "Full Name *"),
+          const SizedBox(height: 10),
+          _buildTextField(_phoneCtrl, "Phone Number *", isNumber: true),
+          const SizedBox(height: 10),
+          _buildTextField(_altPhoneCtrl, "Alternative Phone", isNumber: true),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+                child: _buildTextField(_houseCtrl, "House No/Flat *")),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _buildTextField(_pinCtrl, "Pincode *",
+                    isNumber: true, readOnly: true)),
+          ]),
+          const SizedBox(height: 10),
+          _buildTextField(_streetCtrl, "Street/Area/Colony *"),
+          const SizedBox(height: 10),
+          _buildTextField(_landmarkCtrl, "Landmark *"),
+          const SizedBox(height: 10),
+          _buildTextField(_marketCtrl, "Nearby Market *"),
+          const SizedBox(height: 10),
+          _buildTextField(_cityCtrl, "Service Area *",
+              readOnly: true, suffixIcon: const Icon(Icons.lock, size: 16, color: Colors.grey)),
+          const SizedBox(height: 10),
+           Row(children: [
+            Expanded(
+                child: _buildTextField(_districtCtrl, "District",
+                    readOnly: true)),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _buildTextField(_stateCtrl, "State",
+                    readOnly: true)),
+          ]),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                // Determine if valid (simple check)
+                if (_nameCtrl.text.isNotEmpty && _houseCtrl.text.isNotEmpty) {
+                  setState(() => _isEditingAddress = false);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("DONE"),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

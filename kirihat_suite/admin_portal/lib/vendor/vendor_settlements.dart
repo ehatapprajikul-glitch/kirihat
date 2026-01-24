@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kirihat_core/shared/rider_settlement_history.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class VendorSettlementsScreen extends StatefulWidget {
   const VendorSettlementsScreen({super.key});
@@ -81,7 +82,7 @@ class _RiderDebtCard extends StatelessWidget {
   Future<void> _showSettlementDialog(BuildContext context,
       List<QueryDocumentSnapshot> orders, double totalDebt) async {
     final TextEditingController amountCtrl =
-        TextEditingController(text: totalDebt.toStringAsFixed(0));
+        TextEditingController(text: '${totalDebt.toInt()}');
 
     // Sort Oldest First
     orders.sort((a, b) {
@@ -98,7 +99,7 @@ class _RiderDebtCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Total Outstanding: ₹${totalDebt.toStringAsFixed(0)}",
+            Text("Total Outstanding: ${CurrencyHelper.format(totalDebt)}",
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.red,
@@ -109,7 +110,6 @@ class _RiderDebtCard extends StatelessWidget {
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: "Enter Amount Received",
-                prefixText: "₹ ",
                 border: OutlineInputBorder(),
               ),
             ),
@@ -214,7 +214,7 @@ class _RiderDebtCard extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
-                Text("Success! Collected ₹${amountPayable.toStringAsFixed(0)}"),
+                Text("Success! Collected ${CurrencyHelper.format(amountPayable)}"),
             backgroundColor: Colors.green));
       }
     } catch (e) {
@@ -285,7 +285,7 @@ class _RiderDebtCard extends StatelessWidget {
               title: Text(riderName,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text("No outstanding debt ($riderPhone)"),
-              trailing: const Text("₹0",
+              trailing: Text(CurrencyHelper.format(0),
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -332,7 +332,7 @@ class _RiderDebtCard extends StatelessWidget {
                       children: [
                         const Text("To Collect",
                             style: TextStyle(fontSize: 10, color: Colors.red)),
-                        Text("₹${totalDebt.toStringAsFixed(0)}",
+                        Text(CurrencyHelper.format(totalDebt),
                             style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,

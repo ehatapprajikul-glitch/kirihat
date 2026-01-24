@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class AnalyticsReports extends StatelessWidget {
   const AnalyticsReports({super.key});
@@ -61,7 +62,7 @@ class AnalyticsReports extends StatelessWidget {
                   Expanded(
                     child: _buildStatCard(
                       'Total Revenue',
-                      '₹${(totalRevenue / 1000).toStringAsFixed(1)}K',
+                      CurrencyHelper.format(totalRevenue),
                       Icons.attach_money,
                       Colors.green,
                       'All time',
@@ -81,7 +82,7 @@ class AnalyticsReports extends StatelessWidget {
                   Expanded(
                     child: _buildStatCard(
                       'Today Revenue',
-                      '₹${todayRevenue.toStringAsFixed(0)}',
+                      CurrencyHelper.format(todayRevenue),
                       Icons.today,
                       Colors.purple,
                       '${todayOrders.length} orders',
@@ -92,8 +93,8 @@ class AnalyticsReports extends StatelessWidget {
                     child: _buildStatCard(
                       'Avg Order Value',
                       totalOrders > 0 
-                          ? '₹${(totalRevenue / totalOrders).toStringAsFixed(0)}'
-                          : '₹0',
+                          ? CurrencyHelper.format(totalRevenue / totalOrders)
+                          : CurrencyHelper.format(0),
                       Icons.shopping_bag,
                       Colors.orange,
                       'Per order',
@@ -209,7 +210,7 @@ class AnalyticsReports extends StatelessWidget {
                       cells: [
                         DataCell(Text(data['name'] ?? 'N/A')),
                         DataCell(Text(data['category'] ?? 'N/A')),
-                        DataCell(Text('₹${data['price'] ?? 0}')),
+                        DataCell(Text(CurrencyHelper.format(data['price'] ?? 0))),
                         DataCell(Text('${data['stock_quantity'] ?? 0}')),
                       ],
                     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:kirihat_core/services/notification_service.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import '../widgets/order_timer.dart';
 
 class RiderOrdersScreen extends StatefulWidget {
@@ -77,9 +78,16 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
         dataToUpdate['out_for_delivery_at'] = FieldValue.serverTimestamp();
       }
 
-      // IF DELIVERING -> CALCULATE COMMISSION
-      if (newStatus == 'Delivered') {
-        dataToUpdate['delivered_at'] = FieldValue.serverTimestamp();
+      // IF DELIVERING OR ELIGIBLE CANCELLATION -> CALCULATE COMMISSION
+      bool isEligibleCancellation = newStatus == 'Cancelled' && 
+          (cancelReason == "Customer Unreachable" || 
+           cancelReason == "Wrong Address" || 
+           cancelReason == "Customer Refused Delivery");
+
+      if (newStatus == 'Delivered' || isEligibleCancellation) {
+        if (newStatus == 'Delivered') {
+          dataToUpdate['delivered_at'] = FieldValue.serverTimestamp();
+        }
 
         // Safe Data Extraction
         Map<String, dynamic>? orderData =
@@ -137,6 +145,7 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
       if (newStatus == 'Cancelled') {
         dataToUpdate['cancellation_reason'] = cancelReason;
         dataToUpdate['cancelled_at'] = FieldValue.serverTimestamp();
+        dataToUpdate['cancelled_by'] = 'rider';
       }
 
       // EXECUTE UPDATE
@@ -172,7 +181,7 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
 
       if (newStatus == 'Delivered' && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Order Delivered! You earned ₹$commission"),
+          content: Text("Order Delivered! You earned ${CurrencyHelper.format(commission)}"),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 3),
         ));
@@ -397,7 +406,7 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
     }
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text("My Deliveries"),
@@ -412,6 +421,7 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
             tabs: [
               Tab(text: "New Tasks"),
               Tab(text: "In Progress"),
+              Tab(text: "History"),
             ],
           ),
         ),
@@ -435,11 +445,14 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
             var newTasks = docs.where((d) => d['status'] == 'Shipped').toList();
             var inProgress =
                 docs.where((d) => d['status'] == 'Out for Delivery').toList();
+            var history = docs.where((d) => 
+                d['status'] == 'Delivered' || d['status'] == 'Cancelled').toList();
 
             return TabBarView(
               children: [
                 _buildOrderList(newTasks, isNew: true),
                 _buildOrderList(inProgress, isNew: false),
+                _buildOrderList(history, isNew: false, isHistory: true),
               ],
             );
           },
@@ -449,16 +462,16 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
   }
 
   Widget _buildOrderList(List<QueryDocumentSnapshot> orders,
-      {required bool isNew}) {
+      {required bool isNew, bool isHistory = false}) {
     if (orders.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(isNew ? Icons.inbox : Icons.local_shipping,
+            Icon(isNew ? Icons.inbox : (isHistory ? Icons.history : Icons.local_shipping),
                 size: 60, color: Colors.grey[300]),
             const SizedBox(height: 10),
-            Text(isNew ? "No new tasks." : "No active trips.",
+            Text(isNew ? "No new tasks." : (isHistory ? "No history." : "No active trips."),
                 style: const TextStyle(color: Colors.grey)),
           ],
         ),
@@ -524,7 +537,7 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
                       decoration: BoxDecoration(
                           color: Colors.blue[50],
                           borderRadius: BorderRadius.circular(4)),
-                      child: Text("COD: ₹${data['total_amount']}",
+                      child: Text("COD: ${CurrencyHelper.format(data['total_amount'])}",
                           style: const TextStyle(
                               color: Colors.blue, fontWeight: FontWeight.bold)),
                     ),
@@ -562,7 +575,37 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                if (isNew)
+                
+                if (status == 'Cancelled') ...[
+                   Container(
+                     width: double.infinity,
+                     padding: const EdgeInsets.all(10),
+                     decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(5)),
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text("CANCELLED BY ${(data['cancelled_by'] ?? 'UNKNOWN').toString().toUpperCase()}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                         Text("Reason: ${data['cancellation_reason'] ?? 'N/A'}", style: TextStyle(color: Colors.red.shade800)),
+                         if (data['rider_commission'] != null && data['rider_commission'] > 0)
+                            Text("Compensation: ${CurrencyHelper.format(data['rider_commission'])}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                       ],
+                     ),
+                   )
+                ] else if (status == 'Delivered') ...[
+                   Container(
+                     width: double.infinity,
+                     padding: const EdgeInsets.all(10),
+                     decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(5)),
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         const Text("DELIVERED", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                         if (data['rider_commission'] != null)
+                           Text("Earned: ${CurrencyHelper.format(data['rider_commission'])}", style: TextStyle(color: Colors.green.shade800)),
+                       ],
+                     ),
+                   )
+                ] else if (isNew)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

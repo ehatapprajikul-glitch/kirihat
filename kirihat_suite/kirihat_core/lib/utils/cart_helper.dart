@@ -391,16 +391,19 @@ class CartHelper {
 
       debugPrint('Migrating ${guestCart.length} items from guest cart to Firestore');
 
-      // Add all guest cart items to Firestore
+      // Add all guest cart items to Firestore using Batch Write for speed
+      final batch = FirebaseFirestore.instance.batch();
+      
       for (var item in guestCart) {
         String productId = item['product_id'];
         
-        await FirebaseFirestore.instance
+        final docRef = FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
             .collection('cart')
-            .doc(productId)
-            .set({
+            .doc(productId);
+            
+        batch.set(docRef, {
           'product_id': productId,
           'name': item['name'],
           'price': item['price'],
@@ -411,6 +414,8 @@ class CartHelper {
           'added_at': FieldValue.serverTimestamp(),
         });
       }
+
+      await batch.commit();
 
       // Clear guest cart
       SharedPreferences prefs = await SharedPreferences.getInstance();

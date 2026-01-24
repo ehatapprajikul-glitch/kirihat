@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/collection_model.dart';
 import 'package:kirihat_core/services/smart_collection_service.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // For vendor ID if needed
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 /// Unified screen to manage Collections, Categories, and Smart Collections
 /// with expandable product views and drag-and-drop reordering
@@ -336,7 +337,7 @@ class _CollectionsTabState extends State<_CollectionsTab> {
                       product['name'] ?? 'Unknown',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text('₹${product['mrp'] ?? 0}'),
+                    subtitle: Text(CurrencyHelper.format(product['mrp'] ?? 0)),
                     trailing: const Icon(Icons.drag_handle, color: Colors.grey),
                   ),
                 ),
@@ -401,7 +402,7 @@ class _CompactProductCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '₹${product['mrp'] ?? 0}',
+                  CurrencyHelper.format(product['mrp'] ?? 0),
                   style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ],

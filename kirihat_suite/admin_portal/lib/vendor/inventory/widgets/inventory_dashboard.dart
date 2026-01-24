@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/inventory_service.dart';
 import 'product_metrics_card.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 /// Comprehensive inventory dashboard with metrics and insights
 class InventoryDashboard extends StatelessWidget {
@@ -89,7 +90,7 @@ class InventoryDashboard extends StatelessWidget {
                   ),
                   ProductMetricCard(
                     title: 'Inventory Value',
-                    value: '₹${_formatCurrency(metrics['totalValue'])}',
+                    value: CurrencyHelper.format(metrics['totalValue']),
                     icon: Icons.account_balance_wallet,
                     color: Colors.green,
                   ),

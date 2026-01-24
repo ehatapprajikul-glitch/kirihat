@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../main.dart';
-import 'phone_auth_screen.dart';
 
 // IMPORTS FOR RIDER ONLY
 import '../rider/rider_dashboard.dart';
@@ -396,37 +395,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(child: Divider(color: Colors.grey[300])),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text("OR", style: TextStyle(color: Colors.grey[600])),
-              ),
-              Expanded(child: Divider(color: Colors.grey[300])),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 50,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PhoneAuthScreen()),
-                );
-              },
-              icon: const Icon(Icons.phone_android),
-              label: const Text("Continue with Mobile Number",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _brandColor,
-                side: BorderSide(color: _brandColor),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
         ],
       ),
     );

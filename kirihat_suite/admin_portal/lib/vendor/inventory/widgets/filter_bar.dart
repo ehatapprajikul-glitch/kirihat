@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import '../models/inventory_filter.dart';
 
 /// Filter bar widget for inventory management
@@ -335,7 +336,7 @@ class FilterBar extends StatelessWidget {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('₹${minPrice.toInt()} - ₹${maxPrice.toInt()}'),
+                  Text('${CurrencyHelper.format(minPrice)} - ${CurrencyHelper.format(maxPrice)}'),
                   const SizedBox(height: 16),
                   Row(
                     children: [

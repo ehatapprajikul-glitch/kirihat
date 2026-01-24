@@ -1,6 +1,6 @@
 {
-    "name": "customer_app",
-    "short_name": "customer_app",
+    "name": "Kirihat",
+    "short_name": "Kirihat",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

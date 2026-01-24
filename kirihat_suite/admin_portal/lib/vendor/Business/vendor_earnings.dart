@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class VendorEarningsScreen extends StatelessWidget {
   const VendorEarningsScreen({super.key});
@@ -10,8 +11,7 @@ class VendorEarningsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
-    final currencyFormat = NumberFormat.currency(
-        symbol: '₹', decimalDigits: 0); // No decimals for cleaner look
+
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -123,7 +123,7 @@ class VendorEarningsScreen extends StatelessWidget {
                               letterSpacing: 1.0,
                               fontSize: 12)),
                       const SizedBox(height: 10),
-                      Text(currencyFormat.format(totalVendorRevenue),
+                      Text(CurrencyHelper.format(totalVendorRevenue),
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 32,
@@ -135,9 +135,9 @@ class VendorEarningsScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildBalanceSubItem("Gross Sales",
-                              currencyFormat.format(totalLifeTimeSales)),
+                              CurrencyHelper.format(totalLifeTimeSales)),
                           _buildBalanceSubItem("Cash with Riders",
-                              currencyFormat.format(cashCurrentlyWithRiders),
+                              CurrencyHelper.format(cashCurrentlyWithRiders),
                               isWarning: true),
                         ],
                       ),
@@ -260,14 +260,14 @@ class VendorEarningsScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text("+${currencyFormat.format(netShare)}",
+                            Text("+${CurrencyHelper.format(netShare)}",
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: status == 'Delivered'
                                         ? Colors.black
                                         : Colors.grey)),
                             if (status == 'Delivered')
-                              Text("Gross: ${currencyFormat.format(total)}",
+                              Text("Gross: ${CurrencyHelper.format(total)}",
                                   style: const TextStyle(
                                       fontSize: 10, color: Colors.grey)),
                           ],

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kirihat_core/services/session_service.dart';
 import 'package:kirihat_core/services/service_area_service.dart';
 import '../customer_dashboard.dart';
+import 'package:kirihat_core/services/user_service.dart';
+import 'account_setup_screen.dart';
 
 class AreaSelectionScreen extends StatefulWidget {
   final String pincode;
@@ -30,9 +32,11 @@ class _AreaSelectionScreenState extends State<AreaSelectionScreen> {
   Future<void> _confirmSelection() async {
     if (_selectedArea == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select your area'),
+        SnackBar(
+          content: const Text('Please select your area'),
           backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
@@ -44,53 +48,73 @@ class _AreaSelectionScreenState extends State<AreaSelectionScreen> {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       final isGuest = userId == null;
       
-      // Resolve vendors for the selected area
       final serviceAreaService = ServiceAreaService();
       final vendorIds = await serviceAreaService.findVendorsForArea(widget.pincode, _selectedArea!);
       
       if (vendorIds.isEmpty) {
          if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('No active vendors for this area currently.')));
+             const SnackBar(
+               content: Text('No active vendors for this area currently.'),
+               behavior: SnackBarBehavior.floating,
+             )
+           );
          }
          setState(() => _isLoading = false);
          return;
       }
 
-      // Save session (guest or logged-in)
       if (isGuest) {
-        // Guest mode - save without userId
         await _sessionService.saveGuestSession(
           pincode: widget.pincode,
           area: _selectedArea!,
           vendorIds: vendorIds,
         );
-        print('✅ Guest session saved');
       } else {
-        // Logged-in mode
         await _sessionService.saveSession(
           userId: userId!,
           pincode: widget.pincode,
           area: _selectedArea!,
           vendorIds: vendorIds,
         );
-        print('✅ User session saved');
       }
 
       if (mounted) {
-        // Navigate to customer dashboard
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const CustomerDashboard()),
-          (route) => false,
-        );
+        // Pincode/Area saved. Now check profile completeness (Name/Gender/Address)
+        // If guest, go to dashboard.
+        // If logged in, check profile.
+        
+        if (isGuest) {
+           Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const CustomerDashboard()),
+            (route) => false,
+          );
+        } else {
+           // Check profile
+           final isProfileComplete = await UserService().isProfileComplete(userId);
+           
+           if (!isProfileComplete) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const AccountSetupScreen()),
+              );
+           } else {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const CustomerDashboard()),
+                (route) => false,
+              );
+           }
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -102,219 +126,257 @@ class _AreaSelectionScreenState extends State<AreaSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+      body: Container(
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomRight,
+            end: Alignment.topLeft,
+            colors: [
+              const Color(0xFF0D9759).withOpacity(0.05),
+              Colors.white,
+              const Color(0xFF0D9759).withOpacity(0.02),
+            ],
+          ),
         ),
-        title: const Text(
-          'Select Your Area',
-          style: TextStyle(color: Colors.black87),
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Location Info
-            Container(
-              padding: const EdgeInsets.all(20),
-              margin: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF0D9759).withOpacity(0.1),
-                    const Color(0xFF0D9759).withOpacity(0.05),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              
+              // Custom Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    const Text(
+                      'Choose Locality',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF0D9759).withOpacity(0.3)),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9759).withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+
+              const SizedBox(height: 30),
+
+              // Summary Card
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                    child: const Icon(
-                      Icons.location_city,
-                      color: Color(0xFF0D9759),
-                      size: 28,
+                  ],
+                  border: Border.all(color: Colors.grey.shade100),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9759).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.apartment_rounded,
+                        color: Color(0xFF0D9759),
+                        size: 30,
+                      ),
                     ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.city.isNotEmpty ? widget.city : 'Your City',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1A1A1A),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Pincode: ${widget.pincode}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Select your exact area',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                    letterSpacing: 0.5,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.city.isNotEmpty ? widget.city : 'Your City',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Areas List
+              Expanded(
+                child: widget.areas.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.location_off_rounded, size: 64, color: Colors.grey[300]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No areas available for this pincode',
+                              style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w600),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Pincode: ${widget.pincode}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: widget.areas.length,
+                        itemBuilder: (context, index) {
+                          final area = widget.areas[index];
+                          final isSelected = _selectedArea == area;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: isSelected ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF0D9759).withOpacity(0.15),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  )
+                                ] : [],
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF0D9759) : Colors.grey.shade100,
+                                  width: 2,
+                                ),
+                              ),
+                              child: ListTile(
+                                onTap: () {
+                                  setState(() => _selectedArea = area);
+                                  _confirmSelection();
+                                },
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                title: Text(
+                                  area,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    color: isSelected ? const Color(0xFF0D9759) : const Color(0xFF4A4A4A),
+                                  ),
+                                ),
+                                trailing: isSelected 
+                                  ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9759))
+                                  : Icon(Icons.circle_outlined, color: Colors.grey[300]),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+
+              // Footer
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 64,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0D9759).withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Instructions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'Choose your area/locality:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Areas List
-            Expanded(
-              child: widget.areas.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No areas available',
-                        style: TextStyle(color: Colors.grey),
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _confirmSelection,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9759),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: widget.areas.length,
-                      itemBuilder: (context, index) {
-                        final area = widget.areas[index];
-                        final isSelected = _selectedArea == area;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _selectedArea = area;
-                                });
-                                _confirmSelection(); // Auto-forward
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(0xFF0D9759).withOpacity(0.1)
-                                      : Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? const Color(0xFF0D9759)
-                                        : Colors.grey.shade300,
-                                    width: isSelected ? 2 : 1,
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Confirm Locality',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isSelected
-                                          ? Icons.radio_button_checked
-                                          : Icons.radio_button_unchecked,
-                                      color: isSelected
-                                          ? const Color(0xFF0D9759)
-                                          : Colors.grey,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Text(
-                                        area,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: isSelected
-                                              ? FontWeight.w600
-                                              : FontWeight.normal,
-                                          color: isSelected
-                                              ? const Color(0xFF0D9759)
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                    ),
-                                    if (isSelected)
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Color(0xFF0D9759),
-                                      ),
-                                  ],
-                                ),
-                              ),
+                                SizedBox(width: 12),
+                                Icon(Icons.shopping_bag_rounded),
+                              ],
                             ),
-                          ),
-                        );
-                      },
                     ),
-            ),
-
-            // Confirm Button
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _confirmSelection,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D9759),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Confirm & Start Shopping',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.shopping_bag, size: 20),
-                          ],
-                        ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
+

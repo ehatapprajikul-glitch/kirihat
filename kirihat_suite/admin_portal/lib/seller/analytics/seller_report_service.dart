@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:kirihat_core/models/seller_model.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class SellerReportService {
   
@@ -119,7 +120,7 @@ class SellerReportService {
         pw.Text(label, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
         pw.SizedBox(height: 4),
         pw.Text(
-          'INR ${amount.toStringAsFixed(2)}',
+          CurrencyHelper.format(amount),
           style: pw.TextStyle(
             fontSize: 14,
             fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
@@ -140,7 +141,7 @@ class SellerReportService {
         '#${order['order_id'] ?? 'N/A'}',
         '${(order['items'] as List?)?.length ?? 0} items',
         order['status'] ?? '-',
-        '${(order['total'] as num).toStringAsFixed(2)}',
+        CurrencyHelper.format(order['total'] as num),
       ];
     }).toList();
 

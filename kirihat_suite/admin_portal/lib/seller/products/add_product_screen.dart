@@ -9,6 +9,7 @@ import 'package:kirihat_core/models/category_specification_model.dart';
 import 'package:kirihat_core/services/category_specification_service.dart';
 import 'widgets/dynamic_specification_renderer.dart';
 import 'widgets/keyword_suggestion_widget.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class AddProductScreen extends StatefulWidget {
   final SellerModel seller;
@@ -323,7 +324,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'You earn ₹${(sellingPrice - costPrice).toStringAsFixed(2)} per unit',
+            'You earn ${CurrencyHelper.format(sellingPrice - costPrice)} per unit',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 16),
@@ -361,14 +362,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Discount: ₹${(mrp - sellingPrice).toStringAsFixed(2)} off MRP',
+                        'Discount: ${CurrencyHelper.format(mrp - sellingPrice)} off MRP',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
                       Text(
-                        'Customers see: ₹$mrp → ₹$sellingPrice',
+                        'Customers see: ${CurrencyHelper.format(mrp)} → ${CurrencyHelper.format(sellingPrice)}',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey[600],
@@ -458,7 +459,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   child: TextFormField(
                     controller: _costPriceController,
                     decoration: const InputDecoration(
-                      labelText: 'Cost Price (₹)',
+                      labelText: 'Cost Price',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.money_off),
                       helperText: 'Your purchase cost',
@@ -472,7 +473,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   child: TextFormField(
                     controller: _sellingPriceController,
                     decoration: const InputDecoration(
-                      labelText: 'Selling Price (₹) *',
+                      labelText: 'Selling Price *',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.sell),
                       helperText: 'Customer pays',
@@ -491,7 +492,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   child: TextFormField(
                     controller: _mrpController,
                     decoration: const InputDecoration(
-                      labelText: 'MRP (₹)',
+                      labelText: 'MRP',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.currency_rupee),
                       helperText: 'Max retail price',
@@ -552,6 +553,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 child: DynamicSpecificationRenderer(
                   fields: _currentTemplate!.fields,
                   initialValues: _specifications,
+                  isSellerMode: true,
                   onValuesChanged: (values) {
                     setState(() => _specifications = values);
                   },

@@ -514,9 +514,11 @@ class _CategorySpecificationManagerState extends State<CategorySpecificationMana
       return aOrder.compareTo(bOrder);
     });
 
-    if (sortedSections.length <= 1) return const SizedBox.shrink();
+    // Show always so "Add New Section" is available
+    if (sortedSections.isEmpty) return const SizedBox.shrink();
 
     return Container(
+      constraints: const BoxConstraints(maxHeight: 320),
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -536,6 +538,7 @@ class _CategorySpecificationManagerState extends State<CategorySpecificationMana
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -575,10 +578,10 @@ class _CategorySpecificationManagerState extends State<CategorySpecificationMana
             ],
           ),
           const SizedBox(height: 12),
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            onReorder: (oldIndex, newIndex) {
+          Flexible(
+            child: ReorderableListView(
+              shrinkWrap: true,
+              onReorder: (oldIndex, newIndex) {
               if (newIndex > oldIndex) newIndex--;
               final sectionName = sortedSections[oldIndex];
               final targetOrder = newIndex + 1;
@@ -589,95 +592,121 @@ class _CategorySpecificationManagerState extends State<CategorySpecificationMana
               String sectionName = entry.value;
               int fieldCount = sectionInfo[sectionName]!['fieldCount'] as int;
 
-              return Container(
-                key: ValueKey(sectionName),
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.drag_indicator, color: Colors.grey.shade400, size: 24),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.blue.shade600, Colors.blue.shade800],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                  // Check if all fields in this section are locked
+                  bool isSectionLocked = _currentTemplate!.fields
+                      .where((f) => f.section == sectionName)
+                      .every((f) => !f.isSellerEditable);
+
+                  return Container(
+                    key: ValueKey(sectionName),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.shade300.withOpacity(0.4),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$visualOrder',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            sectionName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                    child: Row(
+                      children: [
+                        Icon(Icons.drag_indicator, color: Colors.grey.shade400, size: 24),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.blue.shade600, Colors.blue.shade800],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(Icons.description, size: 12, color: Colors.grey[500]),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$fieldCount field${fieldCount > 1 ? 's' : ''}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.shade300.withOpacity(0.4),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                          child: Center(
+                            child: Text(
+                              '$visualOrder',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                sectionName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(Icons.description, size: 12, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$fieldCount field${fieldCount > 1 ? 's' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (isSectionLocked)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: Colors.orange),
+                                      ),
+                                      child: const Text('LOCKED', style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            isSectionLocked ? Icons.lock : Icons.lock_open,
+                            color: isSectionLocked ? Colors.orange : Colors.grey,
+                            size: 20,
+                          ),
+                          tooltip: isSectionLocked ? 'Unlock Section' : 'Lock Section (Data Only)',
+                          onPressed: () => _toggleSectionLock(sectionName, !isSectionLocked),
+                        ),
+                        if (fieldCount == 0)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 20),
+                            onPressed: () => _deleteSection(sectionName),
+                            tooltip: 'Delete empty section',
+                            color: Colors.red.shade400,
+                          ),
+                      ],
                     ),
-                    if (fieldCount == 0)
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 20),
-                        onPressed: () => _deleteSection(sectionName),
-                        tooltip: 'Delete empty section',
-                        color: Colors.red.shade400,
-                      ),
-                  ],
-                ),
-              );
+                  );
             }).toList(),
+          ),
           ),
         ],
       ),
@@ -819,26 +848,76 @@ class _CategorySpecificationManagerState extends State<CategorySpecificationMana
     );
   }
 
-  void _reorderSection(String sectionName, int newPosition) {
+  void _reorderSection(String sectionName, int newOrder) {
     setState(() {
-      List<SpecificationField> fields = List.from(_currentTemplate!.fields);
+      final fields = List<SpecificationField>.from(_currentTemplate!.fields);
+      final fieldsInSection = fields.where((f) => f.section == sectionName).toList();
       
+      // Update order for fields in this section
+      for (var i = 0; i < fields.length; i++) {
+        if (fields[i].section == sectionName) {
+           fields[i] = SpecificationField(
+             fieldName: fields[i].fieldName,
+             fieldType: fields[i].fieldType,
+             section: fields[i].section,
+             sectionOrder: newOrder,
+             isRequired: fields[i].isRequired,
+             helpText: fields[i].helpText,
+             options: fields[i].options,
+             unitOptions: fields[i].unitOptions,
+             isUnitLocked: fields[i].isUnitLocked,
+             defaultUnit: fields[i].defaultUnit,
+             defaultValue: fields[i].defaultValue,
+             isSellerEditable: fields[i].isSellerEditable,
+             validation: fields[i].validation,
+             displayOrder: fields[i].displayOrder,
+           );
+        }
+      }
+      
+      // Basic implementation for swapping orders if collision occurs would be more complex
+      // but for now we just update and save. A more robust reorder would shift others.
+      // Since this is just a quick action:
+      
+      _currentTemplate = CategorySpecification(
+        id: _currentTemplate!.id,
+        categoryId: _currentTemplate!.categoryId,
+        subcategoryId: _currentTemplate!.subcategoryId,
+        categoryName: _currentTemplate!.categoryName,
+        subcategoryName: _currentTemplate!.subcategoryName,
+        fields: fields,
+        version: _currentTemplate!.version,
+        createdAt: _currentTemplate!.createdAt,
+        updatedAt: DateTime.now(),
+      );
+    });
+  }
+
+  void _toggleSectionLock(String sectionName, bool shouldLock) {
+    setState(() {
+      final fields = List<SpecificationField>.from(_currentTemplate!.fields);
       for (int i = 0; i < fields.length; i++) {
         if (fields[i].section == sectionName) {
-          fields[i] = SpecificationField(
-            fieldName: fields[i].fieldName,
-            fieldType: fields[i].fieldType,
-            section: fields[i].section,
-            sectionOrder: newPosition,
-            isRequired: fields[i].isRequired,
-            helpText: fields[i].helpText,
-            options: fields[i].options,
-            unitOptions: fields[i].unitOptions,
-            isUnitLocked: fields[i].isUnitLocked,
-            defaultUnit: fields[i].defaultUnit,
-            validation: fields[i].validation,
-            displayOrder: fields[i].displayOrder,
-          );
+           // Locked means isSellerEditable = false
+           // shouldLock = true -> isSellerEditable = false
+           bool newEditableState = !shouldLock;
+           
+           fields[i] = SpecificationField(
+             fieldName: fields[i].fieldName,
+             fieldType: fields[i].fieldType,
+             section: fields[i].section,
+             sectionOrder: fields[i].sectionOrder,
+             isRequired: fields[i].isRequired,
+             helpText: fields[i].helpText,
+             options: fields[i].options,
+             unitOptions: fields[i].unitOptions,
+             isUnitLocked: fields[i].isUnitLocked,
+             defaultUnit: fields[i].defaultUnit,
+             defaultValue: fields[i].defaultValue, // Preserve
+             isSellerEditable: newEditableState, // Update
+             validation: fields[i].validation,
+             displayOrder: fields[i].displayOrder,
+           );
         }
       }
 
@@ -854,6 +933,16 @@ class _CategorySpecificationManagerState extends State<CategorySpecificationMana
         updatedAt: DateTime.now(),
       );
     });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(shouldLock 
+            ? 'Section locked: Sellers cannot edit these fields.' 
+            : 'Section unlocked: Sellers can edit these fields.'),
+        backgroundColor: shouldLock ? Colors.orange : Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Widget _buildHierarchicalFieldList() {
@@ -1447,9 +1536,11 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
   late TextEditingController _helpTextController;
   late TextEditingController _unitController;
   late TextEditingController _optionsController;
+  late TextEditingController _defaultValueController; // NEW: Default Value
   String _selectedType = 'text';
   bool _isRequired = false;
   bool _isUnitLocked = false; // NEW
+  bool _isSellerEditable = true; // NEW: Seller Editable
 
   late List<String> _availableSections;
 
@@ -1487,9 +1578,11 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
     _optionsController = TextEditingController(
       text: widget.existingField?.options?.join(', ') ?? '',
     );
+    _defaultValueController = TextEditingController(text: widget.existingField?.defaultValue ?? ''); // NEW
     _selectedType = widget.existingField?.fieldType ?? 'text';
     _isRequired = widget.existingField?.isRequired ?? false;
     _isUnitLocked = widget.existingField?.isUnitLocked ?? false; // NEW
+    _isSellerEditable = widget.existingField?.isSellerEditable ?? true; // NEW
   }
 
   @override
@@ -1499,6 +1592,7 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
     _helpTextController.dispose();
     _unitController.dispose();
     _optionsController.dispose();
+    _defaultValueController.dispose(); // NEW
     super.dispose();
   }
 
@@ -1580,13 +1674,31 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
               ),
               const SizedBox(height: 16),
               
-              TextFormField(
-                controller: _helpTextController,
-                decoration: const InputDecoration(
-                  labelText: 'Help Text',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
+              // Default Value and Help Text
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _defaultValueController,
+                      decoration: const InputDecoration(
+                        labelText: 'Default Value',
+                        border: OutlineInputBorder(),
+                        hintText: 'Pre-filled value',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _helpTextController,
+                      decoration: const InputDecoration(
+                        labelText: 'Help Text',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               
@@ -1629,6 +1741,15 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
                 title: const Text('Required Field'),
                 contentPadding: EdgeInsets.zero,
               ),
+
+              CheckboxListTile(
+                value: _isSellerEditable,
+                onChanged: (val) => setState(() => _isSellerEditable = val!),
+                title: const Text('Seller Editable?'),
+                subtitle: const Text('If unchecked, only admin can change value (locked for seller)'),
+                activeColor: const Color(0xFF34A853),
+                contentPadding: EdgeInsets.zero,
+              ),
               
               const SizedBox(height: 24),
               Row(
@@ -1640,7 +1761,7 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton(
-                    onPressed: _save,
+                  onPressed: _save,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF34A853),
                       foregroundColor: Colors.white,
@@ -1681,6 +1802,8 @@ class _FieldEditorDialogState extends State<_FieldEditorDialog> {
       unitOptions: unitOptions.isNotEmpty ? unitOptions : null,
       isUnitLocked: _isUnitLocked,
       defaultUnit: unitOptions.isNotEmpty ? unitOptions.first : null,
+      defaultValue: _defaultValueController.text.trim().isEmpty ? null : _defaultValueController.text.trim(), // NEW
+      isSellerEditable: _isSellerEditable, // NEW
       validation: widget.existingField?.validation,
       displayOrder: widget.existingField?.displayOrder ?? 0,
     );

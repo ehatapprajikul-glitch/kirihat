@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/product_filter.dart';
 import '../../utils/app_constants.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 /// Bottom sheet for filtering and sorting products
 class FilterBottomSheet extends StatefulWidget {
@@ -137,8 +138,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           divisions: 100,
           activeColor: AppConstants.primaryGreen,
           labels: RangeLabels(
-            '₹${_priceRange.start.round()}',
-            '₹${_priceRange.end.round()}',
+            CurrencyHelper.format(_priceRange.start.round()),
+            CurrencyHelper.format(_priceRange.end.round()),
           ),
           onChanged: (values) {
             setState(() => _priceRange = values);
@@ -148,11 +149,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '₹${_priceRange.start.round()}',
+              CurrencyHelper.format(_priceRange.start.round()),
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
             Text(
-              '₹${_priceRange.end.round()}',
+              CurrencyHelper.format(_priceRange.end.round()),
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ],

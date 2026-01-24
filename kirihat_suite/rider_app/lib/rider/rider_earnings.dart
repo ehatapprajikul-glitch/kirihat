@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'rider_history.dart'; // Links to the full history list
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class RiderEarningsScreen extends StatefulWidget {
   const RiderEarningsScreen({super.key});
@@ -167,7 +168,7 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
                           style:
                               TextStyle(color: Colors.white70, fontSize: 14)),
                       const SizedBox(height: 5),
-                      Text("₹${totalDebt.toStringAsFixed(0)}",
+                      Text(CurrencyHelper.format(totalDebt),
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 36,
@@ -184,7 +185,7 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
                               const Text("Lifetime Earnings",
                                   style: TextStyle(
                                       color: Colors.white60, fontSize: 12)),
-                              Text("₹${lifetimeEarnings.toStringAsFixed(0)}",
+                              Text(CurrencyHelper.format(lifetimeEarnings),
                                   style: const TextStyle(
                                       color: Colors.greenAccent,
                                       fontWeight: FontWeight.bold,
@@ -291,7 +292,7 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
                                 ),
                               ],
                             ),
-                            Text("+ ₹${commission.toStringAsFixed(0)}",
+                            Text("+ ${CurrencyHelper.format(commission)}",
                                 style: const TextStyle(
                                     color: Colors.green,
                                     fontWeight: FontWeight.bold,
@@ -344,7 +345,7 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             if (earning > 0)
-              Text("₹${earning.toInt()}",
+              Text(CurrencyHelper.format(earning.toInt()),
                   style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,

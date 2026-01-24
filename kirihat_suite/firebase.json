@@ -1,0 +1,35 @@
+{
+  "hosting": [
+    {
+      "target": "customer",
+      "public": "dist/customer_site",
+      "cleanUrls": true,
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/app/**",
+          "destination": "/app/index.html"
+        }
+      ]
+    },
+    {
+      "target": "portal",
+      "public": "admin_portal/build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ]
+}

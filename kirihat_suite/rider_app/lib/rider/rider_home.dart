@@ -181,7 +181,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                         children: [
                           _buildStatCard(
                               "Total Earnings",
-                              "₹${lifetimeEarnings.toStringAsFixed(0)}",
+                              CurrencyHelper.format(lifetimeEarnings),
                               Icons.account_balance_wallet,
                               Colors.purple),
                           const SizedBox(width: 15),
@@ -216,7 +216,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1)),
                             const SizedBox(height: 5),
-                            Text("₹${currentDebt.toStringAsFixed(0)}",
+                            Text(CurrencyHelper.format(currentDebt),
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 32,

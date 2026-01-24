@@ -40,12 +40,18 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   // Data
   List<CollectionModel> _collections = [];
   Map<String, Map<String, dynamic>> _inventoryMap = {}; // productId -> {price, stock, isAvailable...}
-  List<Map<String, dynamic>> _adminCategories = [];
+  
+  // Category Hierarchy Data
+  List<Map<String, dynamic>> _allCategories = []; // All raw categories
+  List<Map<String, dynamic>> _rootCategories = []; // Level 0
+  Map<String, List<Map<String, dynamic>>> _subCategoriesMap = {}; // ParentID -> List<Level 1>
+  
   List<Map<String, dynamic>> _displayProducts = []; // Final merged products to show
 
   // Selection
   String _selectedType = 'All'; // 'All', 'Collection', 'Category'
-  String _selectedId = 'all'; // 'all', collectionId, or categoryName
+  String _selectedId = 'all'; // 'all', collectionId, or categoryName (Root ID)
+  String _selectedSubId = 'all_sub'; // 'all_sub' or subcategoryName/ID
 
   @override
   void initState() {
@@ -207,23 +213,42 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           // Removed orderBy('sort_order') to avoid hiding docs without the field
           .get();
 
-      setState(() {
-        _adminCategories = snap.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return data;
-        }).where((cat) {
-          // Filter active categories locally
-          return cat['is_active'] != false; 
-        }).toList();
+      final allCats = snap.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).where((cat) {
+        // Filter active categories locally
+        return cat['is_active'] != false; 
+      }).toList();
 
-        // Sort client-side safely
-        _adminCategories.sort((a, b) {
-           final sortA = a['sort_order'] as num? ?? 999;
-           final sortB = b['sort_order'] as num? ?? 999;
-           return sortA.compareTo(sortB);
-        });
+      // Sort client-side safely
+      allCats.sort((a, b) {
+         final sortA = a['sort_order'] as num? ?? 999;
+         final sortB = b['sort_order'] as num? ?? 999;
+         return sortA.compareTo(sortB);
       });
+
+      // Split into Root and Sub data
+      List<Map<String, dynamic>> roots = [];
+      Map<String, List<Map<String, dynamic>>> subs = {};
+
+      for (var cat in allCats) {
+        final parentId = cat['parent_id'] as String?;
+        if (parentId == null || parentId.isEmpty || parentId == 'null') {
+          roots.add(cat);
+        } else {
+           if (!subs.containsKey(parentId)) subs[parentId] = [];
+           subs[parentId]!.add(cat);
+        }
+      }
+      
+      setState(() {
+        _allCategories = allCats;
+        _rootCategories = roots;
+        _subCategoriesMap = subs;
+      });
+      
     } catch (e) {
       print('Error fetching admin categories: $e');
     }
@@ -278,110 +303,139 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   Future<void> _updateDisplayProducts() async {
      if (!mounted) return;
      
-     // Set specific loading state for grid only (not full screen)
      setState(() => _isProductLoading = true); 
 
      List<Map<String, dynamic>> merged = [];
      List<String> targetProductIds = [];
-     bool isSmartCollection = false; // Track if viewing smart collection
+     bool isSmartCollection = false; 
 
      print('DEBUG: _updateDisplayProducts called - type: $_selectedType, id: $_selectedId');
      print('DEBUG: inventoryMap size: ${_inventoryMap.length}');
      print('DEBUG: collections count: ${_collections.length}');
-     print('DEBUG: categories count: ${_adminCategories.length}');
+     print('DEBUG: root categories count: ${_rootCategories.length}');
 
-     // A. Determine which Product IDs we are interested in
+     // A. Determine which Product IDs we are interested in.
+     // For 'Category' type, we generally want to search ALL inventory, and filter by field text.
+     // For 'Collection', we have specific IDs.
      if (_selectedType == 'Collection') {
-        // Get collection definition
         final collection = _collections.firstWhere((c) => c.id == _selectedId, orElse: () => CollectionModel(id: '', name: '', productIds: []));
-        isSmartCollection = collection.id.startsWith('smart_'); // Check if smart collection
+        isSmartCollection = collection.id.startsWith('smart_');
         
         if (isSmartCollection) {
-          // For smart collections: always fetch FRESH IDs to ensure sync with recent actions
           if (collection.id == 'smart_wishlist' && _userId != null) {
              final freshCollection = await _smartCollectionService.getWishlistCollection(_userId!);
              targetProductIds = freshCollection?.productIds ?? [];
-             print('DEBUG: Refreshed Wishlist - ${targetProductIds.length} items');
           } else if (collection.id == 'smart_buy_again' && _userId != null) {
              final freshCollection = await _smartCollectionService.getBuyAgainCollection(_userId!);
              targetProductIds = freshCollection?.productIds ?? [];
-             print('DEBUG: Refreshed Buy Again - ${targetProductIds.length} items');
           } else {
              targetProductIds = collection.productIds;
           }
-          
-          print('DEBUG: Smart Collection mode - ${targetProductIds.length} products (cross-vendor)');
         } else {
-          // For regular collections: only show products in current vendor inventory
           targetProductIds = collection.productIds.where((id) => _inventoryMap.containsKey(id)).toList();
-          print('DEBUG: Collection mode - ${collection.productIds.length} total, ${targetProductIds.length} in inventory');
         }
      } else {
         // 'All' or 'Category' -> Start with everything in inventory
         targetProductIds = _inventoryMap.keys.toList();
-        print('DEBUG: All/Category mode - ${targetProductIds.length} products from inventory');
      }
 
      if (targetProductIds.isEmpty) {
-        print('DEBUG: No target products found!');
-        if (mounted) setState(() => _displayProducts = []);
+        if (mounted) setState(() {
+          _displayProducts = [];
+          _isProductLoading = false;
+        });
         return;
      }
 
-     // B. Batch-fetch master products (up to 10 at a time due to Firestore limitations)
+     // B. Batch-fetch master products
      const int batchSize = 10;
      for (int i = 0; i < targetProductIds.length; i += batchSize) {
         final batchIds = targetProductIds.skip(i).take(batchSize).toList();
-        print('DEBUG: Processing batch $i: fetching ${batchIds.length} products, IDs: $batchIds');
         try {
            final snap = await FirebaseFirestore.instance
                .collection('master_products')
                .where(FieldPath.documentId, whereIn: batchIds)
                .get();
 
-           print('DEBUG: Fetched ${snap.docs.length} master products for batch ${i ~/ batchSize}');
-           print('DEBUG: Found product IDs: ${snap.docs.map((d) => d.id).toList()}');
-           
            for (var doc in snap.docs) {
               Map<String, dynamic> productData = doc.data();
               productData['id'] = doc.id;
 
-              // C. Merge with vendor inventory data (if available)
+              // C. Merge with vendor inventory (if applicable)
               final isInInventory = _inventoryMap.containsKey(doc.id);
-              
               if (isInInventory) {
                 final inv = _inventoryMap[doc.id]!;
                 productData['price'] = inv['price'] ?? productData['price'];
                 productData['stock_quantity'] = inv['stock_quantity'] ?? 0;
                 productData['isAvailable'] = inv['isAvailable'] ?? true;
                 productData['vendor_id'] = _vendorId;
-                productData['isAvailableInCurrentVendor'] = true; // NEW FLAG
+                productData['isAvailableInCurrentVendor'] = true;
               } else {
-                // Product NOT in current vendor (only for smart collections)
                 productData['stock_quantity'] = 0;
                 productData['isAvailable'] = false;
-                productData['isAvailableInCurrentVendor'] = false; // NEW FLAG
+                productData['isAvailableInCurrentVendor'] = false;
                 productData['vendor_id'] = _vendorId;
               }
 
-              // D. Category filter (if applicable)
+              // D. Category filtering
               if (_selectedType == 'Category') {
                  String productCategory = productData['category'] ?? '';
-                 if (productCategory.toLowerCase() == _selectedId.toLowerCase()) {
-                    merged.add(productData);
-                    print('DEBUG: Added product ${doc.id} to display (category match)');
+                 String productSub = productData['subcategory'] ?? '';
+                 
+                 // 1. Resolve Root Category
+                 String selectedRootName = '';
+                 final rootCat = _rootCategories.firstWhere((r) => r['id'] == _selectedId || r['name'] == _selectedId, orElse: () => {});
+                 
+                 Set<String> validNames = {};
+                 
+                 if (rootCat.isNotEmpty) {
+                    selectedRootName = rootCat['name'];
+                    validNames.add(selectedRootName.toLowerCase());
+                    
+                    // Add all subcategories of this root to valid matches
+                    // Logic: If product has 'category': 'Saag' (which is a sub of 'Vegetables'), it should show up under 'Vegetables'
+                    final subs = _subCategoriesMap[rootCat['id']] ?? [];
+                    for (var s in subs) {
+                      if (s['name'] != null) validNames.add(s['name'].toString().toLowerCase());
+                    }
+                 } else {
+                    selectedRootName = _selectedId;
+                    validNames.add(selectedRootName.toLowerCase());
+                 }
+
+                 // Debug
+                 if (i == 0 && merged.length < 3) {
+                    print('DEBUG FILTER: SelectedID=$_selectedId, Root=$selectedRootName, ValidNamesCount=${validNames.length}, ProdCat=$productCategory');
+                 }
+
+                 // 2. Initial Match (Is this product relevant to the Root Tree?)
+                 // defined as: product.category IN [Root, Sub1, Sub2...] OR product.subcategory IN [Root, Sub1, Sub2...]
+                 bool isMatch = validNames.contains(productCategory.toLowerCase()) || 
+                                validNames.contains(productSub.toLowerCase());
+
+                 if (isMatch) {
+                    // 3. Subcategory Filter (Drill down)
+                    if (_selectedSubId != 'all_sub') {
+                        // Strict check: One of the product's fields must match the selected subcategory explicitly
+                        bool subMatch = productCategory.toLowerCase() == _selectedSubId.toLowerCase() ||
+                                        productSub.toLowerCase() == _selectedSubId.toLowerCase();
+                        
+                        if (subMatch) {
+                             merged.add(productData);
+                        }
+                    } else {
+                        // All subcategories selected -> Show everything in this Root Tree
+                        merged.add(productData);
+                    }
                  }
               } else {
                  merged.add(productData);
-                 print('DEBUG: Added product ${doc.id} to display');
               }
            }
         } catch (e) {
            print('DEBUG: Error fetching batch $i: $e');
         }
      }
-     
-     print('DEBUG: Final merged products: ${merged.length}');
      
      // Sorting
      if (_selectedType == 'Collection') {
@@ -402,8 +456,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
        });
      }
   }
-
-  // ... (Filtering Logic removed, replaced by _updateDisplayProducts)
 
 
   @override
@@ -429,8 +481,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
       );
     }
 
-    // final filteredProducts = _getFilteredProducts(); // Replaced by _displayProducts state
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: DraggableCartWrapper(
@@ -454,7 +504,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                     context: context,
                     delegate: ProductSearchDelegate(
                       products: _displayProducts, // Search within currently filtered/loaded products
-                      categoryName: _selectedType == 'All' ? null : _selectedId, // Show context in search UI
+                      categoryName: _selectedType == 'Category' ? _selectedId : null, 
                     ),
                   );
                 },
@@ -472,13 +522,12 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Left Sidebar
+                            // Left Sidebar (Level 0 Only)
                             SizedBox(
                               width: sidebarWidth,
                               child: Container(
-                                color: Colors.grey[50],
+                                color: Colors.grey[50], // Nice subtle background
                                 child: ListView(
-                                  // Added bottom padding (100)
                                   padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
                                   children: [
                                     _buildSidebarItem('All', 'All', 'all', Icons.grid_view_rounded),
@@ -486,8 +535,9 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                     // Collections
                                     if (_collections.isNotEmpty) ...[
                                       const Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: Text('Collections', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                        padding: EdgeInsets.fromLTRB(8, 12, 8, 4),
+                                        child: Text('COLLECTIONS', 
+                                          style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                       ),
                                       ..._collections.map((c) {
                                         IconData icon = Icons.star_outline;
@@ -499,17 +549,18 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                       }),
                                     ],
 
-                                    // Categories (Admin Managed)
-                                    if (_adminCategories.isNotEmpty) ...[
+                                    // Root Categories
+                                    if (_rootCategories.isNotEmpty) ...[
                                       const Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: Text('Categories', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                        padding: EdgeInsets.fromLTRB(8, 16, 8, 4),
+                                        child: Text('CATEGORIES', 
+                                          style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                       ),
-                                      ..._adminCategories.map((c) {
+                                      ..._rootCategories.map((c) {
                                         return _buildSidebarItem(
                                           c['name'] ?? 'Unnamed', 
                                           'Category', 
-                                          c['name'] ?? 'Unnamed', 
+                                          c['id'], // Use ID for selection tracking
                                           Icons.category_outlined,
                                           imageUrl: c['icon'], 
                                         );
@@ -520,13 +571,17 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                               ),
                             ),
 
-                        // Right Product Grid
+                        // Right Product Area
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Dynamic Header
-                              if (_selectedType != 'All' && _selectedType != 'Category')
+                              // 1. Level 1 Categories (Subcategories) - Only if Category Selected
+                              if (_selectedType == 'Category')
+                                _buildSubcategoryHeader(),
+                                
+                              // 2. Title (For Collections/All)
+                              if (_selectedType != 'Category' && _selectedType != 'All')
                                 Padding(
                                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                                   child: Row(
@@ -538,13 +593,11 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                       else if (_selectedType == 'Collection' && _selectedId == 'smart_new_arrivals')
                                         const Icon(Icons.new_releases, color: Colors.orange, size: 20),
                                       
-                                      if (_selectedType == 'Collection')
+                                      if (_selectedType == 'Collection' && _collections.any((c) => c.id == _selectedId))
                                          const SizedBox(width: 8),
 
                                       Text(
-                                        _selectedType == 'Collection' 
-                                            ? (_collections.firstWhere((c) => c.id == _selectedId, orElse: () => CollectionModel(id: '', name: 'Collection', productIds: [])).name)
-                                            : _selectedId,
+                                        _getHeaderTitle(),
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -555,29 +608,26 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                   ),
                                 ),
                                 
+                              // 3. Product Grid
                               Expanded(
                                 child: LayoutBuilder(
                             builder: (context, constraints) {
-                              // Calculate responsive columns
                               int crossAxisCount = (constraints.maxWidth / 140).floor();
                               if (constraints.maxWidth > 280 && crossAxisCount < 2) crossAxisCount = 2;
                               if (crossAxisCount < 1) crossAxisCount = 1;
                               
                               double spacing = 8.0;
                               double cardWidth = (constraints.maxWidth - (spacing * 2) - ((crossAxisCount - 1) * spacing)) / crossAxisCount;
-                              
-                              // Increase height to prevent overflow
                               double desiredHeight = 270.0; 
                               double childAspectRatio = cardWidth / desiredHeight;
                               
-                              // Clamp aspect ratio
                               if (childAspectRatio < 0.5) childAspectRatio = 0.5;
                               if (childAspectRatio > 0.8) childAspectRatio = 0.8;
                               
                                 return Container(
                                   color: Colors.white,
                                   child: _isProductLoading
-                                      ? Center(child: CircularProgressIndicator(color: const Color(0xFF0D9759))) // Show immediate loader
+                                      ? Center(child: CircularProgressIndicator(color: const Color(0xFF0D9759)))
                                       : _displayProducts.isEmpty 
                                     ? Center(
                                       child: Column(
@@ -586,11 +636,21 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                           Icon(Icons.search_off, size: 48, color: Colors.grey[300]),
                                           const SizedBox(height: 8),
                                           const Text('No products found', style: TextStyle(color: Colors.grey)),
+                                          if (_selectedType == 'Collection' && _selectedId == 'smart_wishlist')
+                                            TextButton(
+                                              onPressed: () {
+                                                 setState(() {
+                                                   _selectedType = 'All';
+                                                   _selectedId = 'all';
+                                                 });
+                                                 _updateDisplayProducts();
+                                              },
+                                              child: const Text('Browse Products'),
+                                            )
                                         ],
                                       )
                                     )
                                   : GridView.builder(
-                                      // Added bottom padding (100)
                                       padding: EdgeInsets.fromLTRB(spacing, spacing, spacing, 100),
                                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                         crossAxisCount: crossAxisCount,
@@ -616,9 +676,6 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                           },
                                           onAdd: () async {
                                             bool success = await CartHelper.addToCart(context, product);
-                                            // Snackbar is already handled inside addToCart failure, 
-                                            // but for success we can show one or rely on the UI update.
-                                            // Let's rely on the UI update or a simple optional snack bar.
                                             if (success && context.mounted) {
                                                ScaffoldMessenger.of(context).showSnackBar(
                                                 const SnackBar(
@@ -650,6 +707,130 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     );
   }
 
+  String _getHeaderTitle() {
+    if (_selectedType == 'All') return 'All Products';
+    if (_selectedType == 'Collection') {
+      return _collections.firstWhere((c) => c.id == _selectedId, 
+          orElse: () => CollectionModel(id: '', name: 'Collection', productIds: [])).name;
+    }
+    if (_selectedType == 'Category') {
+      // Find name from ID
+      final cat = _rootCategories.firstWhere((c) => c['id'] == _selectedId, orElse: () => {'name': _selectedId});
+      return cat['name'];
+    }
+    return 'Products';
+  }
+
+  // New Widget: Horizontal Subcategory List
+  Widget _buildSubcategoryHeader() {
+    final rootId = _selectedId;
+    final subcategories = _subCategoriesMap[rootId] ?? [];
+
+    // Always show 'All' option
+    // Map available subcategories to widgets
+    
+    return Container(
+       height: 100, // Fixed height for the header
+       width: double.infinity,
+       color: Colors.white,
+       child: Column(
+         crossAxisAlignment: CrossAxisAlignment.start,
+         mainAxisAlignment: MainAxisAlignment.center,
+         children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 8, top: 4),
+              child: Text(
+                _getHeaderTitle().toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 12, 
+                  fontWeight: FontWeight.bold, 
+                  letterSpacing: 1.0,
+                  color: Colors.black54
+                ),
+              ),
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                   // 1. 'All' Option
+                   _buildSubCategoryItem(
+                     label: 'All', 
+                     icon: Icons.apps, 
+                     id: 'all_sub',
+                     isSelected: _selectedSubId == 'all_sub'
+                   ),
+                   
+                   // 2. Dynamic Subs
+                   ...subcategories.map((sub) {
+                      return _buildSubCategoryItem(
+                        label: sub['name'], 
+                        icon: Icons.category, // Fallback
+                        imageUrl: sub['icon'],
+                        id: sub['name'], // Filtering by name for now, as products use name
+                        isSelected: _selectedSubId == sub['name']
+                      );
+                   }),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+         ],
+       ),
+    );
+  }
+
+  Widget _buildSubCategoryItem({
+    required String label, 
+    required String id, 
+    required bool isSelected,
+    IconData? icon,
+    String? imageUrl
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedSubId = id;
+        });
+        _updateDisplayProducts();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 12, bottom: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             // Circle/Icon
+             Container(
+               width: 45,
+               height: 45,
+               decoration: BoxDecoration(
+                 shape: BoxShape.circle,
+                 color: isSelected ? const Color(0xFF0D9759) : Colors.grey[100],
+                 border: Border.all(color: isSelected ? const Color(0xFF0D9759) : Colors.grey[300]!),
+                 image: (imageUrl != null && imageUrl.isNotEmpty)
+                     ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                     : null
+               ),
+               child: (imageUrl == null || imageUrl.isEmpty)
+                   ? Icon(icon, color: isSelected ? Colors.white : Colors.grey[600], size: 20)
+                   : null,
+             ),
+             const SizedBox(height: 4),
+             Text(
+               label,
+               style: TextStyle(
+                 fontSize: 10, 
+                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                 color: isSelected ? const Color(0xFF0D9759) : Colors.black87
+               ),
+             )
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSidebarItem(String label, String type, String id, IconData icon, {String? imageUrl}) {
     final bool isSelected = (_selectedType == type && _selectedId == id);
     final bool isSmallMobile = MediaQuery.of(context).size.width < 380;
@@ -660,6 +841,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         setState(() {
           _selectedType = type;
           _selectedId = id;
+          _selectedSubId = 'all_sub'; // Reset subcategory when switching root
         });
         print('DEBUG: Selection updated - _selectedType: $_selectedType, _selectedId: $_selectedId');
         _updateDisplayProducts();
@@ -682,17 +864,17 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           children: [
             // Icon Container - Rounded Square
             Container(
-              width: isSmallMobile ? 40 : 48, // Increased size
+              width: isSmallMobile ? 40 : 48,
               height: isSmallMobile ? 40 : 48,
               decoration: BoxDecoration(
                 color: isSelected ? const Color(0xFF0D9759).withOpacity(0.1) : Colors.white,
-                shape: BoxShape.rectangle, // Rectangle
-                borderRadius: BorderRadius.circular(8), // Rounded corners
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade200),
                 image: (imageUrl != null && imageUrl.isNotEmpty)
                     ? DecorationImage(
                         image: NetworkImage(imageUrl),
-                        fit: BoxFit.contain, // Show full icon
+                        fit: BoxFit.contain,
                       )
                     : null,
               ),
@@ -701,10 +883,10 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                       child: Icon(
                         icon,
                         color: isSelected ? const Color(0xFF0D9759) : Colors.grey,
-                        size: isSmallMobile ? 24 : 28, // Increased icon size
+                        size: isSmallMobile ? 24 : 28,
                       ),
                     )
-                  : null, // Image handled by DecorationImage
+                  : null, 
             ),
             const SizedBox(height: 6),
             Text(

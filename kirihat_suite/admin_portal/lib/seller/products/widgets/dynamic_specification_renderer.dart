@@ -6,12 +6,14 @@ class DynamicSpecificationRenderer extends StatefulWidget {
   final List<SpecificationField> fields;
   final Map<String, dynamic> initialValues;
   final Function(Map<String, dynamic>) onValuesChanged;
+  final bool isSellerMode; // NEW: Control locking behavior
 
   const DynamicSpecificationRenderer({
     super.key,
     required this.fields,
     required this.initialValues,
     required this.onValuesChanged,
+    this.isSellerMode = true, // Default to true (safe)
   });
 
   @override
@@ -27,6 +29,13 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
     super.initState();
     _values.addAll(widget.initialValues);
     
+    // Initialize defaults if values are missing
+    for (var field in widget.fields) {
+      if (!_values.containsKey(field.fieldName) && field.defaultValue != null && field.defaultValue!.isNotEmpty) {
+        _values[field.fieldName] = field.defaultValue;
+      }
+    }
+
     // Initialize controllers for text fields and default units
     for (var field in widget.fields) {
       if (['text', 'numeric', 'textarea'].contains(field.fieldType)) {
@@ -55,7 +64,7 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
 
   void _updateValue(String fieldName, dynamic value) {
     _values[fieldName] = value;
-    // Debounce the parent callback to prevent excessive rebuilds
+    // Debounce the parent callback
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         widget.onValuesChanged(_values);
@@ -93,18 +102,17 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
       sections[field.section]!.add(field);
     }
     
-    // Sort sections by sectionOrder (or first field's displayOrder if sectionOrder is 0)
+    // Sort sections
     final sortedSectionNames = sections.keys.toList()..sort((a, b) {
       final aOrder = sections[a]!.first.sectionOrder;
       final bOrder = sections[b]!.first.sectionOrder;
       
       if (aOrder == 0 && bOrder == 0) {
-        // Both sections have no explicit order, fall back to field display order
         return sections[a]!.first.displayOrder
             .compareTo(sections[b]!.first.displayOrder);
       }
       
-      if (aOrder == 0) return 1; // Sections with no explicit order go last
+      if (aOrder == 0) return 1;
       if (bOrder == 0) return -1;
       
       return aOrder.compareTo(bOrder);
@@ -120,22 +128,16 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Section Header
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   sectionName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
               ),
               const Divider(),
               const SizedBox(height: 8),
               
-              // Fields in this section
               ...sectionFields.map((field) => Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _buildFieldWidget(field),
@@ -168,10 +170,18 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
     }
   }
 
+  // Helper to check if field is locked
+  bool _isFieldEditable(SpecificationField field) {
+    if (!widget.isSellerMode) return true; // Admins can always edit
+    return field.isSellerEditable; // Sellers respect the flag
+  }
+
   Widget _buildTextField(SpecificationField field) {
+    bool isEditable = _isFieldEditable(field);
     return TextFormField(
       controller: _controllers[field.fieldName],
-      decoration: _buildDecoration(field),
+      decoration: _buildDecoration(field, isEditable),
+      enabled: isEditable,
       onChanged: (value) => _updateValue(field.fieldName, value),
       validator: (val) {
         if (field.isRequired && (val == null || val.isEmpty)) {
@@ -183,6 +193,7 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
   }
 
   Widget _buildNumericField(SpecificationField field) {
+    bool isEditable = _isFieldEditable(field);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -190,8 +201,9 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
           flex: 2,
           child: TextFormField(
             controller: _controllers[field.fieldName],
-            decoration: _buildDecoration(field),
+            decoration: _buildDecoration(field, isEditable),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            enabled: isEditable,
             onChanged: (value) {
               double? numValue = double.tryParse(value);
               _updateValue(field.fieldName, numValue);
@@ -204,7 +216,6 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
                 return 'Must be a valid number';
               }
               
-              // Validation rules
               if (field.validation != null && val != null && val.isNotEmpty) {
                 double? numVal = double.tryParse(val);
                 if (numVal != null) {
@@ -230,14 +241,14 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
                 labelText: 'Unit',
                 border: const OutlineInputBorder(),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                enabled: !field.isUnitLocked, // Disable if locked
+                enabled: isEditable && !field.isUnitLocked,  // Locked if main field locked OR unit locked
               ),
               items: field.unitOptions!.map((unit) {
                 return DropdownMenuItem(value: unit, child: Text(unit));
               }).toList(),
-              onChanged: field.isUnitLocked 
-                  ? null 
-                  : (value) => _updateValue('${field.fieldName}_unit', value),
+              onChanged: (isEditable && !field.isUnitLocked)
+                  ? (value) => _updateValue('${field.fieldName}_unit', value)
+                  : null,
             ),
           ),
       ],
@@ -245,13 +256,14 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
   }
 
   Widget _buildDropdownField(SpecificationField field) {
+    bool isEditable = _isFieldEditable(field);
     return DropdownButtonFormField<String>(
       value: _values[field.fieldName]?.toString(),
-      decoration: _buildDecoration(field),
+      decoration: _buildDecoration(field, isEditable),
       items: field.options?.map((option) {
         return DropdownMenuItem(value: option, child: Text(option));
       }).toList() ?? [],
-      onChanged: (value) => _updateValue(field.fieldName, value),
+      onChanged: isEditable ? (value) => _updateValue(field.fieldName, value) : null,
       validator: (val) {
         if (field.isRequired && val == null) {
           return '${field.fieldName} is required';
@@ -262,6 +274,7 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
   }
 
   Widget _buildMultiSelectField(SpecificationField field) {
+    bool isEditable = _isFieldEditable(field);
     List<String> selectedValues = [];
     if (_values[field.fieldName] is List) {
       selectedValues = List<String>.from(_values[field.fieldName]);
@@ -294,16 +307,17 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
             return FilterChip(
               label: Text(option),
               selected: isSelected,
-              onSelected: (selected) {
+              onSelected: isEditable ? (selected) {
                 if (selected) {
                   selectedValues.add(option);
                 } else {
                   selectedValues.remove(option);
                 }
                 _updateValue(field.fieldName, List.from(selectedValues));
-              },
+              } : null, // Disable if not editable
               selectedColor: const Color(0xFF34A853).withOpacity(0.2),
               checkmarkColor: const Color(0xFF34A853),
+              backgroundColor: isEditable ? null : Colors.grey[200],
             );
           }).toList() ?? [],
         ),
@@ -320,10 +334,11 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
   }
 
   Widget _buildDateField(SpecificationField field) {
+    bool isEditable = _isFieldEditable(field);
     DateTime? selectedDate = _values[field.fieldName];
     
     return InkWell(
-      onTap: () async {
+      onTap: isEditable ? () async {
         DateTime? picked = await showDatePicker(
           context: context,
           initialDate: selectedDate ?? DateTime.now(),
@@ -333,9 +348,9 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
         if (picked != null) {
           _updateValue(field.fieldName, picked);
         }
-      },
+      } : null,
       child: InputDecorator(
-        decoration: _buildDecoration(field),
+        decoration: _buildDecoration(field, isEditable),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -344,10 +359,12 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
                   ? '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'
                   : 'Select date',
               style: TextStyle(
-                color: selectedDate != null ? Colors.black : Colors.grey[600],
+                color: selectedDate != null 
+                    ? (isEditable ? Colors.black : Colors.grey[700]) 
+                    : Colors.grey[600],
               ),
             ),
-            const Icon(Icons.calendar_today, size: 20),
+            Icon(Icons.calendar_today, size: 20, color: isEditable ? Colors.black54 : Colors.grey),
           ],
         ),
       ),
@@ -355,10 +372,12 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
   }
 
   Widget _buildTextAreaField(SpecificationField field) {
+    bool isEditable = _isFieldEditable(field);
     return TextFormField(
       controller: _controllers[field.fieldName],
-      decoration: _buildDecoration(field),
+      decoration: _buildDecoration(field, isEditable),
       maxLines: 4,
+      enabled: isEditable,
       onChanged: (value) => _updateValue(field.fieldName, value),
       validator: (val) {
         if (field.isRequired && (val == null || val.isEmpty)) {
@@ -369,13 +388,19 @@ class _DynamicSpecificationRendererState extends State<DynamicSpecificationRende
     );
   }
 
-  InputDecoration _buildDecoration(SpecificationField field) {
+  InputDecoration _buildDecoration(SpecificationField field, bool isEditable) {
     return InputDecoration(
       labelText: '${field.fieldName}${field.isRequired ? " *" : ""}',
       hintText: field.helpText,
       border: const OutlineInputBorder(),
+      enabled: isEditable,
+      filled: !isEditable,
+      fillColor: !isEditable ? Colors.grey[50] : null,
       focusedBorder: const OutlineInputBorder(
         borderSide: BorderSide(color: Color(0xFF34A853), width: 2),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[300]!),
       ),
       suffixIcon: field.helpText.isNotEmpty
           ? Tooltip(

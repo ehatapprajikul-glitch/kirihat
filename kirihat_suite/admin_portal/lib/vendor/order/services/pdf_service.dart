@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/order_model.dart';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class PDFService {
   // Generate 4x6 thermal shipping label (black & white, optimized)
@@ -398,7 +399,7 @@ class PDFService {
                           color: PdfColors.black,
                         ),
                         child: pw.Text(
-                          'COLLECT: ₹${order.totalAmount.toStringAsFixed(0)}',
+                          'COLLECT: ${CurrencyHelper.format(order.totalAmount)}',
                           style: pw.TextStyle(
                             fontSize: 11,
                             fontWeight: pw.FontWeight.bold,
@@ -700,8 +701,8 @@ class PDFService {
       data: order.items.map((item) => [
         item.name,
         item.quantity.toString(),
-        '₹${item.price.toStringAsFixed(2)}',
-        '₹${item.total.toStringAsFixed(2)}',
+        CurrencyHelper.format(item.price),
+        CurrencyHelper.format(item.total),
       ]).toList(),
     );
   }
@@ -719,7 +720,7 @@ class PDFService {
         ),
         child: pw.Column(
           children: [
-            _buildInfoRow('Subtotal', '₹${order.totalAmount.toStringAsFixed(2)}'),
+            _buildInfoRow('Subtotal', CurrencyHelper.format(order.totalAmount)),
             pw.Divider(),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -732,7 +733,7 @@ class PDFService {
                   ),
                 ),
                 pw.Text(
-                  '₹${order.totalAmount.toStringAsFixed(2)}',
+                  CurrencyHelper.format(order.totalAmount),
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,

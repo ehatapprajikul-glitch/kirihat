@@ -4,12 +4,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:kirihat_core/services/service_area_service.dart';
+import 'customer_dashboard.dart';
 
 class AddressScreen extends StatefulWidget {
   final String? addressId;
   final Map<String, dynamic>? initialData;
+  final bool isOnboarding;
 
-  const AddressScreen({super.key, this.addressId, this.initialData});
+  const AddressScreen({
+    super.key,
+    this.addressId,
+    this.initialData,
+    this.isOnboarding = false,
+  });
 
   @override
   State<AddressScreen> createState() => _AddressScreenState();
@@ -69,6 +76,16 @@ class _AddressScreenState extends State<AddressScreen> {
     if (user != null) {
       if (user.displayName != null && _nameController.text.isEmpty) {
         setState(() => _nameController.text = user.displayName!);
+      }
+      
+      // Auto-fill phone from verified Auth Credential if empty
+      if (_phoneController.text.isEmpty && user.phoneNumber != null) {
+        String phone = user.phoneNumber!;
+        // Strip country code (e.g., +91) -> keep last 10 digits
+        if (phone.length > 10) {
+          phone = phone.substring(phone.length - 10);
+        }
+        setState(() => _phoneController.text = phone);
       }
 
       var doc = await FirebaseFirestore.instance
@@ -228,7 +245,15 @@ class _AddressScreenState extends State<AddressScreen> {
       }, SetOptions(merge: true));
 
       if (mounted) {
-        Navigator.pop(context);
+        if (widget.isOnboarding) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const CustomerDashboard()),
+            (route) => false,
+          );
+        } else {
+          Navigator.pop(context);
+        }
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Address Saved Successfully!"),
             backgroundColor: Colors.green));

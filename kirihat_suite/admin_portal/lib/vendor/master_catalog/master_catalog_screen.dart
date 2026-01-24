@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'dart:async';
 import 'widgets/request_product_dialog.dart';
 import 'widgets/product_card.dart';
@@ -259,7 +260,7 @@ class _MasterCatalogScreenState extends State<MasterCatalogScreen> with Automati
                    const SizedBox(height: 16),
                    TextField(
                      keyboardType: TextInputType.number,
-                     decoration: const InputDecoration(labelText: 'Enter Maximum Price (₹)', border: OutlineInputBorder()),
+                     decoration: const InputDecoration(labelText: 'Enter Maximum Price', border: OutlineInputBorder()),
                      onChanged: (val) => _customPriceLimit = double.tryParse(val),
                    )
                 ],
@@ -403,7 +404,7 @@ class _MasterCatalogScreenState extends State<MasterCatalogScreen> with Automati
                children: [
                  const Text("Active Filter:", style: TextStyle(fontSize: 12, color: Colors.grey)),
                  Chip(
-                   label: Text(_filterType + (_filterType.contains('custom') ? ' (${_customPriceLimit?.toStringAsFixed(0)})' : '')),
+                   label: Text(_filterType + (_filterType.contains('custom') ? ' (${CurrencyHelper.format(_customPriceLimit ?? 0)})' : '')),
                    onDeleted: () {
                       setState(() { 
                         _filterType = 'All';

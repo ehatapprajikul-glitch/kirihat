@@ -16,6 +16,7 @@ import 'package:kirihat_core/services/wishlist_service.dart';
 import '../widgets/draggable_cart_wrapper.dart';
 import '../../services/recently_viewed_service.dart';
 import '../widgets/floating_cart_button.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class EnhancedProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -531,7 +532,7 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
               await Share.share(
                 'Check out this amazing product on KiriHat!\n\n'
                 '📦 $name\n'
-                '💰 ₹$price\n'
+                '💰 ${CurrencyHelper.format(price)}\n'
                 '🏷️ $category\n\n'
                 'Download KiriHat app to order now!',
                 subject: 'Product Recommendation from KiriHat',
@@ -866,7 +867,7 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '₹$price',
+                CurrencyHelper.format(price),
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -877,7 +878,7 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
               if (mrp > price) ...[
                 const SizedBox(width: 8),
                 Text(
-                  '₹$mrp',
+                  CurrencyHelper.format(mrp),
                   style: TextStyle(
                     fontSize: 15,
                     color: Colors.grey[500],
@@ -1014,7 +1015,7 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
               ),
               child: ExpansionTile(
                 title: const Text(
-                  'Product Specifications',
+                  'Item Details',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                 ),
                 tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1037,7 +1038,7 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
                       const SizedBox(height: 12),
                       ExpansionTile(
                         title: Text(
-                          'View More Specifications (${sortedSections.length - 1})',
+                          'view more',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,

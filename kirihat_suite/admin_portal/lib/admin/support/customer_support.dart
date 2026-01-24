@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'customer_dashboard_dialog.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class CustomerSupport extends StatefulWidget {
   const CustomerSupport({super.key});
@@ -13,6 +14,7 @@ class CustomerSupport extends StatefulWidget {
 class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _statusFilter = 'All';
+  String _searchType = 'Phone'; // 'Phone' or 'Order ID'
 
   @override
   void initState() {
@@ -44,7 +46,7 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
 
         const SizedBox(height: 16),
 
-        // Search Bar
+        // Search Bar with Type Selector
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
@@ -56,16 +58,50 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
             children: [
               const Icon(Icons.search, color: Colors.grey),
               const SizedBox(width: 12),
+              
+              // Search Type Dropdown
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9759).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF0D9759).withOpacity(0.3)),
+                ),
+                child: DropdownButton<String>(
+                  value: _searchType,
+                  underline: const SizedBox(),
+                  isDense: true,
+                  icon: const Icon(Icons.arrow_drop_down, size: 20),
+                  items: const [
+                    DropdownMenuItem(value: 'Phone', child: Text('📱 Phone')),
+                    DropdownMenuItem(value: 'Order ID', child: Text('📦 Order ID')),
+                    DropdownMenuItem(value: 'Email', child: Text('✉️ Email')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _searchType = value!);
+                  },
+                ),
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // Search Input
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'Search by email, phone, or order ID...',
+                  decoration: InputDecoration(
+                    hintText: _searchType == 'Phone' 
+                        ? 'Enter phone number...' 
+                        : _searchType == 'Order ID'
+                        ? 'Enter order ID (e.g., ORD-12345)...'
+                        : 'Enter email address...',
                     border: InputBorder.none,
                     isDense: true,
                   ),
                   onSubmitted: (value) => _searchCustomerOrOrder(value.trim()),
                 ),
               ),
+              
+              // Info button
               IconButton(
                 icon: const Icon(Icons.info_outline, size: 20, color: Colors.grey),
                 onPressed: () {
@@ -74,11 +110,11 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
                     builder: (context) => AlertDialog(
                       title: const Text('Search Help'),
                       content: const Text(
-                        'You can search by:\n\n'
-                        '• Customer Email\n'
-                        '• Customer Phone Number\n'
-                        '• Order ID (e.g., ORD-12345 or ADMIN-67890)\n\n'
-                        'Order search will show order details and customer info.',
+                        'Select search type and enter:\n\n'
+                        '📱 Phone: 9876543210 or +919876543210\n'
+                        '📦 Order ID: ORD-12345 or ADMIN-67890\n'
+                        '✉️ Email: customer@example.com\n\n'
+                        'Tip: Select the right type for faster results!',
                       ),
                       actions: [
                         TextButton(
@@ -729,7 +765,7 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
     if (query.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter phone, email, or order ID'),
+          content: Text('Please enter a search term'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -737,12 +773,42 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
     }
 
     try {
-      // 1. Try Order Search first (since ID is usually specific)
-      bool orderFound = await _searchOrder(query);
-      if (orderFound) return;
-
-      // 2. Try Customer Search
-      await _searchCustomer(query);
+      String trimmedQuery = query.trim();
+      
+      // OPTIMIZED: Use selected search type for TARGETED queries
+      if (_searchType == 'Order ID') {
+        // Only search orders - skip customer search entirely
+        bool orderFound = await _searchOrder(trimmedQuery);
+        
+        if (!orderFound) {
+          // Try with prefix if user entered just numbers
+          if (RegExp(r'^[0-9]+$').hasMatch(trimmedQuery)) {
+            orderFound = await _searchOrder('ORD-$trimmedQuery');
+          }
+        }
+        
+        if (!orderFound && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No order found with this ID'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      
+      if (_searchType == 'Phone') {
+        // Only search by phone - much faster!
+        await _searchCustomerByPhone(trimmedQuery);
+        return;
+      }
+      
+      if (_searchType == 'Email') {
+        // Only search by email
+        await _searchCustomerByEmail(trimmedQuery);
+        return;
+      }
       
     } catch (e) {
       if (mounted) {
@@ -756,7 +822,6 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
   Future<bool> _searchOrder(String query) async {
       try {
         // Try searching by order_id exact match
-        // Also try searching by trimming or case insensitive
         var orders = await FirebaseFirestore.instance
             .collection('orders')
             .where('order_id', isEqualTo: query.toUpperCase())
@@ -767,7 +832,7 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
           var orderData = orders.docs.first.data();
           var customerId = orderData['customer_id'];
           
-          // Fetch customer data
+          // Fetch customer details
           String customerName = orderData['customer_name'] ?? 'Unknown Customer';
           if (customerId != null) {
               var customerDoc = await FirebaseFirestore.instance
@@ -810,6 +875,128 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
       }
   }
 
+  // OPTIMIZED: Phone-only search (much faster!)
+  Future<void> _searchCustomerByPhone(String rawQuery) async {
+    try {
+      // Generate phone variants
+      Set<String> variants = {rawQuery};
+      
+      if (RegExp(r'^[0-9+]+$').hasMatch(rawQuery)) {
+        if (rawQuery.startsWith('+91')) {
+          variants.add(rawQuery.substring(3));
+        } else if (rawQuery.length == 10) {
+          variants.add('+91$rawQuery');
+        }
+      }
+
+      for (String phoneVariant in variants) {
+        // Run all phone field queries in parallel
+        final results = await Future.wait([
+          FirebaseFirestore.instance.collection('users').where('phone', isEqualTo: phoneVariant).limit(1).get(),
+          FirebaseFirestore.instance.collection('users').where('phone_number', isEqualTo: phoneVariant).limit(1).get(),
+          FirebaseFirestore.instance.collection('users').where('phoneNumber', isEqualTo: phoneVariant).limit(1).get(),
+          FirebaseFirestore.instance.collection('users').where('mobile', isEqualTo: phoneVariant).limit(1).get(),
+        ]);
+        
+        for (var querySnapshot in results) {
+          if (querySnapshot.docs.isNotEmpty) {
+            _openCustomerFromDoc(querySnapshot.docs.first);
+            return;
+          }
+        }
+      }
+
+      // Fallback: Search in orders
+      List<String> orderVariants = [rawQuery];
+      if (rawQuery.startsWith('+91')) {
+        orderVariants.add(rawQuery.substring(3));
+      } else if (rawQuery.length == 10) {
+        orderVariants.add('+91$rawQuery');
+      }
+
+      final orderQueries = orderVariants.map((phoneVariant) => 
+        FirebaseFirestore.instance
+          .collection('orders')
+          .where('customer_phone', isEqualTo: phoneVariant)
+          .limit(1)
+          .get()
+      ).toList();
+      
+      final orderResults = await Future.wait(orderQueries);
+      
+      for (var orderQ in orderResults) {
+        if (orderQ.docs.isNotEmpty) {
+          var orderData = orderQ.docs.first.data();
+          if (orderData['customer_id'] != null) {
+            if (mounted) {
+              _showCustomerDashboard(
+                context, 
+                orderData['customer_id'], 
+                orderData['customer_name'] ?? 'Customer'
+              );
+            }
+            return;
+          }
+        }
+      }
+
+      // No customer found
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No customer found with this phone number'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // OPTIMIZED: Email-only search
+  Future<void> _searchCustomerByEmail(String email) async {
+    try {
+      var usersByEmail = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email.trim())
+          .limit(1)
+          .get();
+
+      if (usersByEmail.docs.isNotEmpty) {
+        var userData = usersByEmail.docs.first.data();
+        if (mounted) {
+          _showCustomerDashboard(
+            context,
+            usersByEmail.docs.first.id,
+            userData['name'] ?? 'Customer',
+          );
+        }
+        return;
+      }
+
+      // No customer found
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No customer found with this email'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _searchCustomer(String query) async {
     try {
       // Clean query
@@ -837,11 +1024,14 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
       }
 
       // 2. Search by Phone (Robust)
-      // If it looks like a phone number (mostly digits/plus)
+      // Check for phone number patterns
+      // We'll search across multiple fields: phone, phoneNumber, mobile
+      
+      // Generate variants to try
+      Set<String> variants = {rawQuery}; 
+      
+      // If it looks like a phone number
       if (RegExp(r'^[0-9+]+$').hasMatch(rawQuery)) {
-          // Generate variants
-          List<String> variants = [rawQuery]; // Exact input
-          
           if (rawQuery.startsWith('+91')) {
               // Try without prefix
               variants.add(rawQuery.substring(3));
@@ -849,28 +1039,65 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
               // Try with prefix
               variants.add('+91$rawQuery');
           }
+      }
 
-          for (String phone in variants) {
-              // Check 'phone' field
-              var q1 = await FirebaseFirestore.instance.collection('users').where('phone', isEqualTo: phone).limit(1).get();
-              if (q1.docs.isNotEmpty) {
-                  var userData = q1.docs.first.data();
-                  if (mounted) {
-                    _showCustomerDashboard(context, q1.docs.first.id, userData['name'] ?? 'Customer');
-                  }
-                  return;
-              }
 
-              // Check 'phoneNumber' field
-              var q2 = await FirebaseFirestore.instance.collection('users').where('phoneNumber', isEqualTo: phone).limit(1).get();
-              if (q2.docs.isNotEmpty) {
-                  var userData = q2.docs.first.data();
-                  if (mounted) {
-                    _showCustomerDashboard(context, q2.docs.first.id, userData['name'] ?? 'Customer');
-                  }
-                  return;
-              }
+      for (String phoneVariant in variants) {
+          // Run ALL queries in PARALLEL for maximum speed
+          final results = await Future.wait([
+            FirebaseFirestore.instance.collection('users').where('phone', isEqualTo: phoneVariant).limit(1).get(),
+            FirebaseFirestore.instance.collection('users').where('phone_number', isEqualTo: phoneVariant).limit(1).get(),
+            FirebaseFirestore.instance.collection('users').where('phoneNumber', isEqualTo: phoneVariant).limit(1).get(),
+            FirebaseFirestore.instance.collection('users').where('mobile', isEqualTo: phoneVariant).limit(1).get(),
+          ]);
+          
+          // Check results in priority order: phone > phone_number > phoneNumber > mobile
+          for (var querySnapshot in results) {
+            if (querySnapshot.docs.isNotEmpty) {
+              _openCustomerFromDoc(querySnapshot.docs.first);
+              return;
+            }
           }
+      }
+
+
+      // 3. Fallback: Search in Orders by customer_phone
+      // If user profile doesn't have the phone but they placed an order
+      if (RegExp(r'^[0-9+]+$').hasMatch(rawQuery)) {
+          List<String> orderVariants = [rawQuery];
+          if (rawQuery.startsWith('+91')) {
+             orderVariants.add(rawQuery.substring(3));
+          } else if (rawQuery.length == 10) {
+             orderVariants.add('+91$rawQuery');
+          }
+
+          // Run order queries in parallel too
+          final orderQueries = orderVariants.map((phoneVariant) => 
+            FirebaseFirestore.instance
+              .collection('orders')
+              .where('customer_phone', isEqualTo: phoneVariant)
+              .limit(1)
+              .get()
+          ).toList();
+          
+          final orderResults = await Future.wait(orderQueries);
+          
+          for (var orderQ in orderResults) {
+            if (orderQ.docs.isNotEmpty) {
+              var orderData = orderQ.docs.first.data();
+              if (orderData['customer_id'] != null) {
+                  if (mounted) {
+                    _showCustomerDashboard(
+                      context, 
+                      orderData['customer_id'], 
+                      orderData['customer_name'] ?? 'Customer'
+                    );
+                  }
+
+                 return;
+              }
+            }
+         }
       }
 
       // No customer found
@@ -889,6 +1116,12 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
         );
       }
     }
+  }
+
+  void _openCustomerFromDoc(DocumentSnapshot doc) {
+      if (!mounted) return;
+      var userData = doc.data() as Map<String, dynamic>;
+      _showCustomerDashboard(context, doc.id, userData['name'] ?? 'Customer');
   }
 
   void _showOrderDetailsDialog(String orderId, Map<String, dynamic> orderData, String customerName) {
@@ -962,8 +1195,53 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Status Badge
-                      _buildStatusBadge(orderData['status'] ?? 'Unknown'),
+                      // Status Badge & Cancellation Info
+                      Row(
+                        children: [
+                           _buildStatusBadge(orderData['status'] ?? 'Unknown'),
+                        ],
+                      ),
+
+                      // CANCELLATION DETAILS BLOCK
+                      if (orderData['status'] == 'Cancelled') ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.info_outline, size: 20, color: Colors.red.shade800),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Cancellation Details",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold, 
+                                      color: Colors.red.shade900
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text("Cancelled By: ${(orderData['cancelled_by'] ?? 'Unknown').toString().toUpperCase()}",
+                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text("Reason: ${orderData['cancellation_reason'] ?? 'Not specified'}"),
+                              if (orderData['cancelled_at'] != null) ...[
+                                const SizedBox(height: 4),
+                                Text("Time: ${_formatDate(orderData['cancelled_at'] is Timestamp ? orderData['cancelled_at'] : Timestamp.now())}"),
+                              ]
+                            ],
+                          ),
+                        ),
+                      ],
                       
                       const SizedBox(height: 24),
 
@@ -979,9 +1257,9 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
                       _buildSectionTitle('Payment Details'),
                       _buildInfoRow('Method', orderData['payment_method'] ?? 'N/A'),
                       _buildInfoRow('Status', orderData['payment_status'] ?? 'Pending'),
-                      _buildInfoRow('Subtotal', '₹${orderData['product_total'] ?? orderData['subtotal'] ?? 0}'),
-                      _buildInfoRow('Delivery Fee', '₹${orderData['delivery_fee'] ?? 0}'),
-                      _buildInfoRow('Total', '₹${orderData['total_amount'] ?? 0}', isBold: true),
+                      _buildInfoRow('Subtotal', CurrencyHelper.format(orderData['product_total'] ?? orderData['subtotal'] ?? 0)),
+                      _buildInfoRow('Delivery Fee', CurrencyHelper.format(orderData['delivery_fee'] ?? 0)),
+                      _buildInfoRow('Total', CurrencyHelper.format(orderData['total_amount'] ?? 0), isBold: true),
 
                       if (orderData['delivery_pin'] != null)
                         _buildInfoRow('Delivery PIN', orderData['delivery_pin'], isBold: true),
@@ -1224,7 +1502,7 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
     );
   }
 
-  void _showCustomerDashboard(BuildContext context, String? userId, String customerName) {
+  void _showCustomerDashboard(BuildContext context, String? userId, String customerName) async {
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1235,11 +1513,31 @@ class _CustomerSupportState extends State<CustomerSupport> with SingleTickerProv
       return;
     }
 
+    // Fetch actual customer name if not provided or generic
+    String displayName = customerName;
+    if (customerName == 'Customer' || customerName == 'Unknown' || customerName.isEmpty || customerName == 'N/A') {
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+        
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>?;
+          if (userData != null && userData['name'] != null && userData['name'].toString().isNotEmpty) {
+            displayName = userData['name'];
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching customer name: $e');
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) => CustomerDashboardDialog(
         userId: userId,
-        customerName: customerName,
+        customerName: displayName,
       ),
     );
   }

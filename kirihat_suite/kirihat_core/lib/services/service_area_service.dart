@@ -1,7 +1,46 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ServiceAreaService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // --- EXTERNAL API ---
+
+  /// Fetch available Post Offices for a given Pincode from external API
+  Future<Map<String, dynamic>> fetchPostOfficesForPincode(String pincode) async {
+    if (pincode.length != 6) {
+      return {'success': false, 'message': 'Invalid Pincode length'};
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.postalpincode.in/pincode/$pincode'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty && data[0]['Status'] == 'Success') {
+          return {
+            'success': true,
+            'data': data[0]['PostOffice'],
+            'message': 'Found areas'
+          };
+        } else {
+          return {
+            'success': false, 
+            'message': 'No Post Offices found for this pincode.'
+          };
+        }
+      } else {
+        return {'success': false, 'message': 'API Error: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Network Error: $e'};
+    }
+  }
+
+  // --- QUERY & READ ---
 
   /// Find all service areas (Post Offices) available for a pincode across ALL vendors
   /// Returns: { zoneName, areas: Set<String>, vendors: List<String> }
@@ -176,6 +215,126 @@ class ServiceAreaService {
     } catch (e) {
       print('❌ Error getting service areas for pincode: $e');
       return [];
+    }
+  }
+
+  // --- WRITE OPERATIONS ---
+
+  /// Internal helper to log history
+  Future<void> _logHistory({
+    required String vendorId,
+    required String action, // 'Create', 'Update', 'Delete'
+    required String pincode,
+    required String details,
+  }) async {
+    try {
+      await _firestore.collection('vendor_zone_history').add({
+        'vendor_id': vendorId,
+        'action': action,
+        'pincode': pincode,
+        'details': details,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Failed to log history: $e');
+    }
+  }
+
+  /// Add a new service zone or update existing one
+  Future<Map<String, dynamic>> addServiceZone({
+    required String uid, 
+    required String pincode, 
+    required List<String> selectedAreas,
+    required String zoneName,
+  }) async {
+    try {
+      // 0. Check if zone exists to determine Action (Create vs Update)
+      String docId = '${pincode}_$uid';
+      final docSnap = await _firestore.collection('service_areas').doc(docId).get();
+      
+      bool isUpdate = docSnap.exists;
+      Set<String> oldAreas = {};
+      if (isUpdate) {
+        oldAreas = Set<String>.from(docSnap.data()?['areas'] ?? []);
+      }
+
+      // 1. Exclusivity Check (Internal call)
+      // Check ALL selected areas, even if previously owned (checkAreaExclusivity handles self-exclusion)
+      final exclusivity = await checkAreaExclusivity(
+        pincode: pincode,
+        areasToCheck: selectedAreas,
+        currentVendorId: uid,
+      );
+
+      if (!exclusivity['isAvailable']) {
+        return {
+          'success': false,
+          'type': 'conflict',
+          'conflictingAreas': exclusivity['conflictingAreas'],
+          'message': 'Some areas are already claimed by another vendor.'
+        };
+      }
+
+      // 2. Add/Update service_areas collection
+      await _firestore.collection('service_areas').doc(docId).set({
+        'doc_id': docId,
+        'pincode': pincode,
+        'vendorId': uid,
+        'vendor_id': uid, // maintain consistency
+        'areas': selectedAreas,
+        'zoneName': zoneName,
+        'isActive': true,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+
+      // 3. Update Vendor's service_pincodes list
+      await _firestore.collection('vendors').doc(uid).update({
+        'service_pincodes': FieldValue.arrayUnion([pincode])
+      });
+
+      // 4. Log History
+      if (isUpdate) {
+        Set<String> newSet = Set.from(selectedAreas);
+        List<String> added = newSet.difference(oldAreas).toList();
+        List<String> removed = oldAreas.difference(newSet).toList();
+        
+        String details = "Updated zone.";
+        if (added.isNotEmpty) details += " Added: ${added.join(', ')}.";
+        if (removed.isNotEmpty) details += " Removed: ${removed.join(', ')}.";
+        if (added.isEmpty && removed.isEmpty) details = "Updated zone details (no area change).";
+
+        await _logHistory(vendorId: uid, action: 'Update', pincode: pincode, details: details);
+      } else {
+        await _logHistory(vendorId: uid, action: 'Create', pincode: pincode, details: "Created zone with ${selectedAreas.length} areas.");
+      }
+
+      return {'success': true, 'message': isUpdate ? 'Service Zone updated successfully' : 'Service Zone added successfully'};
+    } catch (e) {
+      return {'success': false, 'message': 'Database Error: $e'};
+    }
+  }
+
+  /// Delete a service zone
+  Future<Map<String, dynamic>> deleteServiceZone({
+    required String uid, 
+    required String pincode
+  }) async {
+    String docId = '${pincode}_$uid';
+    try {
+      // 1. Delete from service_areas
+      await _firestore.collection('service_areas').doc(docId).delete();
+
+      // 2. Remove from vendor's service_pincodes
+      await _firestore.collection('vendors').doc(uid).update({
+        'service_pincodes': FieldValue.arrayRemove([pincode])
+      });
+
+      // 3. Log History
+      await _logHistory(vendorId: uid, action: 'Delete', pincode: pincode, details: "Deleted zone $pincode.");
+
+      return {'success': true, 'message': 'Zone removed successfully'};
+    } catch (e) {
+      return {'success': false, 'message': 'Delete Error: $e'};
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'order_details.dart';
 import 'product/enhanced_product_detail.dart'; // Import this to navigate to product details
+import 'package:kirihat_core/utils/currency_helper.dart';
 import '../auth/phone_auth_screen.dart';
 
 class CustomerOrdersScreen extends StatelessWidget {
@@ -185,7 +186,7 @@ class CustomerOrdersScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  "₹$total",
+                                  CurrencyHelper.format(total),
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14),
@@ -270,7 +271,7 @@ class CustomerOrdersScreen extends StatelessWidget {
                                           fontWeight: FontWeight.w500),
                                     ),
                                     Text(
-                                      "Qty: ${item['quantity']}  •  ₹${item['price']}",
+                                      "Qty: ${item['quantity']}  •  ${CurrencyHelper.format(item['price'])}",
                                       style: TextStyle(
                                           fontSize: 11,
                                           color: Colors.grey[600]),

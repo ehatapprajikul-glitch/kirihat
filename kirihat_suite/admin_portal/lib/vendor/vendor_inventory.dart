@@ -3,6 +3,7 @@ import 'package:kirihat_core/models/seller_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'vendor_product_detail.dart';
 
 // New inventory system imports
@@ -621,7 +622,7 @@ class _VendorInventoryScreenState extends State<VendorInventoryScreen>
                                   fontSize: 11, color: Colors.grey)),
                           const SizedBox(height: 4),
                           Text(
-                              "Stock: ${data['stock_quantity'] ?? 0} | ₹${data['price'] ?? 0}",
+                              "Stock: ${data['stock_quantity'] ?? 0} | ${CurrencyHelper.format(data['price'] ?? 0)}",
                               style: TextStyle(
                                   color: (data['stock_quantity'] ?? 0) <= 0
                                       ? Colors.red 

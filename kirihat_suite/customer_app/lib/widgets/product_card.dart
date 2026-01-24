@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kirihat_core/utils/app_colors.dart';
 import 'package:kirihat_core/services/wishlist_service.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class ProductCard extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -134,7 +135,7 @@ class _ProductCardState extends State<ProductCard> {
                           ),
                         ),
                         child: Text(
-                          "₹$discountAmount OFF",
+                          "${CurrencyHelper.format(discountAmount)} OFF",
                           style: const TextStyle(
                               color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
@@ -270,7 +271,7 @@ class _ProductCardState extends State<ProductCard> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      "₹${price.toStringAsFixed(0)}",
+                                      CurrencyHelper.format(price),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
@@ -283,7 +284,7 @@ class _ProductCardState extends State<ProductCard> {
                                     Padding(
                                       padding: const EdgeInsets.only(top: 2),
                                       child: Text(
-                                        "₹${mrp!.toStringAsFixed(0)}",
+                                        CurrencyHelper.format(mrp!),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(

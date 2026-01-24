@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/models/category_specification_model.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'package:kirihat_core/services/seller_service.dart';
 import 'package:kirihat_core/services/cloudinary_service.dart';
 import 'package:kirihat_core/services/category_specification_service.dart';
@@ -1139,6 +1140,7 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
                   ? DynamicSpecificationRenderer(
                       fields: _template!.fields,
                       initialValues: _specifications,
+                      isSellerMode: true, // Enforce locking for sellers
                       onValuesChanged: (values) {
                         // Update values without rebuilding the entire screen
                         _specifications = values;
@@ -1194,7 +1196,7 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
                 child: TextFormField(
                   controller: _mrpController,
                   decoration: const InputDecoration(
-                    labelText: 'MRP (\u20B9) *',
+                    labelText: 'MRP *',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.currency_rupee),
                     helperText: 'Max Retail Price',
@@ -1218,7 +1220,7 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
                 child: TextFormField(
                   controller: _costPriceController,
                   decoration: const InputDecoration(
-                    labelText: 'Cost Price (\u20B9)',
+                    labelText: 'Cost Price',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.money_off),
                     helperText: 'Your purchase cost',
@@ -1237,7 +1239,7 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
                 child: TextFormField(
                   controller: _sellingPriceController,
                   decoration: const InputDecoration(
-                    labelText: 'Selling Price (\u20B9) *',
+                    labelText: 'Selling Price *',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.sell),
                     helperText: 'Final price for customer',
@@ -1278,7 +1280,7 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
                   const Icon(Icons.trending_up, color: Color(0xFF34A853)),
                   const SizedBox(width: 12),
                   Text(
-                    'Profit Margin: ${_calculateMargin().toStringAsFixed(1)}%',
+                    'Profit Margin: ${double.parse(_calculateMargin().toStringAsFixed(1))}%',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -1628,9 +1630,9 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
             ),
 
           _buildReviewSection('Pricing', [
-            'MRP: \u20B9${_mrpController.text}',
-            'Selling Price: \u20B9${_sellingPriceController.text}',
-            'Cost Price: \u20B9${_costPriceController.text}',
+            'MRP: ${CurrencyHelper.format(_mrpController.text.isEmpty ? 0 : double.tryParse(_mrpController.text))}',
+            'Selling Price: ${CurrencyHelper.format(_sellingPriceController.text.isEmpty ? 0 : double.tryParse(_sellingPriceController.text))}',
+            'Cost Price: ${CurrencyHelper.format(_costPriceController.text.isEmpty ? 0 : double.tryParse(_costPriceController.text))}',
             'Quantity: ${_quantityController.text}',
           ], () => setState(() => _currentStep = 3)),
 

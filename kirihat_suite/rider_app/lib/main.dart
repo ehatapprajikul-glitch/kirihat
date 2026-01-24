@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Kiri Hat Rider',
+      title: 'Kirihat Rider',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue), // Distinct color for Rider
         useMaterial3: true,

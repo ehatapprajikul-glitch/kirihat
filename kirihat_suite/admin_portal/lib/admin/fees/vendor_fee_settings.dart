@@ -337,10 +337,10 @@ class _FeeConfigurationDialogState extends State<_FeeConfigurationDialog> {
                           ),
                           if (_freeDeliveryEnabled) ...[
                             const SizedBox(height: 16),
-                            _buildTextField(_freeDeliveryThresholdCtrl, 'Free Delivery Above (₹)', 'e.g., 249'),
+                            _buildTextField(_freeDeliveryThresholdCtrl, 'Free Delivery Above', 'e.g., 249'),
                           ],
                           const SizedBox(height: 16),
-                          _buildTextField(_standardDeliveryFeeCtrl, 'Fallback Standard Fee (₹)', 'Used if no zone found'),
+                          _buildTextField(_standardDeliveryFeeCtrl, 'Fallback Standard Fee', 'Used if no zone found'),
                           
                           const Divider(height: 32),
                           const Text("Instant Delivery Rules", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -354,10 +354,10 @@ class _FeeConfigurationDialogState extends State<_FeeConfigurationDialog> {
                           ),
                           if (_freeInstantDeliveryEnabled) ...[
                             const SizedBox(height: 16),
-                            _buildTextField(_freeInstantDeliveryThresholdCtrl, 'Free Instant Above (₹)', 'e.g., 1000'),
+                            _buildTextField(_freeInstantDeliveryThresholdCtrl, 'Free Instant Above', 'e.g., 1000'),
                           ],
                           const SizedBox(height: 16),
-                          _buildTextField(_instantDeliveryFeeCtrl, 'Fallback Instant Fee (₹)', 'Used if no zone found'),
+                          _buildTextField(_instantDeliveryFeeCtrl, 'Fallback Instant Fee', 'Used if no zone found'),
                         ],
                       ),
                     ),
@@ -377,9 +377,9 @@ class _FeeConfigurationDialogState extends State<_FeeConfigurationDialog> {
                             const SizedBox(height: 16),
                             Row(
                               children: [
-                                Expanded(child: _buildTextField(_lowCartThresholdCtrl, 'Below Amount (₹)', 'e.g., 199')),
+                                Expanded(child: _buildTextField(_lowCartThresholdCtrl, 'Below Amount', 'e.g., 199')),
                                 const SizedBox(width: 16),
-                                Expanded(child: _buildTextField(_lowCartFeeCtrl, 'Add Fee (₹)', 'e.g., 15')),
+                                Expanded(child: _buildTextField(_lowCartFeeCtrl, 'Add Fee', 'e.g., 15')),
                               ],
                             ),
                           ],
@@ -410,7 +410,7 @@ class _FeeConfigurationDialogState extends State<_FeeConfigurationDialog> {
                                       border: OutlineInputBorder(),
                                     ),
                                     items: const [
-                                      DropdownMenuItem(value: 'fixed', child: Text('Fixed Amount (₹)')),
+                                      DropdownMenuItem(value: 'fixed', child: Text('Fixed Amount')),
                                       DropdownMenuItem(value: 'percent', child: Text('Percentage (%)')),
                                     ],
                                     onChanged: (val) => setState(() => _platformFeeType = val!),
@@ -421,7 +421,7 @@ class _FeeConfigurationDialogState extends State<_FeeConfigurationDialog> {
                                   child: _buildTextField(
                                     _platformFeeValueCtrl, 
                                     'Value', 
-                                    _platformFeeType == 'fixed' ? 'Amount in ₹' : 'Percentage',
+                                    _platformFeeType == 'fixed' ? 'Amount' : 'Percentage',
                                   ),
                                 ),
                               ],

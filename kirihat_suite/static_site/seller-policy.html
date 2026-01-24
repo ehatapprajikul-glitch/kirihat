@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Policy - Kirihat</title>
+    <meta name="description" content="Policy page for Kirihat platform.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header" id="header">
+        <div class="container">
+            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
+            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <nav class="nav" id="mainNav">
+                <a href="index.html">Home</a>
+                <a href="about-us">About Us</a>
+                <a href="contact-us">Contact</a>
+                <a href="/app/" class="btn-primary">Launch App</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container content-page">
+        <h1>Seller Policy</h1>
+        <p>This is the placeholder content for Seller Policy. Detailed terms will be added here.</p>
+        <p>Last updated: January 24, 2026</p>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-section">
+                <h3>Policies</h3>
+                <div class="footer-grid">
+                    <a href="terms-and-conditions">Terms & Conditions</a>
+                    <a href="privacy-policy">Privacy Policy</a>
+                    <a href="return-refund-policy">Return & Refund</a>
+                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                    <a href="cancellation-policy">Cancellation</a>
+                    <a href="payment-policy">Payment Policy</a>
+                    <a href="seller-policy">Seller Policy</a>
+                    <a href="vendor-policy">Vendor Policy</a>
+                    <a href="rider-policy">Rider Policy</a>
+                    <a href="product-listing-policy">Product Listing</a>
+                    <a href="dispute-resolution-policy">Dispute Resolution</a>
+                    <a href="acceptable-use-policy">Acceptable Use</a>
+                    <a href="pricing-fee-structure">Pricing & Fees</a>
+                    <a href="intellectual-property-policy">IP Policy</a>
+                    <a href="cookie-policy">Cookie Policy</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h3>Company</h3>
+                <div class="footer-grid">
+                    <a href="faq">FAQ</a>
+                    <a href="about-us">About Us</a>
+                    <a href="contact-us">Contact Us</a>
+                    <a href="grievance-redressal">Grievance Redressal</a>
+                    <a href="community-guidelines">Community Guidelines</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Kirihat. All rights reserved. | Kachakhana, Golakganj, Dhubri - 783334, India</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('mainNav').classList.toggle('active');
+        }
+
+        // Header scroll effect
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+    </script>
+</body>
+</html>

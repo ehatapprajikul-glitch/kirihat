@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 /// Model class representing inventory filter and sort criteria
 class InventoryFilter {
@@ -158,11 +159,11 @@ class InventoryFilter {
     }
     if (minPrice != null || maxPrice != null) {
       if (minPrice != null && maxPrice != null) {
-        parts.add('₹$minPrice - ₹$maxPrice');
+        parts.add('${CurrencyHelper.format(minPrice)} - ${CurrencyHelper.format(maxPrice)}');
       } else if (minPrice != null) {
-        parts.add('Min: ₹$minPrice');
+        parts.add('Min: ${CurrencyHelper.format(minPrice)}');
       } else {
-        parts.add('Max: ₹$maxPrice');
+        parts.add('Max: ${CurrencyHelper.format(maxPrice)}');
       }
     }
     

@@ -12,6 +12,8 @@ class SpecificationField {
   final List<String>? unitOptions; // List of available units
   final bool isUnitLocked; // If true, seller cannot change the default unit
   final String? defaultUnit; // Pre-selected unit
+  final String? defaultValue; // Default value for the field
+  final bool isSellerEditable; // If false, seller cannot change the value (admin only/default value locked)
   final Map<String, dynamic>? validation; // Custom validation rules
   final int displayOrder;
 
@@ -26,6 +28,8 @@ class SpecificationField {
     this.unitOptions,
     this.isUnitLocked = false,
     this.defaultUnit,
+    this.defaultValue,
+    this.isSellerEditable = true,
     this.validation,
     this.displayOrder = 0,
   });
@@ -42,6 +46,8 @@ class SpecificationField {
       unitOptions: map['unit_options'] != null ? List<String>.from(map['unit_options']) : null,
       isUnitLocked: map['is_unit_locked'] ?? false,
       defaultUnit: map['default_unit'],
+      defaultValue: map['default_value'],
+      isSellerEditable: map['is_seller_editable'] ?? true,
       validation: map['validation'],
       displayOrder: map['display_order'] ?? 0,
     );
@@ -59,6 +65,8 @@ class SpecificationField {
       'unit_options': unitOptions,
       'is_unit_locked': isUnitLocked,
       'default_unit': defaultUnit,
+      'default_value': defaultValue,
+      'is_seller_editable': isSellerEditable,
       'validation': validation,
       'display_order': displayOrder,
     };

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 /// Enhanced product recommendation card with discount badge and add button
 class RecommendationCard extends StatelessWidget {
@@ -134,7 +135,7 @@ class RecommendationCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '₹$price',
+                          CurrencyHelper.format(price),
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -144,7 +145,7 @@ class RecommendationCard extends StatelessWidget {
                         if (hasDiscount) ...[
                           const SizedBox(width: 6),
                           Text(
-                            '₹$mrp',
+                            CurrencyHelper.format(mrp),
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey[500],

@@ -7,7 +7,6 @@ import 'firebase_options.dart';
 
 // Screens
 import 'auth/phone_auth_screen.dart';
-import 'auth/login_screen.dart';
 import 'customer/customer_dashboard.dart';
 // import 'vendor/vendor_dashboard.dart'; // Removed for Customer App
 // import 'admin/admin_web_layout.dart'; // Removed for Customer App
@@ -44,7 +43,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Kiri Hat',
+      title: 'Kirihat',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,

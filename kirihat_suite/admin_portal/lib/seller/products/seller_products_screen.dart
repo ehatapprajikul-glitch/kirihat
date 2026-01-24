@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/services/seller_service.dart';
 import 'package:kirihat_core/models/seller_product_request.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'enhanced_add_product_screen.dart';
 import 'widgets/draft_manager_widget.dart';
 
@@ -216,7 +217,7 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
                           Row(
                             children: [
                               Text(
-                                '₹${data['mrp']}',
+                                CurrencyHelper.format(data['mrp']),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF0D9759),

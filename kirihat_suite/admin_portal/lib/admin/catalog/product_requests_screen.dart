@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class ProductRequestsScreen extends StatelessWidget {
   const ProductRequestsScreen({super.key});
@@ -321,9 +322,9 @@ class _ProductRequestCardState extends State<_ProductRequestCard> {
                 
                 const SizedBox(height: 16),
                 _buildSectionHeader('Pricing & Stock'),
-                _buildDetailRow('MRP', '₹${productData['mrp'] ?? '-'}'),
-                _buildDetailRow('Selling Price', '₹${productData['selling_price'] ?? productData['price'] ?? '-'}'),
-                _buildDetailRow('Cost Price', '₹${productData['cost_price'] ?? '-'}'),
+                _buildDetailRow('MRP', CurrencyHelper.format(productData['mrp'])),
+                _buildDetailRow('Selling Price', CurrencyHelper.format(productData['selling_price'] ?? productData['price'])),
+                _buildDetailRow('Cost Price', CurrencyHelper.format(productData['cost_price'])),
                 _buildDetailRow('Quantity', '${productData['quantity'] ?? productData['stock_quantity'] ?? '-'}'),
 
                 const SizedBox(height: 16),

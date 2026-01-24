@@ -186,7 +186,7 @@ class _CreateCouponState extends State<CreateCoupon> {
                               ),
                               items: const [
                                 DropdownMenuItem(value: 'percentage', child: Text('Percentage (%)')),
-                                DropdownMenuItem(value: 'fixed', child: Text('Fixed Amount (₹)')),
+                                DropdownMenuItem(value: 'fixed', child: Text('Fixed Amount')),
                               ],
                               onChanged: (value) {
                                 setState(() => _discountType = value!);
@@ -198,7 +198,7 @@ class _CreateCouponState extends State<CreateCoupon> {
                             child: TextFormField(
                               controller: _discountValueController,
                               decoration: InputDecoration(
-                                labelText: _discountType == 'percentage' ? 'Discount (%)' : 'Amount (₹)',
+                                labelText: _discountType == 'percentage' ? 'Discount (%)' : 'Amount',
                                 border: const OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
@@ -229,7 +229,7 @@ class _CreateCouponState extends State<CreateCoupon> {
                             child: TextFormField(
                               controller: _minOrderController,
                               decoration: const InputDecoration(
-                                labelText: 'Min Order Value (₹)',
+                                labelText: 'Min Order Value',
                                 border: OutlineInputBorder(),
                                 hintText: 'Optional',
                               ),
@@ -241,7 +241,7 @@ class _CreateCouponState extends State<CreateCoupon> {
                             child: TextFormField(
                               controller: _maxDiscountController,
                               decoration: const InputDecoration(
-                                labelText: 'Max Discount (₹)',
+                                labelText: 'Max Discount',
                                 border: OutlineInputBorder(),
                                 hintText: 'Optional',
                               ),

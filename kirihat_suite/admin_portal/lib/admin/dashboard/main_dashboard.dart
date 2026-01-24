@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../users/create_user_dialog.dart';
 import '../coupons/create_coupon.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class MainDashboard extends StatelessWidget {
   final Function(String) onNavigate;
@@ -97,7 +98,7 @@ class MainDashboard extends StatelessWidget {
                               onTap: () => onNavigate('analytics'),
                               child: _buildStatCard(
                                 'Total Revenue',
-                                '₹${(totalRevenue / 1000).toStringAsFixed(1)}K',
+                                CurrencyHelper.format(totalRevenue),
                                 Icons.attach_money,
                                 Colors.purple,
                                 'All time earnings',
@@ -379,7 +380,7 @@ class MainDashboard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '₹${data['total_amount'] ?? 0}',
+                                  CurrencyHelper.format(data['total_amount'] ?? 0),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -632,9 +633,9 @@ class MainDashboard extends StatelessWidget {
                       _buildInfoSection('Order Details', [
                         _buildInfoRow('Order ID', orderId),
                         _buildInfoRow('Payment Method', orderData['payment_method'] ?? 'N/A'),
-                        _buildInfoRow('Subtotal', '₹${orderData['subtotal'] ?? 0}'),
-                        _buildInfoRow('Delivery Fee', '₹${orderData['delivery_fee'] ?? 0}'),
-                        _buildInfoRow('Total Amount', '₹${orderData['total_amount'] ?? 0}', isBold: true),
+                        _buildInfoRow('Subtotal', CurrencyHelper.format(orderData['subtotal'] ?? 0)),
+                        _buildInfoRow('Delivery Fee', CurrencyHelper.format(orderData['delivery_fee'] ?? 0)),
+                        _buildInfoRow('Total Amount', CurrencyHelper.format(orderData['total_amount'] ?? 0), isBold: true),
                       ]),
 
                       const SizedBox(height: 20),
@@ -666,8 +667,7 @@ class MainDashboard extends StatelessWidget {
                                   title: Text(item['name'] ?? 'N/A'),
                                   subtitle: Text('Qty: ${item['quantity'] ?? 1}'),
                                   trailing: Text(
-                                    '₹${item['price'] ?? 0}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    CurrencyHelper.format(item['price'] ?? 0),
                                   ),
                                 );
                               }).toList()

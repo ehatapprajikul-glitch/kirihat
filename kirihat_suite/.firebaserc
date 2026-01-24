@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "kiri-hat-live"
+  },
+  "targets": {
+    "kiri-hat-live": {
+      "hosting": {
+        "customer": [
+          "kiri-hat-live"
+        ],
+        "portal": [
+          "kiri-hat-portal"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

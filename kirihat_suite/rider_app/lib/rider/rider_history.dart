@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:kirihat_core/shared/rider_settlement_history.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class RiderHistoryScreen extends StatefulWidget {
   const RiderHistoryScreen({super.key});
@@ -295,7 +296,7 @@ class _RiderHistoryScreenState extends State<RiderHistoryScreen> {
                         style: TextStyle(color: Colors.white70, fontSize: 14)),
                     const SizedBox(height: 5),
                     Text(
-                      "₹${currentDebt.toStringAsFixed(0)}",
+                      CurrencyHelper.format(currentDebt),
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -307,7 +308,7 @@ class _RiderHistoryScreenState extends State<RiderHistoryScreen> {
                       children: [
                         _buildHeaderStat(
                             "Lifetime Earnings",
-                            "+₹${lifetimeEarnings.toStringAsFixed(0)}",
+                            "+${CurrencyHelper.format(lifetimeEarnings)}",
                             Colors.greenAccent),
                       ],
                     ),
@@ -363,7 +364,7 @@ class _RiderHistoryScreenState extends State<RiderHistoryScreen> {
                         ],
                       ),
                       trailing: Text(
-                        "+ ₹${commission.toStringAsFixed(0)}",
+                        "+ ${CurrencyHelper.format(commission)}",
                         style: const TextStyle(
                             color: Colors.green,
                             fontWeight: FontWeight.bold,

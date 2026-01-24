@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'master_product_form.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class CategoryProductsView extends StatefulWidget {
   final String categoryName;
@@ -233,7 +234,7 @@ class _CategoryProductsViewState extends State<CategoryProductsView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '₹${mrp.toStringAsFixed(2)}',
+                    CurrencyHelper.format(mrp),
                     style: const TextStyle(
                       color: Color(0xFF0D9759),
                       fontWeight: FontWeight.bold,

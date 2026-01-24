@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kirihat_core/models/seller_model.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class SellerSidebar extends StatelessWidget {
   final String currentPage;
@@ -295,7 +296,7 @@ class SellerSidebar extends StatelessWidget {
           const SizedBox(height: 12),
           _buildStatRow('Products', '${seller.totalProducts}'),
           _buildStatRow('Active', '${seller.activeProducts}'),
-          _buildStatRow('Sales', '₹${seller.totalSales.toStringAsFixed(0)}'),
+          _buildStatRow('Sales', CurrencyHelper.format(seller.totalSales)),
           _buildStatRow('Rating', '${seller.rating.toStringAsFixed(1)} ⭐'),
         ],
       ),

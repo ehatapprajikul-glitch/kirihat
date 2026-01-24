@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/services/seller_service.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class SellerManagementScreen extends StatefulWidget {
   const SellerManagementScreen({super.key});
@@ -196,7 +197,7 @@ class _SellerManagementScreenState extends State<SellerManagementScreen> {
       children: [
         _buildStatItem('Products', '${seller.totalProducts}', Icons.inventory_2),
         _buildStatItem('Active', '${seller.activeProducts}', Icons.check_circle_outline),
-        _buildStatItem('Sales', '₹${seller.totalSales.toStringAsFixed(0)}', Icons.trending_up),
+        _buildStatItem('Sales', CurrencyHelper.format(seller.totalSales), Icons.trending_up),
         _buildStatItem('Rating', '${seller.rating.toStringAsFixed(1)}', Icons.star),
       ],
     );

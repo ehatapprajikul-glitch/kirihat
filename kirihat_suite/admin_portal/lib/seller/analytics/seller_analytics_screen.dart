@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/services/seller_service.dart';
 import 'seller_report_service.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class SellerAnalyticsScreen extends StatefulWidget {
   final SellerModel seller;
@@ -223,7 +224,7 @@ class _SellerAnalyticsScreenState extends State<SellerAnalyticsScreen> {
                   // Scorecards
                   Row(
                     children: [
-                      Expanded(child: _buildScoreCard('Revenue', '₹${NumberFormat('#,##0').format(_stats['totalRevenue'])}', Icons.currency_rupee, Colors.green)),
+                      Expanded(child: _buildScoreCard('Revenue', CurrencyHelper.format(_stats['totalRevenue']), Icons.currency_rupee, Colors.green)),
                       const SizedBox(width: 12),
                       Expanded(child: _buildScoreCard('Orders', '${_stats['totalOrders']}', Icons.shopping_bag, Colors.blue)),
                     ],
@@ -353,7 +354,7 @@ class _SellerAnalyticsScreenState extends State<SellerAnalyticsScreen> {
   }
 
   Widget _buildFinanceRow(String label, double amount, Color color, {bool isBold = false}) {
-    final formatted = NumberFormat.currency(symbol: '₹', decimalDigits: 2).format(amount.abs());
+    final formatted = CurrencyHelper.format(amount.abs());
     final display = amount < 0 ? '- $formatted' : formatted;
     
     return Row(
@@ -411,7 +412,7 @@ class _SellerAnalyticsScreenState extends State<SellerAnalyticsScreen> {
              crossAxisAlignment: CrossAxisAlignment.end,
              children: [
                Text(
-                 '₹${NumberFormat('#,##0').format(order['total'])}', 
+                 CurrencyHelper.format(order['total']), 
                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)
                ),
                const SizedBox(height: 4),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_master_product_editor.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class MasterProductsScreen extends StatefulWidget {
   const MasterProductsScreen({super.key});
@@ -358,7 +359,7 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'MRP: ₹${data['mrp'] ?? 0}',
+                        'MRP: ${CurrencyHelper.format(data['mrp'] ?? 0)}',
                         style: const TextStyle(
                           color: Color(0xFF0D9759),
                           fontWeight: FontWeight.bold,

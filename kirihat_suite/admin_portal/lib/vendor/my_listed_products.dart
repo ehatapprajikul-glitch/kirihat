@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 // Inventory system imports
 import 'inventory/widgets/stock_adjustment_dialog.dart';
@@ -266,7 +267,7 @@ class _MyListedProductsScreenState extends State<MyListedProductsScreen>
                         _buildMetricCard('Total Products', total.toString(), Icons.inventory_2, Colors.blue, constraints.maxWidth),
                         _buildMetricCard('Low Stock', lowStock.toString(), Icons.warning, Colors.orange, constraints.maxWidth),
                         _buildMetricCard('Out of Stock', outOfStock.toString(), Icons.remove_circle, Colors.red, constraints.maxWidth),
-                        _buildMetricCard('Total Value', '₹${_formatValue(totalValue)}', Icons.attach_money, Colors.green, constraints.maxWidth),
+                        _buildMetricCard('Total Value', CurrencyHelper.format(totalValue), Icons.attach_money, Colors.green, constraints.maxWidth),
                       ],
                     );
                   },
@@ -575,7 +576,7 @@ class _MyListedProductsScreenState extends State<MyListedProductsScreen>
                                       const SizedBox(width: 12),
                                       Expanded(child: _buildSmallMetric(outOfStock.toString(), 'Out of Stock', Icons.remove_circle_outline, Colors.red)),
                                       const SizedBox(width: 12),
-                                      Expanded(child: _buildSmallMetric('₹${_formatValue(totalValue)}', 'Value', Icons.attach_money, Colors.deepOrange)),
+                                      Expanded(child: _buildSmallMetric(CurrencyHelper.format(totalValue), 'Value', Icons.attach_money, Colors.deepOrange)),
                                     ],
                                   ),
                                 ),
@@ -1471,7 +1472,7 @@ class _ProductCardState extends State<_ProductCard> with AutomaticKeepAliveClien
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Text('₹${sellingPrice.toStringAsFixed(2)}',
+                        Text(CurrencyHelper.format(sellingPrice),
                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 15)),
                         const SizedBox(width: 16),
                         Container(
@@ -1812,7 +1813,7 @@ class _CategoryBrowserState extends State<_CategoryBrowser> {
                               : const Icon(Icons.image, color: Colors.grey),
                         ),
                         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Barcode: $barcode • ₹$price', style: const TextStyle(fontSize: 12)),
+                        subtitle: Text('Barcode: $barcode • ${CurrencyHelper.format(price)}', style: const TextStyle(fontSize: 12)),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,

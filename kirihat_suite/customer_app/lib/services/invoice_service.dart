@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class InvoiceService {
   static Future<void> generateInvoice(Map<String, dynamic> orderData) async {
@@ -452,7 +453,7 @@ class InvoiceService {
                               pw.Expanded(
                                 flex: 1,
                                 child: pw.Text(
-                                  '₹${item['price']}',
+                                  CurrencyHelper.format(item['price']),
                                   style: pw.TextStyle(
                                     font: regularFont,
                                     fontSize: 10,
@@ -464,7 +465,7 @@ class InvoiceService {
                               pw.Expanded(
                                 flex: 1,
                                 child: pw.Text(
-                                  '₹${item['price'] * item['quantity']}',
+                                  CurrencyHelper.format(item['price'] * item['quantity']),
                                   style: pw.TextStyle(
                                     font: boldFont,
                                     fontSize: 10,
@@ -533,7 +534,7 @@ class InvoiceService {
                               ),
                             ),
                             pw.Text(
-                              '₹${totalAmount.toStringAsFixed(2)}',
+                              CurrencyHelper.format(totalAmount),
                               style: pw.TextStyle(
                                 font: boldFont,
                                 fontSize: 16,
@@ -643,7 +644,7 @@ class InvoiceService {
           ),
         ),
         pw.Text(
-          '₹${amount.toStringAsFixed(2)}',
+          CurrencyHelper.format(amount),
           style: pw.TextStyle(
             font: font,
             fontSize: 10,

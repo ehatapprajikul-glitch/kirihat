@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/order_model.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import '../../../widgets/order_timer.dart'; // Import from lib/widgets/
 
 class OrderCard extends StatefulWidget {
@@ -134,7 +135,7 @@ class _OrderCardState extends State<OrderCard> {
                         const SizedBox(width: 8),
                         if (!_isExpanded)
                           Text(
-                            '₹${widget.order.totalAmount.toStringAsFixed(0)}',
+                            CurrencyHelper.format(widget.order.totalAmount),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.deepOrange,
@@ -396,14 +397,14 @@ class _OrderCardState extends State<OrderCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${item.quantity}x ₹${item.price.toStringAsFixed(2)}',
+                      '${item.quantity}x ${CurrencyHelper.format(item.price)}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               ),
               Text(
-                '₹${item.total.toStringAsFixed(2)}',
+                CurrencyHelper.format(item.total),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ],
@@ -453,7 +454,7 @@ class _OrderCardState extends State<OrderCard> {
             
             // Total Amount
             Text(
-              '₹${widget.order.totalAmount.toStringAsFixed(2)}',
+              CurrencyHelper.format(widget.order.totalAmount),
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -561,6 +562,52 @@ class _OrderCardState extends State<OrderCard> {
                 ),
               ),
             ],
+          ),
+        
+        if (widget.order.status == 'Cancelled')
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.cancel_outlined, size: 18, color: Colors.red.shade700),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Cancelled by ${(widget.order.cancelledBy ?? 'Unknown').toUpperCase()}",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade900,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 26),
+                  child: Text(
+                    "Reason: ${widget.order.cancellationReason ?? 'Not specified'}",
+                    style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                  ),
+                ),
+                if (widget.order.cancelledAt != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 26, top: 2),
+                    child: Text(
+                      DateFormat('MMM dd, hh:mm a').format(widget.order.cancelledAt!),
+                      style: TextStyle(color: Colors.red.shade600, fontSize: 11),
+                    ),
+                  ),
+              ],
+            ),
           ),
       ],
     );

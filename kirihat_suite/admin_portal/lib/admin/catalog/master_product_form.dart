@@ -387,7 +387,7 @@ class _ComprehensiveMasterProductFormState extends State<ComprehensiveMasterProd
             Expanded(
               child: TextFormField(
                 controller: _mrpController,
-                decoration: const InputDecoration(labelText: 'MRP (₹) *', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: 'MRP', border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
                 validator: (val) {
                   if (val!.isEmpty) return 'Required';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kirihat_core/services/price_sync_service.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 /// Dialog for vendors to request price exception/override
 class VendorPriceExceptionDialog extends StatefulWidget {
@@ -99,7 +100,7 @@ class _VendorPriceExceptionDialogState extends State<VendorPriceExceptionDialog>
                       children: [
                         const Text('Current Synced Price: '),
                         Text(
-                          '₹${widget.currentPrice.toStringAsFixed(2)}',
+                          CurrencyHelper.format(widget.currentPrice),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF34A853),
@@ -133,7 +134,7 @@ class _VendorPriceExceptionDialogState extends State<VendorPriceExceptionDialog>
               TextFormField(
                 controller: _proposedPriceController,
                 decoration: InputDecoration(
-                  labelText: 'Proposed Price (₹) *',
+                  labelText: 'Proposed Price *',
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.currency_rupee),
                   suffixText: percentDiff != null

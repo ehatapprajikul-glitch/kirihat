@@ -322,28 +322,63 @@ class _VendorOrdersScreenState extends State<VendorOrdersScreen>
 
   // --- CANCEL ORDER ---
   Future<void> _cancelOrder(OrderModel order) async {
-    final confirmed = await showDialog<bool>(
+    String selectedReason = "";
+    final customController = TextEditingController();
+    final reasons = ["Out of Stock", "Item Unavailable", "Shop Closed", "Price Error", "Other"];
+
+    final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancel Order?'),
-        content: Text('Are you sure you want to cancel order #${order.orderId}?'),
+        title: Text('Cancel Order #${order.orderId}?'),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   const Text("Select cancellation reason:", style: TextStyle(fontWeight: FontWeight.bold)),
+                   ...reasons.map((r) => RadioListTile<String>(
+                     title: Text(r),
+                     value: r,
+                     groupValue: selectedReason,
+                     contentPadding: EdgeInsets.zero,
+                     onChanged: (val) => setDialogState(() => selectedReason = val!),
+                   )),
+                   if (selectedReason == 'Other')
+                     TextField(
+                       controller: customController,
+                       decoration: const InputDecoration(
+                         labelText: "Enter Reason",
+                         border: OutlineInputBorder(),
+                       ),
+                     )
+                ],
+              ),
+            );
+          }
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(context),
             child: const Text('No'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Yes, Cancel'),
+            onPressed: () {
+               String finalReason = selectedReason == 'Other' ? customController.text : selectedReason;
+               if (finalReason.trim().isEmpty) return;
+               Navigator.pop(context, finalReason);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Confirm Cancel'),
           ),
         ],
       ),
     );
 
-    if (confirmed == true) {
+    if (result != null) {
       try {
-        await _orderService.cancelOrder(order.id);
+        await _orderService.cancelOrder(order.id, reason: result);
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

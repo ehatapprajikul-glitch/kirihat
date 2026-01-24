@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/services/seller_service.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class SellerBillingScreen extends StatefulWidget {
   final SellerModel seller;
@@ -87,7 +88,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                           _isLoading
                               ? const SizedBox(height: 30, width: 30, child: CircularProgressIndicator(color: Colors.white))
                               : Text(
-                                  '₹${NumberFormat('#,##0.00').format(_currentBalance)}',
+                                  CurrencyHelper.format(_currentBalance),
                                   style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                                 ),
                           const SizedBox(height: 8),
@@ -184,7 +185,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                  title: Text('Order Payment #$OrderId'),
                  subtitle: Text(DateFormat('MMM dd, yyyy').format((data['created_at'] as Timestamp).toDate())),
                  trailing: Text(
-                   '+ ₹${NumberFormat("#,##0").format(myTotal)}',
+                   '+ ${CurrencyHelper.format(myTotal)}',
                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
                  ),
                ),
@@ -208,7 +209,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
             leading: const CircleAvatar(backgroundColor: Colors.grey, child: Icon(Icons.account_balance, color: Colors.white)),
             title: Text('Payout ${payout['id']}'),
             subtitle: Text(DateFormat('MMM dd, yyyy').format(payout['date'])),
-            trailing: Text('₹${payout['amount']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            trailing: Text(CurrencyHelper.format(payout['amount']), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         );
       },

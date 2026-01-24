@@ -1,5 +1,6 @@
 ﻿import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/category_specification_model.dart';
@@ -978,6 +979,7 @@ class _AdminMasterProductEditorState extends State<AdminMasterProductEditor> {
                   child: DynamicSpecificationRenderer(
                     fields: _template!.fields,
                     initialValues: _specifications,
+                    isSellerMode: false, // Admins can edit everything
                     onValuesChanged: (values) {
                       _specifications = values;
                     },
@@ -1133,7 +1135,7 @@ class _AdminMasterProductEditorState extends State<AdminMasterProductEditor> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Profit: \u20B9${(sellingPrice - costPrice).toStringAsFixed(2)} per unit',
+            'Profit: ${CurrencyHelper.format(sellingPrice - costPrice)} per unit',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 16),
@@ -1165,8 +1167,8 @@ class _AdminMasterProductEditorState extends State<AdminMasterProductEditor> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Discount: \u20B9${(mrp - sellingPrice).toStringAsFixed(2)} off MRP', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text('\u20B9$mrp \u2192 \u20B9$sellingPrice', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                      Text('Discount: ${CurrencyHelper.format(mrp - sellingPrice)} off MRP', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text('${CurrencyHelper.format(mrp)} \u2192 ${CurrencyHelper.format(sellingPrice)}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                     ],
                   ),
                 ),

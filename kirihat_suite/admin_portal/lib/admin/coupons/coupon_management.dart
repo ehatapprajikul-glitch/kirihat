@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'create_coupon.dart';
+import 'coupon_usage_dialog.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class CouponManagement extends StatelessWidget {
   const CouponManagement({super.key});
@@ -141,7 +143,7 @@ class CouponManagement extends StatelessWidget {
                   Text(
                     discountType == 'percentage' 
                         ? '${discountValue.toInt()}%' 
-                        : '₹${discountValue.toInt()}',
+                        : CurrencyHelper.format(discountValue),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -224,7 +226,7 @@ class CouponManagement extends StatelessWidget {
                       if (data['min_order_value'] != null) ...[
                         const SizedBox(width: 16),
                         Text(
-                          'Min Order: ₹${data['min_order_value']}',
+                          'Min Order: ${CurrencyHelper.format(data['min_order_value'])}',
                           style: TextStyle(color: Colors.grey[600], fontSize: 13),
                         ),
                       ],
@@ -265,6 +267,16 @@ class CouponManagement extends StatelessWidget {
                   ),
                 ),
                 const PopupMenuItem(
+                  value: 'usage',
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, color: Colors.purple),
+                      SizedBox(width: 12),
+                      Text('View Usage'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
@@ -280,6 +292,11 @@ class CouponManagement extends StatelessWidget {
                   _editCoupon(context, id, data);
                 } else if (value == 'toggle') {
                   _toggleCoupon(context, id, isActive);
+                } else if (value == 'usage') {
+                  showDialog(
+                    context: context,
+                    builder: (context) => CouponUsageDialog(couponId: id, couponCode: code),
+                  );
                 } else if (value == 'delete') {
                   _deleteCoupon(context, id, code);
                 }

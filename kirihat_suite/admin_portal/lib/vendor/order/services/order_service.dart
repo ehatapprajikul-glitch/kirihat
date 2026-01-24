@@ -105,25 +105,27 @@ class OrderService {
   }
 
   // Bulk Cancel orders
-  Future<void> bulkCancelOrders(List<String> orderIds) async {
+  Future<void> bulkCancelOrders(List<String> orderIds, {String reason = 'Bulk cancelled by vendor'}) async {
     if (orderIds.isEmpty) return;
     final WriteBatch batch = _firestore.batch();
     for (String id in orderIds) {
       batch.update(_firestore.collection('orders').doc(id), {
         'status': 'Cancelled',
-        'cancellation_reason': 'Bulk cancelled by vendor',
+        'cancellation_reason': reason,
         'cancelled_at': FieldValue.serverTimestamp(),
+        'cancelled_by': 'vendor',
       });
     }
     await batch.commit();
   }
 
   // Cancel order
-  Future<void> cancelOrder(String orderId) async {
+  Future<void> cancelOrder(String orderId, {required String reason}) async {
     await _firestore.collection('orders').doc(orderId).update({
       'status': 'Cancelled',
-      'cancellation_reason': 'Cancelled by vendor',
+      'cancellation_reason': reason,
       'cancelled_at': FieldValue.serverTimestamp(),
+      'cancelled_by': 'vendor',
     });
   }
   

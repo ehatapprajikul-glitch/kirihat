@@ -1,6 +1,6 @@
 {
-    "name": "admin_portal",
-    "short_name": "admin_portal",
+    "name": "Kirihat Admin",
+    "short_name": "Kirihat Admin",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

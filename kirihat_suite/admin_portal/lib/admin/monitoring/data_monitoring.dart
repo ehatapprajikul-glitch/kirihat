@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class DataMonitoring extends StatefulWidget {
   const DataMonitoring({super.key});
@@ -124,7 +125,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                             ? Image.network(data['imageUrl'], width: 40, height: 40, fit: BoxFit.cover)
                             : const Icon(Icons.image),
                         title: Text(data['name'] ?? 'Unknown'),
-                        trailing: Text('₹${data['price'] ?? 0}'),
+                        trailing: Text(CurrencyHelper.format(data['price'] ?? 0)),
                       );
                     }).toList(),
                   ),
@@ -191,7 +192,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                       child: Text(userName[0].toUpperCase()),
                     ),
                     title: Text(userName),
-                    subtitle: Text('${items.length} items • ₹${cartValue.toStringAsFixed(2)} • $phone'),
+                    subtitle: Text('${items.length} items • ${CurrencyHelper.format(cartValue)} • $phone'),
                     children: items.map((doc) {
                       var data = doc.data() as Map<String, dynamic>;
                       int qty = (data['quantity'] ?? 0) as int;
@@ -204,7 +205,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                             : const Icon(Icons.image),
                         title: Text(data['name'] ?? 'Unknown'),
                         subtitle: Text('Quantity: $qty'),
-                        trailing: Text('₹${(price * qty).toStringAsFixed(2)}'),
+                        trailing: Text(CurrencyHelper.format(price * qty)),
                       );
                     }).toList(),
                   ),
@@ -255,7 +256,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                   ),
                   DataCell(Text(data['name'] ?? 'N/A')),
                   DataCell(Text(data['category'] ?? 'N/A')),
-                  DataCell(Text('₹${data['price'] ?? 0}')),
+                  DataCell(Text(CurrencyHelper.format(data['price'] ?? 0))),
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -377,7 +378,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '₹${totalEarnings.toStringAsFixed(2)}',
+                                CurrencyHelper.format(totalEarnings),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -460,7 +461,7 @@ class _DataMonitoringState extends State<DataMonitoring> with SingleTickerProvid
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '₹${totalCommission.toStringAsFixed(2)}',
+                                CurrencyHelper.format(totalCommission),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class CommissionSettings extends StatefulWidget {
   const CommissionSettings({super.key});
@@ -157,13 +158,13 @@ class _CommissionSettingsState extends State<CommissionSettings> {
             const SizedBox(height: 24),
             TextField(
               controller: _baseCommissionController,
-              decoration: const InputDecoration(labelText: 'Base Commission (₹)', border: OutlineInputBorder(), helperText: 'Flat earning per delivery'),
+              decoration: const InputDecoration(labelText: 'Base Commission', border: OutlineInputBorder(), helperText: 'Flat earning per delivery'),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _distanceRateController,
-              decoration: const InputDecoration(labelText: 'Distance Rate (₹/km)', border: OutlineInputBorder(), helperText: 'Additional earning per km'),
+              decoration: const InputDecoration(labelText: 'Distance Rate (/km)', border: OutlineInputBorder(), helperText: 'Additional earning per km'),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
@@ -217,7 +218,7 @@ class _CommissionSettingsState extends State<CommissionSettings> {
                  Expanded(
                    child: TextField(
                      controller: _basePayXController,
-                     decoration: const InputDecoration(labelText: 'Base Pay X (1st Order)', border: OutlineInputBorder(), prefixText: '₹'),
+                     decoration: const InputDecoration(labelText: 'Base Pay X (1st Order)', border: OutlineInputBorder()),
                      keyboardType: TextInputType.number,
                    ),
                  ),
@@ -225,7 +226,7 @@ class _CommissionSettingsState extends State<CommissionSettings> {
                  Expanded(
                    child: TextField(
                      controller: _extraPayYController,
-                     decoration: const InputDecoration(labelText: 'Extra Pay Y (Addt\'l Orders)', border: OutlineInputBorder(), prefixText: '₹'),
+                     decoration: const InputDecoration(labelText: 'Extra Pay Y (Addt\'l Orders)', border: OutlineInputBorder()),
                      keyboardType: TextInputType.number,
                    ),
                  ),
@@ -319,9 +320,9 @@ class _CommissionSettingsState extends State<CommissionSettings> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
         child: Text(
-          'Example (5km trip, ₹40 fee):\n'
-          'Base: ₹$base + Distance: ₹${rate * distance} + Share: ₹${(deliveryFee * share).toStringAsFixed(1)}\n'
-          '= Total: ₹${total.toStringAsFixed(2)}',
+          'Example (5km trip, ${CurrencyHelper.format(deliveryFee)} fee):\n'
+          'Base: ${CurrencyHelper.format(base)} + Distance: ${CurrencyHelper.format(rate * distance)} + Share: ${CurrencyHelper.format(deliveryFee * share)}\n'
+          '= Total: ${CurrencyHelper.format(total)}',
           style: const TextStyle(fontSize: 13),
         ),
       );

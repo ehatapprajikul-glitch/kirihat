@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class CustomerMonitor extends StatelessWidget {
   const CustomerMonitor({super.key});
@@ -64,7 +65,7 @@ class CustomerMonitor extends StatelessWidget {
                       Expanded(
                         child: _buildStatCard(
                           'Total Revenue',
-                          '₹${(totalRevenue / 1000).toStringAsFixed(1)}K',
+                          CurrencyHelper.format(totalRevenue),
                           Icons.attach_money,
                           Colors.purple,
                           'All time',
@@ -163,7 +164,7 @@ class CustomerMonitor extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '₹${cartValue.toStringAsFixed(2)}',
+                                CurrencyHelper.format(cartValue),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -237,7 +238,7 @@ class CustomerMonitor extends StatelessWidget {
                       cells: [
                         DataCell(Text(data['order_id'] ?? doc.id.substring(0, 8))),
                         DataCell(Text(data['customer_name'] ?? 'N/A')),
-                        DataCell(Text('₹${data['total_amount'] ?? 0}')),
+                        DataCell(Text(CurrencyHelper.format(data['total_amount'] ?? 0))),
                         DataCell(_buildStatusBadge(data['status'] ?? 'Pending')),
                         DataCell(Text(_formatDate(data['created_at']))),
                       ],

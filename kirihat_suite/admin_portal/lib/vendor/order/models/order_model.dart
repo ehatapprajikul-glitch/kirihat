@@ -21,6 +21,7 @@ class OrderModel {
   final DateTime? acceptedAt;
   final DateTime? packedAt;
   final DateTime? cancelledAt;
+  final String? cancelledBy;
   final String? riderId;
   final String? riderName;
   final String? riderPhone;
@@ -49,6 +50,7 @@ class OrderModel {
     this.acceptedAt,
     this.packedAt,
     this.cancelledAt,
+    this.cancelledBy,
     this.riderId,
     this.riderName,
     this.riderPhone,
@@ -98,6 +100,7 @@ class OrderModel {
       acceptedAt: (data['accepted_at'] as Timestamp?)?.toDate(),
       packedAt: (data['packed_at'] as Timestamp?)?.toDate(),
       cancelledAt: (data['cancelled_at'] as Timestamp?)?.toDate(),
+      cancelledBy: data['cancelled_by'],
       riderId: data['rider_id'],
       riderName: data['rider_name'],
       riderPhone: data['rider_phone'],
@@ -133,6 +136,7 @@ class OrderModel {
       'accepted_at': acceptedAt != null ? Timestamp.fromDate(acceptedAt!) : null,
       'packed_at': packedAt != null ? Timestamp.fromDate(packedAt!) : null,
       'cancelled_at': cancelledAt != null ? Timestamp.fromDate(cancelledAt!) : null,
+      'cancelled_by': cancelledBy,
       'rider_id': riderId,
       'rider_name': riderName,
       'rider_phone': riderPhone,
@@ -182,6 +186,7 @@ class OrderModel {
     DateTime? acceptedAt,
     DateTime? packedAt,
     DateTime? cancelledAt,
+    String? cancelledBy,
     String? riderId,
     String? riderName,
     String? riderPhone,
@@ -215,6 +220,7 @@ class OrderModel {
       acceptedAt: acceptedAt ?? this.acceptedAt,
       packedAt: packedAt ?? this.packedAt,
       cancelledAt: cancelledAt ?? this.cancelledAt,
+      cancelledBy: cancelledBy ?? this.cancelledBy,
       riderId: riderId ?? this.riderId,
       riderName: riderName ?? this.riderName,
       riderPhone: riderPhone ?? this.riderPhone,

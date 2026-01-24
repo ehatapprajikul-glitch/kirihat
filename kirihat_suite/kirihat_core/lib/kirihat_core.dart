@@ -29,6 +29,7 @@ export 'services/wishlist_service.dart';
 export 'utils/app_colors.dart';
 export 'utils/cart_helper.dart';
 export 'utils/image_validation_helper.dart';
+export 'utils/currency_helper.dart';
 
 // Shared UI
 export 'shared/rider_settlement_history.dart';

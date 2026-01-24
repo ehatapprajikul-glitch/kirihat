@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:kirihat_core/services/service_area_service.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 
 class CustomerDashboardDialog extends StatefulWidget {
   final String? userId;
@@ -19,44 +20,26 @@ class CustomerDashboardDialog extends StatefulWidget {
 }
 
 class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
-  late Future<DocumentSnapshot> _userFuture;
-  late Future<QuerySnapshot> _ordersFuture;
-  late Future<QuerySnapshot> _addressFuture;
+  late Future<List<dynamic>> _combinedFuture;
   late Future<Map<String, dynamic>> _activityFuture;
 
   @override
   void initState() {
     super.initState();
     if (widget.userId != null) {
-      _userFuture = FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
-      _ordersFuture = FirebaseFirestore.instance
-          .collection('orders')
-          .where('customer_id', isEqualTo: widget.userId)
-          .get()
-          .then((snapshot) {
-            // Sort manually
-            var docs = snapshot.docs.toList();
-            docs.sort((a, b) {
-              var aTime = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-              var bTime = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-              if (aTime == null || bTime == null) return 0;
-              return bTime.compareTo(aTime);
-            });
-            return snapshot; // We can return the snapshot, but we are just using docs mostly. 
-            // Actually, to keep types consistent for builder, we can't easily modify snapshot structure.
-            // So we'll just handle sorting in builder or here and return list.
-            // Let's keep it simple: just return snapshot and sort in builder or return List<DocumentSnapshot>
-            // But builder expects Future<QuerySnapshot>. 
-            // Let's just return snapshot and sort in builder to be safe with types.
-            return snapshot;
-          });
-      
-      _addressFuture = FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .collection('addresses')
-          .limit(1)
-          .get();
+      _combinedFuture = Future.wait([
+        FirebaseFirestore.instance.collection('users').doc(widget.userId).get(),
+        FirebaseFirestore.instance
+            .collection('orders')
+            .where('customer_id', isEqualTo: widget.userId)
+            .get(),
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.userId)
+            .collection('addresses')
+            .limit(1)
+            .get(),
+      ]);
 
       _activityFuture = _getCustomerActivity(widget.userId!);
     }
@@ -81,14 +64,58 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
       child: Container(
         width: 900,
         height: 700,
-        child: FutureBuilder<DocumentSnapshot>(
-          future: _userFuture,
-          builder: (context, userSnapshot) {
-            if (userSnapshot.connectionState == ConnectionState.waiting) {
+        child: FutureBuilder<List<dynamic>>(
+          future: _combinedFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            var userData = userSnapshot.data?.data() as Map<String, dynamic>? ?? {};
+            if (snapshot.hasError) {
+               return Center(child: Text("Error loading data: ${snapshot.error}"));
+            }
+
+            // Unwrap data
+            var userDoc = snapshot.data![0] as DocumentSnapshot;
+            var ordersSnapshot = snapshot.data![1] as QuerySnapshot;
+            var addressSnapshot = snapshot.data![2] as QuerySnapshot;
+
+            var userData = userDoc.data() as Map<String, dynamic>? ?? {};
+            var orders = ordersSnapshot.docs;
+            
+            // Sort orders descending
+            orders.sort((a, b) {
+              var aTime = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+              var bTime = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
+              if (aTime == null || bTime == null) return 0;
+              return bTime.compareTo(aTime); // Descending
+            });
+
+            // FALLBACK LOGIC
+            // 1. Phone
+            String displayPhone = _getPhone(userData);
+            if ((displayPhone == 'N/A' || displayPhone.isEmpty) && orders.isNotEmpty) {
+               var latestOrder = orders.first.data() as Map<String, dynamic>;
+               displayPhone = latestOrder['customer_phone'] ?? 'N/A';
+            }
+
+            // 2. Member Since (Oldest Order if User CreatedAt missing)
+            String displayMemberSince = _formatMemberSince(userData['created_at']);
+            if ((displayMemberSince == 'N/A' || displayMemberSince.isEmpty) && orders.isNotEmpty) {
+               var firstOrder = orders.last.data() as Map<String, dynamic>; // last because sorted desc
+               displayMemberSince = _formatTimestamp(firstOrder['created_at']);
+            }
+
+            // 3. Location (Latest Order Address if Saved Address missing)
+            String displayAddress = 'N/A';
+            if (addressSnapshot.docs.isNotEmpty) {
+              var addrData = addressSnapshot.docs.first.data() as Map<String, dynamic>;
+              displayAddress = '${addrData['city'] ?? ''}, ${addrData['state'] ?? ''}'.trim();
+              if (displayAddress == ',') displayAddress = addrData['full_address'] ?? 'N/A';
+            } else if (orders.isNotEmpty) {
+               var latestOrder = orders.first.data() as Map<String, dynamic>;
+               displayAddress = _formatAddress(latestOrder['delivery_address']);
+            }
 
             return Column(
               children: [
@@ -129,10 +156,12 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                                 color: Colors.white,
                               ),
                             ),
-                            Text(
-                              userData['email'] ?? 'No email',
-                              style: const TextStyle(color: Colors.white70),
-                            ),
+                              /*
+                              Text(
+                                userData['email'] ?? 'No email',
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                              */
                           ],
                         ),
                       ),
@@ -156,28 +185,17 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                         child: _buildInfoCard(
                           Icons.phone,
                           'Phone',
-                          _getPhone(userData),
+                          displayPhone,
                           Colors.blue,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: FutureBuilder<QuerySnapshot>(
-                          future: _addressFuture,
-                          builder: (context, addressSnapshot) {
-                            String address = 'N/A';
-                            if (addressSnapshot.hasData && addressSnapshot.data!.docs.isNotEmpty) {
-                              var addrData = addressSnapshot.data!.docs.first.data() as Map<String, dynamic>;
-                              address = '${addrData['city'] ?? ''}, ${addrData['state'] ?? ''}'.trim();
-                              if (address == ',') address = addrData['full_address'] ?? 'N/A';
-                            }
-                            return _buildInfoCard(
-                              Icons.location_on,
-                              'Location',
-                              address,
-                              Colors.orange,
-                            );
-                          },
+                        child: _buildInfoCard(
+                          Icons.location_on,
+                          'Location',
+                          displayAddress,
+                          Colors.orange,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -185,7 +203,7 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                         child: _buildInfoCard(
                           Icons.calendar_today,
                           'Member Since',
-                          _formatMemberSince(userData['created_at']),
+                          displayMemberSince,
                           Colors.purple,
                         ),
                       ),
@@ -212,7 +230,7 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                         Expanded(
                           child: TabBarView(
                             children: [
-                              _buildOrderHistory(),
+                              _buildOrderHistoryList(orders),
                               _buildCartHistory(widget.userId!),
                               _buildActivityHistory(),
                             ],
@@ -232,6 +250,8 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
 
   String _getPhone(Map<String, dynamic> data) {
     if (data['phone'] != null && data['phone'].toString().isNotEmpty) return data['phone'];
+    // Legacy field from old signup flow (before standardization)
+    if (data['phone_number'] != null && data['phone_number'].toString().isNotEmpty) return data['phone_number'];
     if (data['phoneNumber'] != null && data['phoneNumber'].toString().isNotEmpty) return data['phoneNumber'];
     if (data['mobile'] != null && data['mobile'].toString().isNotEmpty) return data['mobile'];
     return 'N/A';
@@ -266,76 +286,54 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
     );
   }
 
-  Widget _buildOrderHistory() {
-    return FutureBuilder<QuerySnapshot>(
-      future: _ordersFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  Widget _buildOrderHistoryList(List<DocumentSnapshot> orders) {
+    if (orders.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No orders yet', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
+    // Take only first 10 orders (they are already sorted in build)
+    var recentOrders = orders.take(10).toList();
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No orders yet', style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-          );
-        }
-
-        // Manual sort to ensure it's correct
-        var orders = snapshot.data!.docs.toList();
-        orders.sort((a, b) {
-           var aTime = (a.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-           var bTime = (b.data() as Map<String, dynamic>)['created_at'] as Timestamp?;
-           if (aTime == null || bTime == null) return 0;
-           return bTime.compareTo(aTime);
-        });
-
-        // Take only first 10 orders
-        orders = orders.take(10).toList();
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: orders.length,
-          itemBuilder: (context, index) {
-            var orderDoc = orders[index];
-            var order = orderDoc.data() as Map<String, dynamic>;
-            
-            return InkWell(
-              onTap: () => _showOrderDetails(context, orderDoc.id, order),
-              child: Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getStatusColor(order['status']),
-                    child: const Icon(Icons.shopping_bag, color: Colors.white, size: 20),
-                  ),
-                  title: Text('Order #${order['order_id'] ?? orderDoc.id.substring(0, 8).toUpperCase()}'),
-                  subtitle: Text('${order['status'] ?? 'Unknown'} • ₹${order['total_amount'] ?? 0}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatTimestamp(order['created_at']),
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-                    ],
-                  ),
-                ),
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: recentOrders.length,
+      itemBuilder: (context, index) {
+        var orderDoc = recentOrders[index];
+        var order = orderDoc.data() as Map<String, dynamic>;
+        
+        return InkWell(
+          onTap: () => _showOrderDetails(context, orderDoc.id, order),
+          child: Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _getStatusColor(order['status']),
+                child: const Icon(Icons.shopping_bag, color: Colors.white, size: 20),
               ),
-            );
-          },
+              title: Text('Order #${order['order_id'] ?? orderDoc.id.substring(0, 8).toUpperCase()}'),
+              subtitle: Text('${order['status'] ?? 'Unknown'} • ${CurrencyHelper.format(order['total_amount'] ?? 0)}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTimestamp(order['created_at']),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
@@ -346,8 +344,8 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
       context: context,
       builder: (context) => Dialog(
         child: Container(
-          width: 600,
-          constraints: const BoxConstraints(maxHeight: 700),
+          width: 800,
+          constraints: const BoxConstraints(maxHeight: 800),
           child: Column(
             children: [
               // Header
@@ -364,15 +362,57 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                   children: [
                     const Icon(Icons.receipt_long, color: Colors.white),
                     const SizedBox(width: 12),
-                    Text(
-                      'Order #${orderData['order_id'] ?? orderId.substring(0, 8).toUpperCase()}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order #${orderData['order_id'] ?? orderId.substring(0, 8).toUpperCase()}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Placed: ${_formatTimestamp(orderData['created_at'])}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const Spacer(),
+                    // Status chip
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getStatusIcon(orderData['status']),
+                            color: _getStatusColor(orderData['status']),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            orderData['status'] ?? 'Unknown',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _getStatusColor(orderData['status']),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close, color: Colors.white),
@@ -388,59 +428,236 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Status
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(orderData['status']).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _getStatusIcon(orderData['status']),
-                              color: _getStatusColor(orderData['status']),
-                              size: 20,
+                      // Delivery PIN (if shipped)
+                      if (orderData['delivery_pin'] != null && (orderData['status'] == 'Shipped' || orderData['status'] == 'Out for Delivery'))
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.blue.shade700, Colors.blue.shade500],
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              orderData['status'] ?? 'Unknown',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _getStatusColor(orderData['status']),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'DELIVERY PIN',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  letterSpacing: 1.2,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  orderData['delivery_pin'].toString(),
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 4,
+                                    color: Colors.blue.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Customer Info
+                      if (orderData['customer_id'] != null)
+                        FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(orderData['customer_id'])
+                              .get(),
+                          builder: (context, customerSnapshot) {
+                            // Determine customer name with fallback priority:
+                            // 1. Customer profile name
+                            // 2. Order customer_name
+                            // 3. Delivery address name
+                            String customerName = orderData['customer_name'] ?? 'N/A';
+                            String customerEmail = orderData['customer_email'] ?? 'N/A';
+                            
+                            if (customerSnapshot.hasData && customerSnapshot.data!.exists) {
+                              final customerData = customerSnapshot.data!.data() as Map<String, dynamic>?;
+                              if (customerData != null) {
+                                // Use profile name if available
+                                customerName = customerData['name'] ?? orderData['customer_name'] ?? 'N/A';
+                                // Use profile email if available
+                                if (customerData['email'] != null && customerData['email'].toString().isNotEmpty) {
+                                  customerEmail = customerData['email'];
+                                }
+                              }
+                            }
+
+                            // Fallback to delivery address name if still N/A
+                            if (customerName == 'N/A' || customerName.isEmpty) {
+                              final deliveryAddress = orderData['delivery_address'];
+                              if (deliveryAddress != null && deliveryAddress is Map<String, dynamic>) {
+                                customerName = deliveryAddress['name'] ?? 
+                                             deliveryAddress['guardian_name'] ?? 
+                                             'N/A';
+                              }
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader('Customer Information', Icons.person),
+                                const SizedBox(height: 12),
+                                _buildDetailRow('Name', customerName),
+                                _buildDetailRow('Phone', orderData['customer_phone'] ?? 'N/A'),
+                                _buildDetailRow('Email', customerEmail),
+                              ],
+                            );
+                          },
+                        )
+                      else
+                        Builder(
+                          builder: (context) {
+                            // Get name from delivery address if customer_name is N/A
+                            String customerName = orderData['customer_name'] ?? 'N/A';
+                            if (customerName == 'N/A' || customerName.isEmpty) {
+                              final deliveryAddress = orderData['delivery_address'];
+                              if (deliveryAddress != null && deliveryAddress is Map<String, dynamic>) {
+                                customerName = deliveryAddress['name'] ?? 
+                                             deliveryAddress['guardian_name'] ?? 
+                                             'N/A';
+                              }
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader('Customer Information', Icons.person),
+                                const SizedBox(height: 12),
+                                _buildDetailRow('Name', customerName),
+                                _buildDetailRow('Phone', orderData['customer_phone'] ?? 'N/A'),
+                                _buildDetailRow('Email', orderData['customer_email'] ?? 'N/A'),
+                              ],
+                            );
+                          },
+                        ),
+
+                      const SizedBox(height: 20),
+
+                      // Delivery Address
+                      _buildSectionHeader('Delivery Address', Icons.location_on),
+                      const SizedBox(height: 12),
+                      _buildAddressDetails(orderData['delivery_address']),
+
+                      const SizedBox(height: 20),
+
+                      // Vendor Details
+                      if (orderData['vendor_id'] != null)
+                        FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(orderData['vendor_id'])
+                              .get(),
+                          builder: (context, vendorSnapshot) {
+                            String? shopName;
+                            String? vendorId = orderData['vendor_id']?.toString();
+                            
+                            if (vendorSnapshot.hasData && vendorSnapshot.data!.exists) {
+                              final vendorData = vendorSnapshot.data!.data() as Map<String, dynamic>?;
+                              if (vendorData != null) {
+                                shopName = vendorData['shop_name'] ?? 
+                                         vendorData['business_name'] ?? 
+                                         vendorData['name'];
+                              }
+                            }
+
+                            // Fallback if fetch fails or name missing but ID exists
+                            String displayName = shopName ?? 'N/A';
+                            String displayId = vendorId != null 
+                              ? (vendorId.length > 8 ? vendorId.substring(0, 12) : vendorId) 
+                              : 'N/A';
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader('Vendor Information', Icons.store),
+                                const SizedBox(height: 12),
+                                _buildDetailRow('Shop Name', displayName),
+                                _buildDetailRow('Vendor ID', displayId),
+                                const SizedBox(height: 20),
+                              ],
+                            );
+                          },
+                        ),
+
+                      // Rider Details
+                      if (orderData['rider_id'] != null || orderData['rider_name'] != null)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionHeader('Delivery Partner', Icons.delivery_dining),
+                            const SizedBox(height: 12),
+                            _buildDetailRow('Rider Name', orderData['rider_name'] ?? 'N/A'),
+                            _buildDetailRow('Phone', orderData['rider_phone'] ?? 'N/A'),
+                            if (orderData['rider_vehicle'] != null) // Check if vehicle is in order data too
+                              _buildDetailRow('Vehicle', orderData['rider_vehicle']),
+                            if (orderData['rider_id'] != null)
+                               _buildDetailRow('Rider ID', orderData['rider_id'].toString()),
+                            if (orderData['rider_assigned_at'] != null)
+                              _buildDetailRow('Assigned At', _formatTimestamp(orderData['rider_assigned_at'])),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+
+                      // Items
+                      _buildSectionHeader('Order Items', Icons.shopping_bag),
+                      const SizedBox(height: 12),
+                      _buildItemsList(orderData['items'] ?? []),
+
+                      const SizedBox(height: 20),
+
+                      // Payment Summary
+                      _buildSectionHeader('Payment Summary', Icons.payment),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildPaymentRow('Subtotal', orderData['product_total'] ?? orderData['subtotal'] ?? 0),
+                            _buildPaymentRow('Delivery Fee', orderData['delivery_fee'] ?? 0),
+                            if ((orderData['tax_amount'] ?? 0) > 0)
+                              _buildPaymentRow('Tax (GST)', orderData['tax_amount']),
+                            if ((orderData['low_cart_fee'] ?? 0) > 0)
+                              _buildPaymentRow('Small Order Fee', orderData['low_cart_fee']),
+                            if ((orderData['platform_fee'] ?? 0) > 0)
+                              _buildPaymentRow('Platform Fee', orderData['platform_fee']),
+                            const Divider(height: 24),
+                            _buildPaymentRow('Total Amount', orderData['total_amount'] ?? 0, isBold: true, isTotal: true),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Payment Method', style: TextStyle(color: Colors.grey)),
+                                Text(
+                                  orderData['payment_method'] ?? 'N/A',
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-
-                      const SizedBox(height: 24),
-
-                      // Customer Info
-                      const Text(
-                        'Customer Information',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDetailRow('Name', orderData['customer_name'] ?? 'N/A'),
-                      _buildDetailRow('Phone', orderData['customer_phone'] ?? 'N/A'),
-                      _buildDetailRow('Address', _formatAddress(orderData['delivery_address'])),
-
-                      const SizedBox(height: 20),
-
-                      // Order Info
-                      const Text(
-                        'Order Details',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDetailRow('Payment Method', orderData['payment_method'] ?? 'N/A'),
-                      _buildDetailRow('Subtotal', '₹${orderData['product_total'] ?? orderData['subtotal'] ?? 0}'),
-                      _buildDetailRow('Delivery Fee', '₹${orderData['delivery_fee'] ?? 0}'),
-                      _buildDetailRow('Total Amount', '₹${orderData['total_amount'] ?? 0}', isBold: true),
-                      if (orderData['delivery_pin'] != null && (orderData['status'] == 'Shipped' || orderData['status'] == 'Out for Delivery'))
-                        _buildDetailRow('Delivery PIN', orderData['delivery_pin'], isBold: true),
                     ],
                   ),
                 ),
@@ -448,6 +665,157 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF0D9759), size: 20),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddressDetails(dynamic address) {
+    if (address == null) return const Text('N/A', style: TextStyle(color: Colors.grey));
+    
+    if (address is Map<String, dynamic>) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (address['house_no'] != null && address['house_no'].toString().trim().isNotEmpty)
+            _buildDetailRow('House/Building', address['house_no']),
+          if (address['street'] != null && address['street'].toString().trim().isNotEmpty)
+            _buildDetailRow('Street/Area', address['street']),
+          if (address['landmark'] != null && address['landmark'].toString().trim().isNotEmpty)
+            _buildDetailRow('Landmark', address['landmark']),
+          if (address['nearby_market'] != null && address['nearby_market'].toString().trim().isNotEmpty)
+            _buildDetailRow('Nearby Market', address['nearby_market']),
+          if (address['city'] != null && address['city'].toString().trim().isNotEmpty)
+            _buildDetailRow('City', address['city']),
+          if (address['district'] != null && address['district'].toString().trim().isNotEmpty)
+            _buildDetailRow('District', address['district']),
+          if (address['state'] != null && address['state'].toString().trim().isNotEmpty)
+            _buildDetailRow('State', address['state']),
+          if (address['pincode'] != null && address['pincode'].toString().trim().isNotEmpty)
+            _buildDetailRow('Pincode', address['pincode']),
+        ],
+      );
+    }
+    
+    return Text(_formatAddress(address));
+  }
+
+  Widget _buildItemsList(List<dynamic> items) {
+    if (items.isEmpty) {
+      return const Text('No items', style: TextStyle(color: Colors.grey));
+    }
+
+    return Column(
+      children: items.map((item) {
+        if (item is! Map<String, dynamic>) return const SizedBox.shrink();
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              // Image
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                  image: item['imageUrl'] != null
+                      ? DecorationImage(
+                          image: NetworkImage(item['imageUrl']),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: item['imageUrl'] == null
+                    ? const Icon(Icons.image, color: Colors.grey, size: 24)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              // Name & Quantity
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['name'] ?? 'Unknown Product',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Qty: ${item['quantity'] ?? 1}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              // Price
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    CurrencyHelper.format((item['price'] ?? 0).toDouble()),
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    CurrencyHelper.format((item['price'] ?? 0).toDouble() * (item['quantity'] ?? 1)),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPaymentRow(String label, dynamic amount, {bool isBold = false, bool isTotal = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isTotal ? 16 : 14,
+            ),
+          ),
+          Text(
+            CurrencyHelper.format((amount ?? 0).toDouble()),
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              fontSize: isTotal ? 16 : 14,
+              color: isTotal ? const Color(0xFF0D9759) : Colors.black,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -546,7 +914,7 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'Total: ₹${cartTotal.toStringAsFixed(0)}',
+                    'Total: ${CurrencyHelper.format(cartTotal)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0D9759),
@@ -572,9 +940,9 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                           ? Image.network(item['imageUrl'], width: 50, height: 50, fit: BoxFit.cover)
                           : const Icon(Icons.shopping_bag),
                       title: Text(item['name'] ?? 'Unknown Product'),
-                      subtitle: Text('Qty: $qty • ₹$price'),
+                      subtitle: Text('Qty: $qty • ${CurrencyHelper.format(price)}'),
                       trailing: Text(
-                        '₹${price * qty}',
+                        CurrencyHelper.format(price * qty),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -621,7 +989,7 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
               onTap: () => _showDetailedOrders(context, widget.userId!, 'Cancelled'),
               child: _buildActivityCard('Cancelled Orders', activity['cancelledOrders'].toString(), Icons.cancel, Colors.red),
             ),
-            _buildActivityCard('Total Spent', '₹${activity['totalSpent'].toStringAsFixed(0)}', Icons.attach_money, Colors.purple),
+            _buildActivityCard('Total Spent', CurrencyHelper.format(activity['totalSpent']), Icons.attach_money, Colors.purple),
             InkWell(
               onTap: () => _showWishlist(context, widget.userId!),
               child: _buildActivityCard('Wishlist Items', activity['wishlistCount'].toString(), Icons.favorite, Colors.pink),
@@ -689,7 +1057,7 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                         var order = orders[index].data() as Map<String, dynamic>;
                         return ListTile(
                           title: Text('Order #${order['order_id'] ?? orders[index].id.substring(0, 8).toUpperCase()}'),
-                          subtitle: Text('${order['status']} • ₹${order['total_amount']}'),
+                          subtitle: Text('${order['status']} • ${CurrencyHelper.format(order['total_amount'])}'),
                           trailing: Text(_formatTimestamp(order['created_at'])),
                         );
                       },
@@ -754,7 +1122,7 @@ class _CustomerDashboardDialogState extends State<CustomerDashboardDialog> {
                               ? Image.network(item['imageUrl'], width: 50)
                               : const Icon(Icons.favorite),
                           title: Text(item['name'] ?? 'Product'),
-                          subtitle: Text('₹${item['price'] ?? 0}'),
+                          subtitle: Text(CurrencyHelper.format(item['price'] ?? 0)),
                         );
                       },
                     );
@@ -1226,7 +1594,7 @@ class _AddressManagementDialogState extends State<_AddressManagementDialog> {
           .collection('users')
           .doc(widget.userId)
           .collection('addresses')
-          .orderBy('created_at', descending: true)
+          // .orderBy('created_at', descending: true) // Removed to avoid index issues
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());

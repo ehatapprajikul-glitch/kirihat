@@ -5,7 +5,6 @@ import '../main.dart'; // Import AuthWrapper
 import 'customer_orders.dart';
 import 'manage_addresses.dart';
 import 'wishlist_screen.dart';
-import '../auth/login_screen.dart';
 import '../auth/phone_auth_screen.dart';
 import '../auth/seller_registration_screen.dart';
 import 'package:kirihat_core/services/session_service.dart';
@@ -21,42 +20,53 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   static DateTime? _lastResetTime;
 
-  // --- 1. EDIT PROFILE DIALOG (Updated with Dropdown) ---
+  // --- 1. EDIT PROFILE DIALOG (Updated with Dropdown & Loading & Fix) ---
   void _showEditProfileDialog(Map<String, dynamic> currentData) {
-    final nameController = TextEditingController(text: currentData['name']);
+    // FIX: Handle null name gracefully to avoid errors
+    final nameController = TextEditingController(text: currentData['name'] ?? '');
 
-    // Set initial gender value (ensure it matches one of the dropdown items or is null)
-    String? selectedGender = currentData['gender'];
+    // Robust Gender Handling: Normalize casing to Title Case (e.g. "male" -> "Male")
+    String? rawGender = currentData['gender'];
+    String? selectedGender;
     final List<String> genderOptions = ["Male", "Female", "Other"];
 
-    // Validate if current data matches options, else reset
-    if (!genderOptions.contains(selectedGender)) {
-      selectedGender = null;
+    if (rawGender != null && rawGender.isNotEmpty) {
+      // Capitalize first letter, lowercase rest
+      String normalized = rawGender[0].toUpperCase() + rawGender.substring(1).toLowerCase();
+      if (genderOptions.contains(normalized)) {
+        selectedGender = normalized;
+      }
     }
 
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevent closing while saving
       builder: (context) {
+        bool isLoading = false;
+
         return StatefulBuilder(
-          // Helper to update state inside Dialog
           builder: (context, setDialogState) {
             return AlertDialog(
               title: const Text("Edit Personal Info"),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                          labelText: "Full Name",
-                          border: OutlineInputBorder())),
-                  const SizedBox(height: 15),
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Full Name",
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                  // GENDER DROPDOWN
                   DropdownButtonFormField<String>(
                     value: selectedGender,
                     decoration: const InputDecoration(
                       labelText: "Gender",
+                      prefixIcon: Icon(Icons.wc),
                       border: OutlineInputBorder(),
                     ),
                     items: genderOptions.map((String value) {
@@ -74,25 +84,59 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 ],
               ),
               actions: [
-                TextButton(
+                if (!isLoading)
+                  TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text("Cancel")),
+                    child: const Text("Cancel"),
+                  ),
+                
                 ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.isNotEmpty) {
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(user!.uid)
-                          .update({
-                        'name': nameController.text.trim(),
-                        'gender': selectedGender ?? "Not Specified",
-                      });
-                      if (mounted) {
-                        Navigator.pop(context);
-                      }
-                    }
-                  },
-                  child: const Text("Save"),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (nameController.text.trim().isEmpty) {
+                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Name cannot be empty")));
+                             return;
+                          }
+
+                          setDialogState(() => isLoading = true);
+
+                          try {
+                            // FIX: Use set with merge: true to avoid 'not-found' error if doc doesn't exist
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user!.uid)
+                                .set({
+                              'name': nameController.text.trim(),
+                              'gender': selectedGender ?? "Not Specified",
+                            }, SetOptions(merge: true));
+                            
+                            if (mounted) {
+                              Navigator.pop(context); // Close dialog
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Profile updated successfully!"), backgroundColor: Colors.green),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isLoading = false);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Error saving profile: $e"), backgroundColor: Colors.red),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9759),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text("Save"),
                 )
               ],
             );

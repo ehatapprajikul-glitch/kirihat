@@ -11,6 +11,7 @@ import 'auth/login_screen.dart';
 import 'vendor/vendor_dashboard.dart';
 import 'admin/admin_web_layout.dart';
 import 'seller/seller_dashboard.dart';
+import 'landing/portal_landing_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Kiri Hat Portal',
+      title: 'Kirihat Admin',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple), // Admin/Portal Theme
         useMaterial3: true,
@@ -56,7 +57,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         if (!snapshot.hasData) {
-          return const LoginScreen();
+          return const PortalLandingScreen();
         }
 
         User user = snapshot.data!;
@@ -93,7 +94,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                  ),
                );
             }
-            return const LoginScreen();
+            return const LoginScreen(); // Fallback if user exists but doc doesn't (should require profile setup usually)
           },
         );
       },

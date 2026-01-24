@@ -1,6 +1,6 @@
 {
-    "name": "rider_app",
-    "short_name": "rider_app",
+    "name": "Kirihat Rider",
+    "short_name": "Kirihat Rider",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

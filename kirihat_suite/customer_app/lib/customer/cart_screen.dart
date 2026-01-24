@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:kirihat_core/utils/cart_helper.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'checkout_screen.dart';
 import '../auth/phone_auth_screen.dart';
 
@@ -204,7 +205,7 @@ class _CartScreenState extends State<CartScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    "₹${total.toStringAsFixed(2)}",
+                    CurrencyHelper.format(total),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -366,7 +367,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "₹$price",
+                    CurrencyHelper.format(price),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

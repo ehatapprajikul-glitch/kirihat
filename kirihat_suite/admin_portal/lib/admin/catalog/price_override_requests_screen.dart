@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/services/price_sync_service.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Admin screen to review and approve/reject vendor price override requests
@@ -319,7 +320,7 @@ class _PriceOverrideRequestCardState extends State<_PriceOverrideRequestCard> {
                     label: originalProposedPrice != null ? 'Approved Price' : 'Proposed Price',
                     price: proposedPrice,
                     color: percentDiff > 0 ? Colors.red : Colors.green,
-                    subLabel: originalProposedPrice != null ? '(Orig: ₹$originalProposedPrice)' : null,
+                    subLabel: originalProposedPrice != null ? '(Orig: ${CurrencyHelper.format(originalProposedPrice)})' : null,
                   ),
                 ),
               ],
@@ -579,7 +580,7 @@ class _PriceBox extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '₹${price.toStringAsFixed(2)}',
+            CurrencyHelper.format(price),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../customer/onboarding/pincode_gate.dart';
 import 'otp_verification_screen.dart';
-import 'login_screen.dart';
 
 class PhoneAuthScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess; // Optional callback after successful login
@@ -33,26 +33,37 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     try {
       final phoneNumber = '+91${_phoneController.text.trim()}';
       
-      print('📱 Sending OTP to: $phoneNumber');
+      debugPrint('📱 Sending OTP to: $phoneNumber');
       
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         timeout: const Duration(seconds: 60),
         
-        // Auto-verification (Android only, when SMS is auto-read)
+        // Auto-verification (Android only)
         verificationCompleted: (PhoneAuthCredential credential) async {
-          print('✅ Auto-verification completed');
+          debugPrint('✅ Auto-verification completed');
           await _signInWithCredential(credential);
         },
         
         // Verification failed
         verificationFailed: (FirebaseAuthException e) {
-          print('❌ Verification failed: ${e.message}');
+          debugPrint('❌ Verification failed: ${e.code} - ${e.message}');
+          
+          String userMessage = e.message ?? 'Verification failed';
+          
+          if (kIsWeb && e.code == 'unauthorized-domain') {
+            userMessage = 'Hostname mismatch: This domain is not authorized in Firebase Console. Please add ${Uri.base.host} to Authorized Domains.';
+          } else if (e.code == 'too-many-requests') {
+            userMessage = 'Too many attempts. Please try again later.';
+          }
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(e.message ?? 'Verification failed'),
-                backgroundColor: Colors.red,
+                content: Text(userMessage),
+                backgroundColor: Colors.redAccent,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
           }
@@ -61,7 +72,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         
         // OTP sent successfully
         codeSent: (String verificationId, int? resendToken) async {
-          print('✅ OTP sent to $phoneNumber');
+          debugPrint('✅ OTP sent to $phoneNumber');
           
           if (mounted) {
             setState(() => _isLoading = false);
@@ -69,12 +80,19 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
             // Navigate to OTP entry screen and wait for result
             final result = await Navigator.push<bool>(
               context,
-              MaterialPageRoute(
-                builder: (context) => OTPVerificationScreen(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => OTPVerificationScreen(
                   phoneNumber: phoneNumber,
                   verificationId: verificationId,
                   resendToken: resendToken,
                 ),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOutQuart;
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  return SlideTransition(position: animation.drive(tween), child: child);
+                },
               ),
             );
 
@@ -87,17 +105,18 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         
         // Auto-retrieval timeout
         codeAutoRetrievalTimeout: (String verificationId) {
-          print('⏱️ Auto-retrieval timeout');
+          debugPrint('⏱️ Auto-retrieval timeout');
         },
       );
       
     } catch (e) {
-      print('❌ Error sending OTP: $e');
+      debugPrint('❌ Error sending OTP: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -110,7 +129,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user!;
       
-      print('✅ Signed in: ${user.uid}');
+      debugPrint('✅ Signed in: ${user.uid}');
       
       // Create or update user in Firestore
       if (userCredential.additionalUserInfo?.isNewUser == true) {
@@ -118,7 +137,6 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       }
       
       if (mounted) {
-        // Navigate to onboarding
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const PincodeGateScreen()),
@@ -126,12 +144,12 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         );
       }
     } catch (e) {
-      print('❌ Sign-in error: $e');
+      debugPrint('❌ Sign-in error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sign-in error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.redAccent,
           ),
         );
       }
@@ -143,15 +161,11 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     final docSnapshot = await userDoc.get();
     
     if (!docSnapshot.exists) {
-      // New user
       await userDoc.set({
-        'phone_number': phoneNumber,
+        'phone': phoneNumber,
         'role': 'customer',
         'created_at': FieldValue.serverTimestamp(),
       });
-      print('✅ New customer created: $uid');
-    } else {
-      print('✅ Existing user: $uid');
     }
   }
 
@@ -159,261 +173,277 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-            // If strictly root, do nothing or minimize (default system back handles this)
-          },
+      body: Container(
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF0D9759).withOpacity(0.05),
+              Colors.white,
+              const Color(0xFF0D9759).withOpacity(0.02),
+            ],
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Logo/Icon
-                Center(
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9759).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.shopping_bag,
-                      size: 50,
-                      color: Color(0xFF0D9759),
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 32),
-
-                // Welcome Text
-                const Text(
-                  'Welcome to Kiri Hat',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                Text(
-                  'Enter your mobile number to continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Phone Number Input
-                Text(
-                  'Mobile Number',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    children: [
-                      // Country Code
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  
+                  // Back Button
+                  if (Navigator.canPop(context))
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            bottomLeft: Radius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          children: [
-                            Text(
-                              '🇮🇳',
-                              style: TextStyle(fontSize: 20),
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              spreadRadius: 2,
                             ),
-                            SizedBox(width: 8),
-                            Text(
-                              '+91',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                          ],
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 40),
+
+                  // Hero Icon / Image
+                  Center(
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0D9759).withOpacity(0.2),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0D9759).withOpacity(0.1),
+                                shape: BoxShape.circle,
                               ),
+                            ),
+                            const Icon(
+                              Icons.phone_android_rounded,
+                              size: 50,
+                              color: Color(0xFF0D9759),
                             ),
                           ],
                         ),
                       ),
-                      
-                      // Vertical Divider
-                      Container(
-                        width: 1,
-                        height: 50,
-                        color: Colors.grey.shade300,
-                      ),
-                      
-                      // Phone Number Field
-                      Expanded(
-                        child: TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          maxLength: 10,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter mobile number',
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                            counterText: '',
-                          ),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter mobile number';
-                            }
-                            if (value.length != 10) {
-                              return 'Please enter a valid 10-digit number';
-                            }
-                            if (!RegExp(r'^[6-9][0-9]{9}$').hasMatch(value)) {
-                              return 'Please enter a valid Indian mobile number';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Send OTP Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _sendOTP,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D9759),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Send OTP',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                  ),
+                  
+                  const SizedBox(height: 48),
+
+                  // Header Section
+                  const Text(
+                    'Welcome back!',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF1A1A1A),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Login to your Kiri Hat account using your mobile number',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Label
+                  Text(
+                    'Mobile Number',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Premium Input Field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D9759).withOpacity(0.05),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              bottomLeft: Radius.circular(20),
                             ),
                           ),
+                          child: Row(
+                            children: [
+                              const Text(
+                                '🇮🇳',
+                                style: TextStyle(fontSize: 22),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '+91',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            maxLength: 10,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '00000 00000',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[400],
+                                letterSpacing: 2,
+                                fontWeight: FontWeight.normal,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                              counterText: '',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Enter number';
+                              if (value.length != 10) return 'Invalid length';
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 48),
 
-                // Divider with "OR"
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'OR',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+                  // Dynamic Action Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 64,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0D9759).withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _sendOTP,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9759),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    'Get Verification Code',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Icon(Icons.arrow_forward_rounded, color: Colors.white.withOpacity(0.8)),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Footer - Policy
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: TextStyle(fontSize: 13, color: Colors.grey[500], height: 1.5),
+                          children: [
+                            const TextSpan(text: 'By continuing, you agree to our '),
+                            TextSpan(
+                              text: 'Terms of Service',
+                              style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold),
+                            ),
+                            const TextSpan(text: ' and '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // Email Login Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.email_outlined),
-                    label: const Text(
-                      'Login with Email',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0D9759),
-                      side: const BorderSide(color: Color(0xFF0D9759)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                   ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Terms & Privacy
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'By continuing, you agree to our Terms of Service and Privacy Policy',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -421,3 +451,4 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     );
   }
 }
+

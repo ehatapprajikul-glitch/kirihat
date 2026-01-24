@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'my_listed_products.dart';
+import 'package:kirihat_core/utils/currency_helper.dart';
 import 'Business/vendor_sales_analytics.dart';
 import '../auth/login_screen.dart';
 
@@ -18,7 +19,7 @@ class _VendorHomeScreenState extends State<VendorHomeScreen> {
 
   // Helper to format currency
   String formatCurrency(double amount) {
-    return NumberFormat.currency(symbol: '₹', decimalDigits: 0).format(amount);
+    return CurrencyHelper.format(amount);
   }
 
   // Helper to check if date is today

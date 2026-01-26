@@ -677,12 +677,12 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                           onAdd: () async {
                                             bool success = await CartHelper.addToCart(context, product);
                                             if (success && context.mounted) {
-                                               ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Added to cart'),
-                                                  duration: Duration(seconds: 1),
-                                                ),
-                                              );
+                                               // ScaffoldMessenger.of(context).showSnackBar(
+                                               //  const SnackBar(
+                                               //    content: Text('Added to cart'),
+                                               //    duration: Duration(seconds: 1),
+                                               //  ),
+                                              // );
                                             }
                                           },
                                         );

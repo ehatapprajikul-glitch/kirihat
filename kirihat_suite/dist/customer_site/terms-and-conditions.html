@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terms And Conditions - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <title>Terms and Conditions - Kirihat</title>
+    <meta name="description"
+        content="Read Kirihat's Terms and Conditions governing the use of our quick commerce and e-commerce platform.">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,42 +40,505 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Terms And Conditions</h1>
-        <p>This is the placeholder content for Terms And Conditions. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
+    <!-- Main Content -->
+    <main class="content-page">
+        <div class="container">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span class="current">Terms and Conditions</span>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Terms and Conditions</h1>
+                <p class="last-updated">Last Updated: January 23, 2026</p>
+            </div>
+
+            <!-- Table of Contents -->
+            <div class="toc-box">
+                <h3>Table of Contents</h3>
+                <nav class="toc">
+                    <a href="#introduction">1. Introduction</a>
+                    <a href="#definitions">2. Definitions</a>
+                    <a href="#eligibility">3. Eligibility</a>
+                    <a href="#user-accounts">4. User Accounts</a>
+                    <a href="#platform-usage">5. Platform Usage</a>
+                    <a href="#orders">6. Orders and Transactions</a>
+                    <a href="#payment">7. Payment Terms</a>
+                    <a href="#delivery">8. Delivery</a>
+                    <a href="#returns">9. Returns, Refunds, and Cancellations</a>
+                    <a href="#prohibited">10. Prohibited Products and Activities</a>
+                    <a href="#intellectual">11. Intellectual Property</a>
+                    <a href="#liability">12. Limitation of Liability</a>
+                    <a href="#indemnification">13. Indemnification</a>
+                    <a href="#dispute">14. Dispute Resolution</a>
+                    <a href="#modifications">15. Modifications to Terms</a>
+                    <a href="#termination">16. Termination</a>
+                    <a href="#general">17. General Provisions</a>
+                    <a href="#contact">18. Contact Information</a>
+                </nav>
+            </div>
+
+            <!-- Content Sections -->
+            <section id="introduction" class="content-section">
+                <h2>1. Introduction</h2>
+                <p>Welcome to Kirihat. These Terms and Conditions ("Terms") govern your access to and use of the Kirihat
+                    platform, website (www.kirihat.com), and mobile application (collectively, the "Platform"). Kirihat
+                    is a quick commerce and e-commerce marketplace operated by Kirihat.</p>
+                <p>By accessing or using our Platform, you agree to be bound by these Terms. If you do not agree to
+                    these Terms, please do not use our Platform.</p>
+
+                <div class="info-box">
+                    <h4>Company Details</h4>
+                    <ul class="company-info">
+                        <li><strong>Name:</strong> Kirihat</li>
+                        <li><strong>Udyam Registration:</strong> UDYAM-AS-09-0040666 </li>
+                        <li><strong>Registered Office:</strong> Kirihat, Kachakhana, Golakganj, Hazratganj, Dhubri -
+                            783334, India</li>
+                        <li><strong>Contact Email:</strong> <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </li>
+                        <li><strong>Contact Phone:</strong> <a href="tel:+919957693472">+91 99576 93472</a></li>
+                        <li><strong>Website:</strong> <a href="https://www.kirihat.com">www.kirihat.com</a></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="definitions" class="content-section">
+                <h2>2. Definitions</h2>
+                <dl class="definition-list">
+                    <dt>"Platform"</dt>
+                    <dd>Refers to Kirihat's website, mobile application, and all related services.</dd>
+
+                    <dt>"Customer"</dt>
+                    <dd>Refers to users who purchase products through the Platform.</dd>
+
+                    <dt>"Seller"</dt>
+                    <dd>Refers to users who list and sell products on the Platform.</dd>
+
+                    <dt>"Vendor"</dt>
+                    <dd>Refers to warehouse operators who store products for quick delivery.</dd>
+
+                    <dt>"Rider"</dt>
+                    <dd>Refers to delivery partners who deliver products to Customers.</dd>
+
+                    <dt>"Admin"</dt>
+                    <dd>Refers to Kirihat's administrative team.</dd>
+
+                    <dt>"User"</dt>
+                    <dd>Refers to any person accessing or using the Platform in any capacity.</dd>
+                </dl>
+            </section>
+
+            <section id="eligibility" class="content-section">
+                <h2>3. Eligibility</h2>
+                <ul class="styled-list">
+                    <li>You must be at least 18 years of age to create an account and make purchases on our Platform.
+                    </li>
+                    <li>Minors under 18 may use the Platform only with the involvement and consent of a parent or legal
+                        guardian.</li>
+                    <li>By using the Platform, you represent and warrant that you have the legal capacity to enter into
+                        a binding agreement.</li>
+                    <li>You agree to provide accurate, current, and complete information during registration and to
+                        update such information to keep it accurate, current, and complete.</li>
+                </ul>
+            </section>
+
+            <section id="user-accounts" class="content-section">
+                <h2>4. User Accounts</h2>
+
+                <h3>4.1. Account Registration</h3>
+                <p>You must create an account to access certain features of the Platform. You are responsible for
+                    maintaining the confidentiality of your account credentials.</p>
+
+                <h3>4.2. Account Types</h3>
+                <p>The Platform supports five types of user accounts: Customer, Seller, Vendor, Rider, and Admin. Each
+                    account type has specific rights and responsibilities as outlined in respective policies.</p>
+
+                <h3>4.3. Account Security</h3>
+                <p>You are solely responsible for all activities that occur under your account. Notify us immediately of
+                    any unauthorized use of your account.</p>
+
+                <h3>4.4. Account Termination</h3>
+                <p>We reserve the right to suspend or terminate your account if you violate these Terms or engage in
+                    fraudulent, illegal, or harmful activities.</p>
+
+                <h3>4.5. Account Deletion</h3>
+                <p>Users may request account deletion at any time through the Platform settings. Upon deletion, all
+                    associated data will be permanently removed from our systems.</p>
+            </section>
+
+            <section id="platform-usage" class="content-section">
+                <h2>5. Platform Usage</h2>
+
+                <div class="highlight-box">
+                    <h3>5.1. Service Area</h3>
+                    <p>Kirihat currently operates in PIN code 783334 in India. We plan to expand to additional areas in
+                        the future.</p>
+                </div>
+
+                <h3>5.2. Business Hours</h3>
+                <ul class="styled-list">
+                    <li><strong>Order Placement:</strong> Customers may place orders at any time</li>
+                    <li><strong>Delivery Services:</strong> 6:00 AM to 9:00 PM IST</li>
+                    <li><strong>Customer Support:</strong> 9:00 AM to 5:00 PM IST</li>
+                </ul>
+
+                <h3>5.3. Acceptable Use</h3>
+                <p>You agree to use the Platform only for lawful purposes and in accordance with these Terms. You shall
+                    not use the Platform to transmit, distribute, or store material that is unlawful, harmful,
+                    threatening, abusive, defamatory, or otherwise objectionable.</p>
+            </section>
+
+            <section id="orders" class="content-section">
+                <h2>6. Orders and Transactions</h2>
+                <ul class="styled-list">
+                    <li>All orders placed through the Platform are subject to acceptance by the respective Seller and
+                        Vendor.</li>
+                    <li>Kirihat acts as a facilitator between Customers, Sellers, Vendors, and Riders and is not
+                        directly responsible for the quality, safety, or legality of products listed.</li>
+                    <li>Product prices are determined by Sellers and may be subject to change without notice.</li>
+                    <li>All prices are in Indian Rupees (INR) and include applicable taxes unless otherwise stated.</li>
+                    <li>Order confirmation does not constitute acceptance of your order by the Seller. Sellers and
+                        Vendors reserve the right to cancel orders at their discretion before shipment.</li>
+                </ul>
+            </section>
+
+            <section id="payment" class="content-section">
+                <h2>7. Payment Terms</h2>
+                <p>Kirihat accepts the following payment methods to ensure secure and convenient transactions:</p>
+
+                <div class="two-column-grid">
+                    <div class="info-card">
+                        <h4>Accepted Payment Methods</h4>
+                        <ul>
+                            <li>UPI (Unified Payments Interface)</li>
+                            <li>Cash on Delivery (COD)</li>
+                        </ul>
+                    </div>
+                    <div class="info-card">
+                        <h4>Applicable Charges</h4>
+                        <ul>
+                            <li>Platform fees</li>
+                            <li>Delivery fees</li>
+                            <li>Payment gateway fees</li>
+                            <li>Convenience fees</li>
+                            <li>COD handling fees</li>
+                            <li>Packaging fees</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ Important</h4>
+                    <p>All payments are processed securely through authorized payment gateways. You agree to pay all
+                        applicable fees and charges associated with your orders. These charges will be clearly displayed
+                        at checkout before you complete your purchase.</p>
+                </div>
+            </section>
+
+            <section id="delivery" class="content-section">
+                <h2>8. Delivery</h2>
+
+                <h3>8.1. Delivery Modes</h3>
+                <div class="delivery-modes">
+                    <div class="mode-card">
+                        <div class="mode-icon">📦</div>
+                        <h4>Standard Delivery</h4>
+                        <p class="mode-time">2-10 hours</p>
+                        <p>Regular delivery for non-urgent orders</p>
+                    </div>
+                    <div class="mode-card featured">
+                        <div class="mode-icon">⚡</div>
+                        <h4>Instant Delivery</h4>
+                        <p class="mode-time">~20 minutes</p>
+                        <p>Ultra-fast delivery (not guaranteed)</p>
+                    </div>
+                </div>
+
+                <h3>8.2. Delivery Terms</h3>
+                <ul class="styled-list">
+                    <li>Delivery charges may apply based on product category, order value, and ongoing offers.</li>
+                    <li>Free delivery may be available based on certain thresholds.</li>
+                    <li>Riders will attempt delivery one time only. If the Customer is unreachable or unavailable, the
+                        order may be cancelled by the Rider.</li>
+                    <li>You must provide accurate delivery information. Kirihat is not responsible for failed deliveries
+                        due to incorrect or incomplete address information.</li>
+                </ul>
+            </section>
+
+            <section id="returns" class="content-section">
+                <h2>9. Returns, Refunds, and Cancellations</h2>
+                <p>Returns, refunds, and cancellations are subject to our dedicated policies:</p>
+                <div class="policy-links">
+                    <a href="return-refund-policy" class="policy-link-card">
+                        <span class="icon">↩️</span>
+                        <div>
+                            <h4>Return and Refund Policy</h4>
+                            <p>Learn about our return process and refund timelines</p>
+                        </div>
+                    </a>
+                    <a href="cancellation-policy" class="policy-link-card">
+                        <span class="icon">❌</span>
+                        <div>
+                            <h4>Cancellation Policy</h4>
+                            <p>Understand how to cancel orders and applicable terms</p>
+                        </div>
+                    </a>
+                </div>
+
+                <h3>Quick Summary</h3>
+                <ul class="styled-list">
+                    <li>Customers may cancel orders until the product is shipped.</li>
+                    <li>Refunds for UPI payments will be processed within 24-48 hours of cancellation.</li>
+                    <li>Refunds for COD orders require the Customer to provide valid UPI or bank account details.</li>
+                </ul>
+            </section>
+
+            <section id="prohibited" class="content-section">
+                <h2>10. Prohibited Products and Activities</h2>
+
+                <div class="warning-box">
+                    <h3>10.1. Prohibited Products</h3>
+                    <p>The following products are strictly prohibited on the Platform:</p>
+                </div>
+
+                <div class="prohibited-grid">
+                    <div class="prohibited-item">🚫 Alcoholic beverages</div>
+                    <div class="prohibited-item">🚫 Tobacco products</div>
+                    <div class="prohibited-item">🚫 Addictive substances</div>
+                    <div class="prohibited-item">🚫 Government-banned products</div>
+                    <div class="prohibited-item">🚫 Religious disrespect items</div>
+                    <div class="prohibited-item">🚫 Counterfeit goods</div>
+                    <div class="prohibited-item">🚫 Weapons and ammunition</div>
+                    <div class="prohibited-item">🚫 Adult content</div>
+                </div>
+
+                <h3>10.2. Prohibited Activities</h3>
+                <ul class="styled-list">
+                    <li>Creating fake or fraudulent accounts</li>
+                    <li>Providing false or misleading information</li>
+                    <li>Engaging in fraudulent transactions</li>
+                    <li>Manipulating prices or reviews</li>
+                    <li>Harassing or threatening other users</li>
+                    <li>Attempting to gain unauthorized access to the Platform</li>
+                    <li>Using automated systems or bots without authorization</li>
+                    <li>Violating any applicable laws or regulations</li>
+                </ul>
+            </section>
+
+            <section id="intellectual" class="content-section">
+                <h2>11. Intellectual Property</h2>
+                <p>All content on the Platform, including text, graphics, logos, images, software, and trademarks, is
+                    the property of Kirihat or its content suppliers and is protected by Indian and international
+                    intellectual property laws.</p>
+
+                <h3>11.1. Platform Content</h3>
+                <p>You may not reproduce, distribute, modify, or create derivative works of any content from the
+                    Platform without our express written permission.</p>
+
+                <h3>11.2. User-Generated Content</h3>
+                <p>Product listings, images, and descriptions submitted by Sellers remain the property of the respective
+                    Sellers, who grant Kirihat a license to display and promote such content.</p>
+            </section>
+
+            <section id="liability" class="content-section">
+                <h2>12. Limitation of Liability</h2>
+
+                <div class="info-box">
+                    <h3>Role as Intermediary</h3>
+                    <p>Kirihat acts as an intermediary platform connecting Customers, Sellers, Vendors, and Riders. We
+                        do not manufacture, store (except through Vendors), or directly sell products listed on the
+                        Platform.</p>
+                </div>
+
+                <h3>12.1. Product Liability</h3>
+                <p>Kirihat is not liable for the quality, safety, legality, or accuracy of product listings. All
+                    product-related concerns should be directed to the respective Seller.</p>
+
+                <h3>12.2. Limitation of Damages</h3>
+                <p>To the maximum extent permitted by law, Kirihat shall not be liable for any indirect, incidental,
+                    special, consequential, or punitive damages arising from your use of the Platform.</p>
+
+                <h3>12.3. Maximum Liability</h3>
+                <p>Our total liability for any claims arising from your use of the Platform shall not exceed the amount
+                    paid by you for the specific transaction giving rise to the claim.</p>
+
+                <div class="warning-box">
+                    <h3>12.4. Data Security Disclaimer</h3>
+                    <p>Kirihat implements industry-standard security measures to protect user data. However, we are not
+                        responsible for data breaches, hacking attempts, malware, or unauthorized access caused by third
+                        parties beyond our reasonable control. We will make reasonable efforts to protect user data but
+                        cannot guarantee absolute security.</p>
+                </div>
+            </section>
+
+            <section id="indemnification" class="content-section">
+                <h2>13. Indemnification</h2>
+                <p>You agree to indemnify, defend, and hold harmless Kirihat, its affiliates, officers, directors,
+                    employees, and agents from any claims, liabilities, damages, losses, costs, or expenses (including
+                    reasonable attorney fees) arising from:</p>
+                <ul class="styled-list">
+                    <li>Your use of the Platform</li>
+                    <li>Your violation of these Terms</li>
+                    <li>Your violation of any rights of third parties</li>
+                    <li>Your fraudulent or illegal activities</li>
+                </ul>
+            </section>
+
+            <section id="dispute" class="content-section">
+                <h2>14. Dispute Resolution</h2>
+
+                <h3>14.1. Response Time</h3>
+                <p>Customer complaints and disputes will be addressed within <strong>1-24 hours</strong> of receipt.
+                    Resolution may take <strong>1-30 business days</strong> depending on the complexity of the issue.
+                </p>
+
+                <h3>14.2. Governing Law</h3>
+                <p>Any disputes arising from these Terms or your use of the Platform shall be governed by the laws of
+                    India.</p>
+
+                <h3>14.3. Jurisdiction</h3>
+                <p>All disputes shall be subject to the exclusive jurisdiction of the courts located in <strong>Dhubri,
+                        Assam, India</strong>.</p>
+
+                <div class="highlight-box">
+                    <h3>14.4. Amicable Resolution</h3>
+                    <p>We encourage users to contact our customer support team to resolve disputes amicably before
+                        pursuing legal action.</p>
+                </div>
+            </section>
+
+            <section id="modifications" class="content-section">
+                <h2>15. Modifications to Terms</h2>
+                <ul class="styled-list">
+                    <li>Kirihat reserves the right to modify these Terms at any time.</li>
+                    <li>We will notify users of material changes through the Platform or via email.</li>
+                    <li>Your continued use of the Platform after such modifications constitutes your acceptance of the
+                        updated Terms.</li>
+                    <li>It is your responsibility to review these Terms periodically.</li>
+                </ul>
+            </section>
+
+            <section id="termination" class="content-section">
+                <h2>16. Termination</h2>
+
+                <h3>16.1. Voluntary Termination</h3>
+                <p>Either party may terminate this agreement at any time.</p>
+
+                <h3>16.2. Immediate Termination</h3>
+                <p>Kirihat may suspend or terminate your access to the Platform immediately, without prior notice, for
+                    any breach of these Terms.</p>
+
+                <h3>16.3. Effect of Termination</h3>
+                <p>Upon termination, your right to use the Platform will immediately cease.</p>
+
+                <h3>16.4. Survival</h3>
+                <p>Provisions that by their nature should survive termination shall survive, including ownership
+                    provisions, warranty disclaimers, and limitations of liability.</p>
+            </section>
+
+            <section id="general" class="content-section">
+                <h2>17. General Provisions</h2>
+
+                <h3>17.1. Entire Agreement</h3>
+                <p>These Terms constitute the entire agreement between you and Kirihat regarding your use of the
+                    Platform.</p>
+
+                <h3>17.2. Severability</h3>
+                <p>If any provision of these Terms is found to be unenforceable, the remaining provisions will remain in
+                    full force and effect.</p>
+
+                <h3>17.3. Waiver</h3>
+                <p>Our failure to enforce any right or provision of these Terms will not be deemed a waiver of such
+                    right or provision.</p>
+
+                <h3>17.4. Assignment</h3>
+                <p>You may not assign or transfer these Terms without our prior written consent. Kirihat may assign
+                    these Terms without restriction.</p>
+
+                <h3>17.5. Force Majeure</h3>
+                <p>Kirihat shall not be liable for any failure to perform due to circumstances beyond our reasonable
+                    control, including natural disasters, war, terrorism, riots, embargoes, acts of civil or military
+                    authorities, fire, floods, accidents, network infrastructure failures, strikes, or shortages of
+                    transportation facilities, fuel, energy, labor, or materials.</p>
+            </section>
+
+            <section id="contact" class="content-section">
+                <h2>18. Contact Information</h2>
+                <p>For questions, concerns, or complaints regarding these Terms, please contact us at:</p>
+
+                <div class="contact-card">
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email</h4>
+                            <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <div>
+                            <h4>Phone</h4>
+                            <a href="tel:+919957693472">+91 99576 93472</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📍</span>
+                        <div>
+                            <h4>Address</h4>
+                            <p>Kirihat, Kachakhana, Golakganj, Hazratganj, Dhubri - 783334, India</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Acceptance Notice -->
+            <div class="acceptance-notice">
+                <p><strong>By using the Kirihat Platform, you acknowledge that you have read, understood, and agree to
+                        be bound by these Terms and Conditions.</strong></p>
+            </div>
+
+            <!-- Related Policies -->
+            <section class="related-policies">
+                <h3>Related Policies</h3>
+                <div class="policy-grid">
+                    <a href="privacy-policy" class="policy-card">Privacy Policy</a>
+                    <a href="return-refund-policy" class="policy-card">Return & Refund Policy</a>
+                    <a href="cancellation-policy" class="policy-card">Cancellation Policy</a>
+                    <a href="shipping-delivery-policy" class="policy-card">Shipping & Delivery</a>
+                </div>
+            </section>
+        </div>
     </main>
 
+    <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                        <a href="cancellation-policy">Cancellation</a>
+                        <a href="payment-policy">Payment Policy</a>
+                        <a href="seller-policy">Seller Policy</a>
+                        <a href="vendor-policy">Vendor Policy</a>
+                        <a href="rider-policy">Rider Policy</a>
+                    </div>
                 </div>
-            </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="faq">FAQ</a>
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +547,8 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
 </body>
+
 </html>

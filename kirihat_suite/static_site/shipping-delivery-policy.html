@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shipping Delivery Policy - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <title>Shipping & Delivery Policy - Kirihat</title>
+    <meta name="description"
+        content="Read Kirihat's Shipping & Delivery Policy. Understand our delivery areas, timelines, shipping charges, and order tracking process tailored for Dhubri.">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,42 +40,205 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Shipping Delivery Policy</h1>
-        <p>This is the placeholder content for Shipping Delivery Policy. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
+    <!-- Main Content -->
+    <main class="content-page">
+        <div class="container">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span class="current">Shipping & Delivery Policy</span>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Shipping & Delivery Policy</h1>
+                <p class="last-updated">Last Updated: January 24, 2026</p>
+            </div>
+
+            <!-- Table of Contents -->
+            <div class="toc-box">
+                <h3>Table of Contents</h3>
+                <nav class="toc">
+                    <a href="#introduction">1. Introduction</a>
+                    <a href="#service-area">2. Service Area</a>
+                    <a href="#delivery-modes">3. Delivery Modes & Timelines</a>
+                    <a href="#shipping-charges">4. Shipping Charges</a>
+                    <a href="#order-tracking">5. Order Tracking</a>
+                    <a href="#delivery-attempts">6. Delivery Attempts</a>
+                    <a href="#issues">7. Damaged or Missing Items</a>
+                    <a href="#contact">8. Contact Us</a>
+                </nav>
+            </div>
+
+            <!-- Content Sections -->
+            <section id="introduction" class="content-section">
+                <h2>1. Introduction</h2>
+                <p>At Kirihat, we are committed to delivering fresh groceries and essentials to your doorstep with speed
+                    and reliability. This Shipping & Delivery Policy outlines our delivery process, timelines, and
+                    charges to ensure a transparent shopping experience for our valued customers in Dhubri.</p>
+            </section>
+
+            <section id="service-area" class="content-section">
+                <h2>2. Service Area</h2>
+                <div class="highlight-box">
+                    <h3>Currently Serving</h3>
+                    <p>We are currently operating exclusively in <strong>Dhubri, Assam</strong>, serving the following
+                        PIN code:</p>
+                    <ul class="styled-list">
+                        <li><strong>783334</strong> (Kachakhana, Golakganj, and surrounding areas)</li>
+                    </ul>
+                </div>
+                <p>We are working hard to expand our services to more neighborhoods soon. Please check our app for the
+                    most up-to-date service availability.</p>
+            </section>
+
+            <section id="delivery-modes" class="content-section">
+                <h2>3. Delivery Modes & Timelines</h2>
+                <p>We offer flexible delivery options to suit your needs:</p>
+
+                <div class="delivery-modes">
+                    <div class="mode-card featured">
+                        <div class="mode-icon">⚡</div>
+                        <h4>Instant Delivery</h4>
+                        <p class="mode-time">~20 Minutes</p>
+                        <p>Get your essentials delivered in minutes! Available for eligible products and locations
+                            within our optimized delivery zones.</p>
+                    </div>
+                    <div class="mode-card">
+                        <div class="mode-icon">🚚</div>
+                        <h4>Standard Delivery</h4>
+                        <p class="mode-time">2 - 4 Hours</p>
+                        <p>Perfect for larger bulk orders or items from specific vendors. Orders placed before 6 PM are
+                            typically delivered the same day.</p>
+                    </div>
+                </div>
+                <p><em>Note: Delivery times are estimates and may vary due to traffic, weather conditions, or
+                        operational challenges.</em></p>
+            </section>
+
+            <section id="shipping-charges" class="content-section">
+                <h2>4. Shipping Charges</h2>
+                <p>We strive to keep our delivery fees affordable. Shipping charges are calculated based on your order
+                    value and delivery type:</p>
+
+                <div class="info-box">
+                    <ul class="styled-list">
+                        <li><strong>Free Delivery:</strong> On all orders above <strong>₹499</strong>.</li>
+                        <li><strong>Standard Fee:</strong> A nominal fee of <strong>₹25</strong> applies to orders below
+                            ₹499.</li>
+                        <li><strong>Small Cart Fee:</strong> For orders below ₹100, a small cart fee of ₹10 may apply to
+                            ensure operational sustainability.</li>
+                    </ul>
+                </div>
+                <p>Final delivery charges will be clearly displayed at the checkout screen before you confirm your
+                    order.</p>
+            </section>
+
+            <section id="order-tracking" class="content-section">
+                <h2>5. Order Tracking</h2>
+                <p>Stay updated on your order's journey every step of the way:</p>
+                <ul class="styled-list">
+                    <li><strong>Real-Time Tracking:</strong> Once your order is out for delivery, you can track your
+                        Rider's live location directly within the Kirihat App.</li>
+                    <li><strong>Status Updates:</strong> You will receive notifications for Order Confirmation, Packing,
+                        Out for Delivery, and Successful Delivery.</li>
+                    <li><strong>SMS/In-App Alerts:</strong> Important updates will be sent via SMS or push
+                        notifications.</li>
+                </ul>
+            </section>
+
+            <section id="delivery-attempts" class="content-section">
+                <h2>6. Delivery Attempts</h2>
+                <p>To ensure successful delivery:</p>
+                <ul class="styled-list">
+                    <li>Our Rider will attempt to call you if they cannot locate your address or if you are unavailable.
+                    </li>
+                    <li><strong>One Attempt:</strong> We typically attempt delivery once. If you are unavailable, the
+                        order may be cancelled, or you may need to reschedule via customer support (subject to
+                        availability).</li>
+                    <li><strong>Secure Drop:</strong> You may request a "Leave at Door" or "Leave with Neighbor" option
+                        through the app instruction notes, but Kirihat is not responsible for the package once left as
+                        per your instructions.</li>
+                </ul>
+            </section>
+
+            <section id="issues" class="content-section">
+                <h2>7. Damaged or Missing Items</h2>
+                <p>If you receive an order with damaged, incorrect, or missing items, please report it immediately.</p>
+                <p>For detailed information on how to request a return or refund, please refer to our <a
+                        href="return-refund-policy">Return & Refund Policy</a>.</p>
+            </section>
+
+            <section id="contact" class="content-section">
+                <h2>8. Contact Us</h2>
+                <p>Have questions about your delivery? Our support team is here to help.</p>
+
+                <div class="contact-card">
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email</h4>
+                            <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <div>
+                            <h4>Phone</h4>
+                            <a href="tel:+919957693472">+91 99576 93472</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Related Policies -->
+            <section class="related-policies">
+                <h3>Related Policies</h3>
+                <div class="policy-grid">
+                    <a href="terms-and-conditions" class="policy-card">Terms & Conditions</a>
+                    <a href="return-refund-policy" class="policy-card">Return & Refund Policy</a>
+                    <a href="cancellation-policy" class="policy-card">Cancellation Policy</a>
+                    <a href="privacy-policy" class="policy-card">Privacy Policy</a>
+                </div>
+            </section>
+        </div>
     </main>
 
+    <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                        <a href="cancellation-policy">Cancellation</a>
+                        <a href="payment-policy">Payment Policy</a>
+                        <a href="seller-policy">Seller Policy</a>
+                        <a href="vendor-policy">Vendor Policy</a>
+                        <a href="rider-policy">Rider Policy</a>
+                    </div>
                 </div>
-            </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="faq">FAQ</a>
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>For Partners</h3>
+                    <div class="footer-grid">
+                        <a href="seller-policy">Become a Seller</a>
+                        <a href="vendor-policy">Become a Vendor</a>
+                        <a href="rider-policy">Become a Rider</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +247,8 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
 </body>
+
 </html>

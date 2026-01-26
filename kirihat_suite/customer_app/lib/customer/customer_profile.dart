@@ -6,11 +6,16 @@ import 'customer_orders.dart';
 import 'manage_addresses.dart';
 import 'wishlist_screen.dart';
 import '../auth/phone_auth_screen.dart';
-import '../auth/seller_registration_screen.dart';
 import 'package:kirihat_core/services/session_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:kirihat_core/utils/policy_links.dart';
+import 'delete_account_screen.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
-  const CustomerProfileScreen({super.key});
+  final bool openEditProfile;
+
+  const CustomerProfileScreen({super.key, this.openEditProfile = false});
 
   @override
   State<CustomerProfileScreen> createState() => _CustomerProfileScreenState();
@@ -19,6 +24,36 @@ class CustomerProfileScreen extends StatefulWidget {
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   static DateTime? _lastResetTime;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.openEditProfile) {
+      _fetchAndOpenEditDialog();
+    }
+  }
+
+  Future<void> _fetchAndOpenEditDialog() async {
+    if (user == null) return;
+    // Small delay to allow UI to settle and Firestore write to propagate if needed
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    try {
+      var snapshot = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+      // Even if doc doesn't exist (shouldn't happen), we can pass empty map safely?
+      // _showEditProfileDialog handles empty map well? 
+      // It accesses `currentData['name']`. access on null map throws? 
+      // snapshot.data() returns Map<String, dynamic>?
+      Map<String, dynamic> data = snapshot.exists ? (snapshot.data() ?? {}) : {};
+      
+      if (mounted) {
+        _showEditProfileDialog(data);
+      }
+    } catch (e) {
+      debugPrint("Error opening profile dialog: $e");
+    }
+  }
 
   // --- 1. EDIT PROFILE DIALOG (Updated with Dropdown & Loading & Fix) ---
   void _showEditProfileDialog(Map<String, dynamic> currentData) {
@@ -619,11 +654,56 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   if (user!.providerData.any((p) => p.providerId == 'password'))
                     _buildMenuItem(
                         Icons.lock_outline, "Change Password", _changePassword),
-                  _buildMenuItem(Icons.storefront, "Become a Seller", () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const SellerRegistrationScreen()));
+                  _buildMenuItem(Icons.storefront, "Become a Seller", () async {
+                    final url = Uri.parse('https://kirihat.com/seller-registration');
+                    try {
+                      final canLaunch = await canLaunchUrl(url);
+                      if (canLaunch) {
+                        await launchUrl(url, mode: LaunchMode.platformDefault);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not open seller registration form. Please check your internet connection.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error opening link: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  }),
+                ]),
+
+                const SizedBox(height: 20),
+
+                const SizedBox(height: 20),
+
+                // --- LEGAL & POLICIES ---
+                _buildSectionTitle("Legal & Policies"),
+                _buildMenuCard([
+                  _buildMenuItem(Icons.privacy_tip_outlined, "Privacy Policy", () {
+                    launchUrl(Uri.parse(PolicyLinks.privacyPolicy));
+                  }),
+                  _buildMenuItem(Icons.description_outlined, "Terms & Conditions", () {
+                    launchUrl(Uri.parse(PolicyLinks.termsAndConditions));
+                  }),
+                  _buildMenuItem(Icons.assignment_return_outlined, "Return & Refund", () {
+                    launchUrl(Uri.parse(PolicyLinks.returnRefundPolicy));
+                  }),
+                  _buildMenuItem(Icons.local_shipping_outlined, "Shipping Policy", () {
+                    launchUrl(Uri.parse(PolicyLinks.shippingPolicy));
+                  }),
+                  _buildMenuItem(Icons.cancel_outlined, "Cancellation Policy", () {
+                    launchUrl(Uri.parse(PolicyLinks.cancellationPolicy));
                   }),
                 ]),
 
@@ -683,6 +763,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         elevation: 0),
                     child: const Text("Log Out",
                         style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: TextButton(
+                    onPressed: () {
+                       Navigator.push(context, MaterialPageRoute(builder: (_) => const DeleteAccountEnhancedScreen()));
+                    },
+                    child: const Text("Delete Account",
+                        style: TextStyle(
+                            color: Colors.grey, fontWeight: FontWeight.normal)),
                   ),
                 ),
                 const SizedBox(height: 20),

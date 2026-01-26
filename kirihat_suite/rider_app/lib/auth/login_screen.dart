@@ -245,8 +245,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.white.withAlpha(230))),
                     ],
                   ),
-                  Icon(Icons.shopping_bag_outlined,
-                      size: 120, color: Colors.white.withAlpha(77)),
+                  Image.asset(
+                    'assets/images/rider_icon.png',
+                    height: 120, // Match the previous Icon size mostly
+                    width: 120,
+                  ),
                 ],
               ),
             ),
@@ -286,10 +289,16 @@ class _LoginScreenState extends State<LoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (MediaQuery.of(context).size.width < 768) ...[
-            Icon(Icons.shopping_bag_outlined, size: 60, color: _brandColor),
+            Center(
+              child: Image.asset(
+                'assets/images/rider_icon.png',
+                height: 80,
+                width: 80,
+              ),
+            ),
             const SizedBox(height: 10),
             Center(
-                child: Text("Kiri Hat",
+                child: Text("Kirihat",
                     style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -371,25 +380,29 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 24),
           Center(
             child: TextButton(
-              onPressed: _isLoading
-                  ? null
-                  : () {
-                      setState(() => _isLogin = !_isLogin);
-                      _formKey.currentState?.reset();
-                    },
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(fontSize: 14, color: _textDark),
-                  children: [
-                    TextSpan(
-                        text: _isLogin
-                            ? "New to Kiri Hat? "
-                            : "Already have an account? "),
-                    TextSpan(
-                        text: _isLogin ? "Create an account" : "Login",
-                        style: TextStyle(
-                            color: _brandColor, fontWeight: FontWeight.bold)),
-                  ],
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Become a Rider"),
+                    content: const Text(
+                        "Rider accounts are created by Kirihat vendors.\n\nPlease contact your nearest Kirihat vendor to get registered and start delivering."),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("OK"),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Text(
+                "Want to be a rider?",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: _brandColor,
+                  decoration: TextDecoration.underline,
                 ),
               ),
             ),

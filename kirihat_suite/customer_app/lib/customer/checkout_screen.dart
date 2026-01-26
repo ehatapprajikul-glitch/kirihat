@@ -395,27 +395,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (pincode.length < 6) return;
 
     try {
-      // Check Zones for Specific Vendor
+      // FIX: Query 'service_areas' (Admin Portal) instead of 'vendor_zones'
       var snapshot = await FirebaseFirestore.instance
-          .collection('vendor_zones')
+          .collection('service_areas')
           .where('vendor_id', isEqualTo: widget.vendorId)
-          .where('pincodes', arrayContains: pincode)
+          .where('pincode', isEqualTo: pincode) // Exact match for string pincode
+          .where('isActive', isEqualTo: true)
           .limit(1)
           .get();
 
       if (snapshot.docs.isNotEmpty) {
         var data = snapshot.docs.first.data();
-        double std = (data['standard_fee'] ?? 0).toDouble();
-        double inst = (data['instant_fee'] ?? 0).toDouble();
-
-        // Free delivery logic moved to _updateTotalFee
-        // if (widget.subtotal >= _minFreeDelivery && _minFreeDelivery > 0) {
-        //   std = 0;
-        // }
+        
+        // Use configured fees from Global Settings as fallback since service_areas doesn't have fee fields yet
+        // If fee fields exist in future, use them: data['standard_fee'] ?? _fallbackStandardFee
+        double std = (data.containsKey('standard_fee')) ? (data['standard_fee'] ?? 0).toDouble() : _fallbackStandardFee;
+        double inst = (data.containsKey('instant_fee')) ? (data['instant_fee'] ?? 0).toDouble() : _fallbackInstantFee;
 
         setState(() {
           _isZoneFound = true;
-          _zoneName = data['zone_name'];
+          _zoneName = data['zoneName'] ?? "Delivery Zone";
           _standardFee = std;
           _instantFee = inst;
           _updateTotalFee();
@@ -436,7 +435,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           } else {
             _isZoneFound = false;
             _zoneName = "Not Deliverable";
-            _standardFee = 0;
+            _standardFee = 0; // Don't show misleading free in UI
             _instantFee = 0;
             _deliveryFee = 0;
           }
@@ -653,8 +652,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
       
-      // Check First Order Free Delivery
-      if (_isFirstOrder && _firstOrderFreeDelivery) {
+      // Check First Order Free Delivery (STANDARD DELIVERY ONLY)
+      // FIX: Don't waive Instant Delivery fee for first order
+      if (_isFirstOrder && _firstOrderFreeDelivery && _deliveryMode == 'Standard') {
         baseDeliveryFee = 0;
       }
       

@@ -7,6 +7,7 @@ import 'package:kirihat_core/utils/cart_helper.dart';
 import 'package:kirihat_core/utils/currency_helper.dart';
 import 'checkout_screen.dart';
 import '../auth/phone_auth_screen.dart';
+import 'customer_profile.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -224,35 +225,49 @@ class _CartScreenState extends State<CartScreen> {
                     ? ElevatedButton.icon(
                         onPressed: () async {
                           // Navigate to login and wait for success (true)
-                          final result = await Navigator.of(context).push<bool>(
+                          final result = await Navigator.of(context).push<Map<String, dynamic>>(
                             MaterialPageRoute(
                               builder: (_) => const PhoneAuthScreen(),
                             ),
                           );
                           
                           // If login successful
-                          if (result == true && mounted) {
+                          if (result != null && result['success'] == true && mounted) {
                              setState(() => _isLoading = true);
                              
                              // 1. Reload cart to get migrated items
                              await _loadCart();
-                             
-                             // 2. Navigate to Checkout immediately
+
+                             // 2. Handle redirection based on User Status
+                             final bool isNewUser = result['isNewUser'] == true;
+
                              if (mounted && _cartItems.isNotEmpty) {
-                                // Extract vendorId from first item (all items should be from same vendor)
-                                final vendorId = _cartItems.first['vendor_id'] ?? '';
-                                final total = _calculateTotal();
-                                
-                                Navigator.push(
-                                  context, 
-                                  MaterialPageRoute(
-                                    builder: (_) => CheckoutScreen(
-                                      cartItems: _cartItems,
-                                      subtotal: total,
-                                      vendorId: vendorId,
+                                if (isNewUser) {
+                                  // Redirect to Profile for Setup
+                                  // We should pushReplacement so they can't go back to login? 
+                                  // Actually just push is fine, they can go back to Cart.
+                                  // But user wanted "setup account follow".
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const CustomerProfileScreen(openEditProfile: true)),
+                                  );
+                                } else {
+                                  // Existing User: Proceed to Checkout
+                                  // Extract vendorId from first item (all items should be from same vendor)
+                                  final vendorId = _cartItems.first['vendor_id'] ?? '';
+                                  final total = _calculateTotal();
+                                  
+                                  Navigator.push(
+                                    context, 
+                                    MaterialPageRoute(
+                                      builder: (_) => CheckoutScreen(
+                                        cartItems: _cartItems,
+                                        subtotal: total,
+                                        vendorId: vendorId,
+                                      )
                                     )
-                                  )
-                                );
+                                  );
+                                }
                              }
                              
                              setState(() => _isLoading = false);

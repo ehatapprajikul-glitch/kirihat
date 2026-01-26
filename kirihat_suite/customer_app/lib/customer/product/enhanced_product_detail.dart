@@ -530,12 +530,11 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
               final category = widget.productData['category'] ?? '';
               
               await Share.share(
-                'Check out this amazing product on KiriHat!\n\n'
-                '📦 $name\n'
-                '💰 ${CurrencyHelper.format(price)}\n'
-                '🏷️ $category\n\n'
-                'Download KiriHat app to order now!',
-                subject: 'Product Recommendation from KiriHat',
+                'Check out this amazing product on Kirihat!\n\n'
+                '$name\n'
+                'Price: ${CurrencyHelper.format(price)}\n\n'
+                'Download Kirihat app to order now!',
+                subject: 'Product Recommendation from Kirihat',
               );
             },
           ),

@@ -19,7 +19,7 @@ class InvoiceService {
     // Load Logo
     pw.MemoryImage? logo;
     try {
-      final logoData = await rootBundle.load('assets/images/logo.png');
+      final logoData = await rootBundle.load('assets/images/app_icon.png');
       logo = pw.MemoryImage(logoData.buffer.asUint8List());
       debugPrint('✅ Logo loaded successfully');
     } catch (e) {
@@ -127,7 +127,7 @@ class InvoiceService {
                             ),
                             pw.SizedBox(width: 12),
                             pw.Text(
-                              'KiriHat',
+                              'Kirihat',
                               style: pw.TextStyle(
                                 font: boldFont,
                                 fontSize: 32,
@@ -139,7 +139,7 @@ class InvoiceService {
                         ),
                       if (logo != null)
                          pw.Text(
-                              'KiriHat',
+                              'Kirihat',
                               style: pw.TextStyle(
                                 font: boldFont,
                                 fontSize: 24,
@@ -593,7 +593,7 @@ class InvoiceService {
                       borderRadius: pw.BorderRadius.circular(20),
                     ),
                     child: pw.Text(
-                      'Thank you for choosing KiriHat!',
+                      'Thank you for choosing Kirihat!',
                       style: pw.TextStyle(
                         font: regularFont,
                         fontSize: 11,

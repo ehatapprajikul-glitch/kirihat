@@ -98,9 +98,9 @@ class ProductRowWidget extends StatelessWidget {
                       },
                       onAdd: () {
                         // Add to cart functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Added to cart')),
-                        );
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   const SnackBar(content: Text('Added to cart')),
+                        // );
                       },
                     ),
                   );

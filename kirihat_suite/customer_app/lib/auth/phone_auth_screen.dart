@@ -3,7 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../customer/onboarding/pincode_gate.dart';
+import 'package:kirihat_core/utils/cart_helper.dart';
+import 'package:kirihat_core/services/session_service.dart';
 import 'otp_verification_screen.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:kirihat_core/utils/policy_links.dart';
 
 class PhoneAuthScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess; // Optional callback after successful login
@@ -54,7 +59,11 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           if (kIsWeb && e.code == 'unauthorized-domain') {
             userMessage = 'Hostname mismatch: This domain is not authorized in Firebase Console. Please add ${Uri.base.host} to Authorized Domains.';
           } else if (e.code == 'too-many-requests') {
-            userMessage = 'Too many attempts. Please try again later.';
+            userMessage = 'SMS limit reached (approx 5/hr). For testing, please use a Test Number in Firebase Console.';
+          } else if (e.code == 'invalid-phone-number') {
+            userMessage = 'The phone number is invalid.';
+          } else if (e.code == 'quota-exceeded') {
+             userMessage = 'SMS quota exceeded for this project.';
           }
 
           if (mounted) {
@@ -78,7 +87,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
             setState(() => _isLoading = false);
             
             // Navigate to OTP entry screen and wait for result
-            final result = await Navigator.push<bool>(
+            final result = await Navigator.push<Map<String, dynamic>>(
               context,
               PageRouteBuilder(
                 pageBuilder: (context, animation, secondaryAnimation) => OTPVerificationScreen(
@@ -96,9 +105,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
               ),
             );
 
-            // If login successful (result == true), pop this screen too
-            if (result == true && mounted) {
-              Navigator.pop(context, true);
+            // If login successful, pop this screen too with the result
+            if (result != null && result['success'] == true && mounted) {
+              Navigator.pop(context, result);
             }
           }
         },
@@ -131,17 +140,33 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       
       debugPrint('✅ Signed in: ${user.uid}');
       
-      // Create or update user in Firestore
-      if (userCredential.additionalUserInfo?.isNewUser == true) {
-        await _createOrUpdateUser(user.uid, user.phoneNumber!);
+      // Prepare parallel tasks for lightning speed
+      final List<Future> setupTasks = [];
+
+      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+
+      // Task 1: Create/Update User (Optimized)
+      if (isNewUser) {
+         setupTasks.add(FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'phone': user.phoneNumber,          // Standard field
+          'phone_number': user.phoneNumber,   // Legacy support
+          'role': 'customer',
+          'created_at': FieldValue.serverTimestamp(),
+        }));
       }
+
+      // We should also run Cart Migration here because this is the auto-verification path!
+      // The original code didn't have Cart Migration here, which was a bug/omission.
+      setupTasks.add(CartHelper.migrateGuestCartToFirestore(user.uid));
+      setupTasks.add(SessionService().setCustomerMode(true));
+
+      await Future.wait(setupTasks);
       
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const PincodeGateScreen()),
-          (route) => false,
-        );
+        Navigator.pop(context, {
+          'success': true, 
+          'isNewUser': isNewUser
+        });
       }
     } catch (e) {
       debugPrint('❌ Sign-in error: $e');
@@ -153,19 +178,6 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           ),
         );
       }
-    }
-  }
-  
-  Future<void> _createOrUpdateUser(String uid, String phoneNumber) async {
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
-    final docSnapshot = await userDoc.get();
-    
-    if (!docSnapshot.exists) {
-      await userDoc.set({
-        'phone': phoneNumber,
-        'role': 'customer',
-        'created_at': FieldValue.serverTimestamp(),
-      });
     }
   }
 
@@ -248,10 +260,12 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const Icon(
-                              Icons.phone_android_rounded,
-                              size: 50,
-                              color: Color(0xFF0D9759),
+                            Padding(
+                              padding: const EdgeInsets.all(25.0),
+                              child: Image.asset(
+                                'assets/images/app_icon.png',
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ],
                         ),
@@ -397,7 +411,18 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           elevation: 0,
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(
+                                    width: 24, 
+                                    height: 24, 
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text("Sending...", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                ],
+                              )
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -431,11 +456,19 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                             TextSpan(
                               text: 'Terms of Service',
                               style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  launchUrl(Uri.parse(PolicyLinks.termsAndConditions));
+                                },
                             ),
                             const TextSpan(text: ' and '),
                             TextSpan(
                               text: 'Privacy Policy',
                               style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  launchUrl(Uri.parse(PolicyLinks.privacyPolicy));
+                                },
                             ),
                           ],
                         ),

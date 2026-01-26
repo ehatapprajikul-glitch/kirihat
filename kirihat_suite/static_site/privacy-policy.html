@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="description"
+        content="Learn how Kirihat collects, uses, and protects your personal information. Your privacy and data security are our top priorities.">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,64 +40,686 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Privacy Policy</h1>
-        <p>This is the placeholder content for Privacy Policy. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Main Content -->
+    <main class="content-page">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span class="current">Privacy Policy</span>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Privacy Policy</h1>
+                <p class="last-updated">Last Updated: January 23, 2026</p>
+            </div>
+
+            <!-- Privacy Summary Banner -->
+            <div class="privacy-banner">
+                <div class="privacy-icon">🔒</div>
+                <div>
+                    <h3>Your Privacy Matters</h3>
+                    <p>We are committed to protecting your personal information and being transparent about how we use
+                        it. This policy explains our data practices in detail.</p>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+
+            <!-- Table of Contents -->
+            <div class="toc-box">
+                <h3>Table of Contents</h3>
+                <nav class="toc">
+                    <a href="#introduction">1. Introduction</a>
+                    <a href="#information-collected">2. Information We Collect</a>
+                    <a href="#how-we-use">3. How We Use Your Information</a>
+                    <a href="#data-storage">4. Data Storage and Security</a>
+                    <a href="#data-sharing">5. Data Sharing and Disclosure</a>
+                    <a href="#data-retention">6. Data Retention</a>
+                    <a href="#your-rights">7. Your Rights and Choices</a>
+                    <a href="#cookies">8. Cookies and Tracking Technologies</a>
+                    <a href="#children">9. Children's Privacy</a>
+                    <a href="#third-party">10. Third-Party Links</a>
+                    <a href="#data-transfers">11. Data Transfers</a>
+                    <a href="#compliance">12. Compliance with Indian Laws</a>
+                    <a href="#grievance">13. Grievance Redressal</a>
+                    <a href="#changes">14. Changes to This Privacy Policy</a>
+                    <a href="#consent">15. Consent</a>
+                    <a href="#contact">16. Contact Us</a>
+                </nav>
+            </div>
+
+            <!-- Content Sections -->
+            <section id="introduction" class="content-section">
+                <h2>1. Introduction</h2>
+                <p>Kirihat ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains
+                    how we collect, use, disclose, and safeguard your information when you use our Platform (website and
+                    mobile application).</p>
+                <p>Please read this Privacy Policy carefully. By using the Kirihat Platform, you agree to the collection
+                    and use of information in accordance with this policy. If you do not agree with the terms of this
+                    Privacy Policy, please do not access or use the Platform.</p>
+
+                <div class="info-box">
+                    <h4>Company Details</h4>
+                    <ul class="company-info">
+                        <li><strong>Name:</strong> Kirihat</li>
+                        <li><strong>Udyam Registration:</strong> [Your Udyam Registration Number]</li>
+                        <li><strong>Registered Office:</strong> Kirihat, Kachakhana, Golakganj, Hazratganj, Dhubri -
+                            783334, India</li>
+                        <li><strong>Contact Email:</strong> <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </li>
+                        <li><strong>Contact Phone:</strong> <a href="tel:+919957693472">+91 99576 93472</a></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="information-collected" class="content-section">
+                <h2>2. Information We Collect</h2>
+                <p>We collect various types of information to provide and improve our services. Here's what we collect:
+                </p>
+
+                <h3>2.1. Personal Information</h3>
+                <div class="data-collection-grid">
+                    <div class="data-card">
+                        <div class="data-icon">👤</div>
+                        <h4>Basic Information</h4>
+                        <ul>
+                            <li>Full name</li>
+                            <li>Phone number</li>
+                            <li>Email address</li>
+                        </ul>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-icon">📍</div>
+                        <h4>Location Data</h4>
+                        <ul>
+                            <li>Delivery address</li>
+                            <li>PIN code</li>
+                            <li>City and state</li>
+                        </ul>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-icon">💳</div>
+                        <h4>Payment Information</h4>
+                        <ul>
+                            <li>UPI address</li>
+                            <li>Bank account details (for refunds)</li>
+                        </ul>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-icon">📋</div>
+                        <h4>Identity Documents</h4>
+                        <p style="font-size: 13px; color: #64748b;">For Sellers, Vendors & Riders only:</p>
+                        <ul>
+                            <li>PAN Card</li>
+                            <li>Voter ID</li>
+                            <li>Passport</li>
+                            <li>Aadhaar Card</li>
+                            <li>Driving License (Riders)</li>
+                            <li>Vehicle RC (Riders)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>2.2. Usage Information</h3>
+                <p>We collect information about your interactions with the Platform, including:</p>
+                <div class="usage-info-box">
+                    <div class="usage-item">
+                        <span class="usage-icon">🛍️</span>
+                        <div>
+                            <strong>Shopping Activity</strong>
+                            <p>Wishlist items, shopping cart contents, order history, and transaction details</p>
+                        </div>
+                    </div>
+                    <div class="usage-item">
+                        <span class="usage-icon">🔍</span>
+                        <div>
+                            <strong>Browsing Behavior</strong>
+                            <p>Product searches, browsing history, and pages visited</p>
+                        </div>
+                    </div>
+                    <div class="usage-item">
+                        <span class="usage-icon">💬</span>
+                        <div>
+                            <strong>Communications</strong>
+                            <p>Customer support interactions and feedback</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>2.3. Device and Technical Information</h3>
+                <ul class="styled-list">
+                    <li>Device type and operating system</li>
+                    <li>IP address and browser type</li>
+                    <li>Mobile network information</li>
+                    <li>App version and usage statistics</li>
+                </ul>
+
+                <h3>2.4. App Permissions</h3>
+                <div class="warning-box">
+                    <h4>⚠️ Important: App Permissions</h4>
+                    <p>Our mobile application may request the following permissions. We only access these with your
+                        explicit consent:</p>
+                </div>
+
+                <div class="permissions-grid">
+                    <div class="permission-card">
+                        <span class="permission-icon">📱</span>
+                        <h4>SMS Verification</h4>
+                        <p><strong>Purpose:</strong> To automatically verify OTP codes sent by us using the SMS
+                            Retriever API.</p>
+                        <p class="permission-note">We do NOT read, store, or share your personal SMS messages.</p>
+                    </div>
+                    <div class="permission-card">
+                        <span class="permission-icon">📍</span>
+                        <h4>Location Permission</h4>
+                        <p><strong>Purpose:</strong> To show nearby products and vendors while you are using the app.
+                        </p>
+                    </div>
+                    <div class="permission-card">
+                        <span class="permission-icon">💾</span>
+                        <h4>Storage Permission</h4>
+                        <p><strong>Purpose:</strong> To save images and documents related to your orders.</p>
+                    </div>
+                    <div class="permission-card">
+                        <span class="permission-icon">📷</span>
+                        <h4>Camera Permission</h4>
+                        <p><strong>Purpose:</strong> To allow you to upload product images or profile pictures.</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>You Control Your Permissions:</strong> You may revoke these permissions at any time
+                        through your device settings. However, this may limit certain functionalities of the Platform.
+                    </p>
+                </div>
+
+                <h3>2.5. Information from Third Parties</h3>
+                <p>We may receive information from payment gateways and UPI service providers to process transactions
+                    securely.</p>
+            </section>
+
+            <section id="how-we-use" class="content-section">
+                <h2>3. How We Use Your Information</h2>
+                <p>We use the collected information for the following purposes:</p>
+
+                <div class="usage-purposes">
+                    <div class="purpose-card">
+                        <div class="purpose-icon">🚚</div>
+                        <h4>Service Delivery</h4>
+                        <ul>
+                            <li>Process and fulfill your orders</li>
+                            <li>Facilitate communication between users</li>
+                            <li>Arrange delivery of products</li>
+                            <li>Provide customer support</li>
+                        </ul>
+                    </div>
+
+                    <div class="purpose-card">
+                        <div class="purpose-icon">💰</div>
+                        <h4>Payment Processing</h4>
+                        <ul>
+                            <li>Process payments and refunds</li>
+                            <li>Verify UPI and bank account details</li>
+                            <li>Detect and prevent fraudulent transactions</li>
+                        </ul>
+                    </div>
+
+                    <div class="purpose-card">
+                        <div class="purpose-icon">📊</div>
+                        <h4>Platform Improvement</h4>
+                        <ul>
+                            <li>Understand user preferences</li>
+                            <li>Analyze Platform usage</li>
+                            <li>Optimize performance</li>
+                            <li>Develop new features</li>
+                        </ul>
+                    </div>
+
+                    <div class="purpose-card">
+                        <div class="purpose-icon">📧</div>
+                        <h4>Communication</h4>
+                        <ul>
+                            <li>Send order confirmations and updates</li>
+                            <li>Respond to inquiries</li>
+                            <li>Send promotional offers (opt-out available)</li>
+                            <li>Notify about policy changes</li>
+                        </ul>
+                    </div>
+
+                    <div class="purpose-card">
+                        <div class="purpose-icon">🛡️</div>
+                        <h4>Legal and Security</h4>
+                        <ul>
+                            <li>Comply with legal obligations</li>
+                            <li>Protect against fraud</li>
+                            <li>Enforce our Terms and Conditions</li>
+                            <li>Resolve disputes</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="data-storage" class="content-section">
+                <h2>4. Data Storage and Security</h2>
+
+                <h3>4.1. Data Storage</h3>
+                <div class="info-box">
+                    <h4>Firebase Database by Google</h4>
+                    <p>We use Firebase Database by Google to store and manage user data. Firebase provides secure cloud
+                        storage with industry-standard encryption and reliability.</p>
+                </div>
+
+                <h3>4.2. Security Measures</h3>
+                <p>We implement appropriate technical and organizational security measures to protect your information:
+                </p>
+
+                <div class="security-grid">
+                    <div class="security-item">
+                        <span class="sec-icon">🔐</span>
+                        <strong>Encryption</strong>
+                        <p>Data encrypted during transmission and storage</p>
+                    </div>
+                    <div class="security-item">
+                        <span class="sec-icon">🔑</span>
+                        <strong>Authentication</strong>
+                        <p>Secure authentication mechanisms</p>
+                    </div>
+                    <div class="security-item">
+                        <span class="sec-icon">🔍</span>
+                        <strong>Audits</strong>
+                        <p>Regular security audits and updates</p>
+                    </div>
+                    <div class="security-item">
+                        <span class="sec-icon">👥</span>
+                        <strong>Access Controls</strong>
+                        <p>Limited employee access to personal data</p>
+                    </div>
+                    <div class="security-item">
+                        <span class="sec-icon">💳</span>
+                        <strong>Payment Security</strong>
+                        <p>Secure payment gateway integration</p>
+                    </div>
+                </div>
+
+                <h3>4.3. Data Security Disclaimer</h3>
+                <div class="warning-box">
+                    <h4>⚠️ Important Security Notice</h4>
+                    <p>While we strive to use commercially acceptable means to protect your personal information, we
+                        cannot guarantee absolute security. No method of transmission over the Internet or electronic
+                        storage is 100% secure.</p>
+                    <p><strong>In the event of a data breach caused by hacking, malware, unauthorized access, or other
+                            security incidents beyond our reasonable control, we will:</strong></p>
+                    <ul>
+                        <li>Notify affected users as soon as reasonably possible</li>
+                        <li>Take immediate steps to mitigate the breach</li>
+                        <li>Cooperate with law enforcement and regulatory authorities</li>
+                        <li>Implement additional security measures to prevent future breaches</li>
+                    </ul>
+                    <p style="margin-top: 12px;"><strong>Limitation:</strong> We shall not be held liable for damages
+                        resulting from unauthorized access or security breaches that occur despite our reasonable
+                        security measures. Users acknowledge and accept this risk when using the Platform.</p>
+                </div>
+            </section>
+
+            <section id="data-sharing" class="content-section">
+                <h2>5. Data Sharing and Disclosure</h2>
+
+                <div class="highlight-box">
+                    <h3>We Do Not Sell Your Data</h3>
+                    <p><strong>Kirihat does not sell, rent, or trade your personal information to third parties for
+                            marketing purposes.</strong></p>
+                </div>
+
+                <h3>5.1. Sharing for Service Delivery</h3>
+                <p>We may share your information with the following parties to deliver our services:</p>
+
+                <div class="sharing-table">
+                    <div class="sharing-row">
+                        <div class="sharing-party">
+                            <strong>🏪 Sellers and Vendors</strong>
+                        </div>
+                        <div class="sharing-data">
+                            <strong>Shared Data:</strong> Name, phone number, delivery address
+                        </div>
+                        <div class="sharing-purpose">
+                            <strong>Purpose:</strong> To fulfill your orders
+                        </div>
+                    </div>
+                    <div class="sharing-row">
+                        <div class="sharing-party">
+                            <strong>🚴 Riders</strong>
+                        </div>
+                        <div class="sharing-data">
+                            <strong>Shared Data:</strong> Name, phone number, delivery address, order details
+                        </div>
+                        <div class="sharing-purpose">
+                            <strong>Purpose:</strong> To facilitate delivery
+                        </div>
+                    </div>
+                    <div class="sharing-row">
+                        <div class="sharing-party">
+                            <strong>💳 Payment Processors</strong>
+                        </div>
+                        <div class="sharing-data">
+                            <strong>Shared Data:</strong> Payment details, transaction amounts
+                        </div>
+                        <div class="sharing-purpose">
+                            <strong>Purpose:</strong> To process UPI and other payment transactions
+                        </div>
+                    </div>
+                </div>
+
+                <h3>5.2. Legal Requirements</h3>
+                <p>We may disclose your information if required by law, court order, or government regulation, or if we
+                    believe disclosure is necessary to:</p>
+                <ul class="styled-list">
+                    <li>Comply with legal obligations</li>
+                    <li>Protect the rights, property, or safety of Kirihat, our users, or the public</li>
+                    <li>Prevent fraud or security threats</li>
+                    <li>Enforce our Terms and Conditions</li>
+                </ul>
+
+                <h3>5.3. Business Transfers</h3>
+                <p>In the event of a merger, acquisition, or sale of assets, user information may be transferred to the
+                    acquiring entity. We will notify you of such changes.</p>
+            </section>
+
+            <section id="data-retention" class="content-section">
+                <h2>6. Data Retention</h2>
+                <ul class="styled-list">
+                    <li>We retain your personal information for as long as necessary to fulfill the purposes outlined in
+                        this Privacy Policy, unless a longer retention period is required by law.</li>
+                    <li>Order and transaction data are retained for accounting, taxation, and legal compliance purposes
+                        for a minimum of <strong>7 years</strong> as required by Indian law.</li>
+                    <li>If you delete your account, we will delete or anonymize your personal information within
+                        <strong>30 days</strong>, except for data we are required to retain by law.
+                    </li>
+                </ul>
+            </section>
+
+            <section id="your-rights" class="content-section">
+                <h2>7. Your Rights and Choices</h2>
+                <p>You have several rights regarding your personal information:</p>
+
+                <div class="rights-grid">
+                    <div class="right-card">
+                        <div class="right-icon">👁️</div>
+                        <h4>Access and Update</h4>
+                        <p>You have the right to access, review, and update your personal information at any time
+                            through your account settings.</p>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">🗑️</div>
+                        <h4>Account Deletion</h4>
+                        <p>You may request deletion of your account and associated data at any time through the
+                            Platform.</p>
+                        <div class="right-note">
+                            <strong>Upon deletion:</strong>
+                            <ul>
+                                <li>All personal information will be permanently removed</li>
+                                <li>Order history may be retained for legal compliance</li>
+                                <li>Deletion is irreversible and cannot be undone</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">✉️</div>
+                        <h4>Marketing Communications</h4>
+                        <p>You may opt out of receiving promotional emails, SMS, or notifications by:</p>
+                        <ul>
+                            <li>Clicking "unsubscribe" in emails</li>
+                            <li>Adjusting notification settings</li>
+                            <li>Contacting customer support</li>
+                        </ul>
+                        <p class="right-note-small">You'll still receive transactional communications (order
+                            confirmations, etc.)</p>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">📦</div>
+                        <h4>Data Portability</h4>
+                        <p>You may request a copy of your personal data in a structured, machine-readable format by
+                            contacting <a href="mailto:support@kirihat.com">support@kirihat.com</a>.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="cookies" class="content-section">
+                <h2>8. Cookies and Tracking Technologies</h2>
+
+                <h3>8.1. Current Status</h3>
+                <div class="info-box">
+                    <p><strong>Kirihat does not currently use cookies or third-party analytics tools on our
+                            Platform.</strong></p>
+                </div>
+
+                <h3>8.2. Future Use</h3>
+                <p>We may implement cookies, web beacons, or similar tracking technologies in the future to enhance user
+                    experience, analyze Platform usage, and provide personalized content.</p>
+
+                <div class="highlight-box">
+                    <p><strong>If we implement cookies, we will:</strong></p>
+                    <ul>
+                        <li>Update this Privacy Policy</li>
+                        <li>Notify you of the changes</li>
+                        <li>Provide information about cookie types and purposes</li>
+                        <li>Explain how to manage or disable cookies</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="children" class="content-section">
+                <h2>9. Children's Privacy</h2>
+                <div class="warning-box">
+                    <h4>⚠️ Age Restriction</h4>
+                    <ul>
+                        <li>Kirihat is not intended for use by children under the age of 18.</li>
+                        <li>We do not knowingly collect personal information from children under 18.</li>
+                        <li>If we discover that we have inadvertently collected information from a child under 18, we
+                            will delete such information immediately.</li>
+                        <li>If you are a parent or guardian and believe your child has provided us with personal
+                            information, please contact us at <a
+                                href="mailto:support@kirihat.com">support@kirihat.com</a>.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="third-party" class="content-section">
+                <h2>10. Third-Party Links</h2>
+                <ul class="styled-list">
+                    <li>Our Platform may contain links to third-party websites or services that are not operated by us.
+                    </li>
+                    <li>We have no control over and assume no responsibility for the content, privacy policies, or
+                        practices of third-party sites.</li>
+                    <li>We encourage you to review the privacy policy of every site you visit.</li>
+                </ul>
+            </section>
+
+            <section id="data-transfers" class="content-section">
+                <h2>11. Data Transfers</h2>
+                <ul class="styled-list">
+                    <li>Your information is stored on Firebase servers, which may be located in India or other
+                        countries.</li>
+                    <li>By using our Platform, you consent to the transfer of your information to these locations.</li>
+                    <li>We ensure that data transfers comply with applicable data protection laws.</li>
+                </ul>
+            </section>
+
+            <section id="compliance" class="content-section">
+                <h2>12. Compliance with Indian Laws</h2>
+                <p>Kirihat complies with applicable Indian data protection laws, including:</p>
+
+                <div class="compliance-grid">
+                    <div class="compliance-card">
+                        <h4>📜 Information Technology Act, 2000</h4>
+                        <p>We comply with the IT Act and related rules for data protection and security.</p>
+                    </div>
+                    <div class="compliance-card">
+                        <h4>🔒 IT Rules, 2011</h4>
+                        <p>We follow reasonable security practices for sensitive personal data.</p>
+                    </div>
+                    <div class="compliance-card">
+                        <h4>⚖️ Digital Personal Data Protection Act, 2023</h4>
+                        <p>We are committed to implementing measures as required by evolving regulations.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="grievance" class="content-section">
+                <h2>13. Grievance Redressal</h2>
+
+                <div class="info-box">
+                    <h4>Grievance Officer</h4>
+                    <p>As per the Information Technology (Reasonable Security Practices and Procedures and Sensitive
+                        Personal Data or Information) Rules, 2011, we have designated a Grievance Officer to address
+                        your concerns.</p>
+                    <ul class="company-info">
+                        <li><strong>Name:</strong> Rajikul Islam</li>
+                        <li><strong>Email:</strong> <a href="mailto:support@kirihat.com">support@kirihat.com</a></li>
+                        <li><strong>Phone:</strong> <a href="tel:+919957693472">+91 99576 93472</a></li>
+                        <li><strong>Address:</strong> Kirihat, Kachakhana, Golakganj, Hazratganj, Dhubri - 783334, India
+                        </li>
+                    </ul>
+                </div>
+
+                <h3>Response Timeline</h3>
+                <div class="timeline-box">
+                    <div class="timeline-item">
+                        <div class="timeline-number">1-24 hrs</div>
+                        <p>Acknowledgment of complaint</p>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-item">
+                        <div class="timeline-number">1-30 days</div>
+                        <p>Resolution (depending on complexity)</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="changes" class="content-section">
+                <h2>14. Changes to This Privacy Policy</h2>
+                <ul class="styled-list">
+                    <li>We may update this Privacy Policy from time to time to reflect changes in our practices,
+                        technology, legal requirements, or for other reasons.</li>
+                    <li>We will notify you of any material changes by posting the updated policy on our Platform and
+                        sending an email notification.</li>
+                    <li>The "Last Updated" date at the top of this policy indicates when it was last revised.</li>
+                    <li>Your continued use of the Platform after any changes constitutes your acceptance of the updated
+                        Privacy Policy.</li>
+                </ul>
+            </section>
+
+            <section id="consent" class="content-section">
+                <h2>15. Consent</h2>
+                <div class="acceptance-notice">
+                    <p><strong>By using the Kirihat Platform, you acknowledge that you have read and understood this
+                            Privacy Policy and consent to the collection, use, and disclosure of your information as
+                            described herein.</strong></p>
+                    <p style="margin-top: 12px;">If you do not agree with this Privacy Policy, please do not use our
+                        Platform.</p>
+                </div>
+            </section>
+
+            <section id="contact" class="content-section">
+                <h2>16. Contact Us</h2>
+                <p>If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices,
+                    please contact us at:</p>
+
+                <div class="contact-card">
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email</h4>
+                            <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <div>
+                            <h4>Phone</h4>
+                            <a href="tel:+919957693472">+91 99576 93472</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📍</span>
+                        <div>
+                            <h4>Address</h4>
+                            <p>Kirihat, Kachakhana, Golakganj, Hazratganj, Dhubri - 783334, India</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Related Policies -->
+            <section class="related-policies">
+                <h3>Related Policies</h3>
+                <div class="policy-grid">
+                    <a href="terms-and-conditions" class="policy-card">Terms & Conditions</a>
+                    <a href="return-refund-policy" class="policy-card">Return & Refund Policy</a>
+                    <a href="cookie-policy" class="policy-card">Cookie Policy</a>
+                    <a href="acceptable-use-policy" class="policy-card">Acceptable Use</a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                        <a href="cookie-policy">Cookie Policy</a>
+                        <a href="acceptable-use-policy">Acceptable Use</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>About</h3>
+                    <div class="footer-grid">
+                        <a href="about">About Us</a>
+                        <a href="contact">Contact Us</a>
+                        <a href="faq">FAQ</a>
+                        <a href="blog">Blog</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Connect</h3>
+                    <div class="social-links">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 Kirihat. All rights reserved. | Kachakhana, Golakganj, Dhubri - 783334, India</p>
+                <p>&copy; 2026 Kirihat. All rights reserved.</p>
+                <div class="footer-bottom-links">
+                    <a href="terms-and-conditions">Terms</a>
+                    <a href="privacy-policy">Privacy</a>
+                    <a href="cookie-policy">Cookies</a>
+                </div>
             </div>
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top" id="scrollTop" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
 
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+
+
+    <script src="js/main.js"></script>
 </body>
+
 </html>

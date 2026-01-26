@@ -325,7 +325,23 @@ class UniqueOrderStatusTracker extends StatelessWidget {
         message = '✅ Order successfully delivered. Thank you for shopping!';
         break;
       case 'Cancelled':
-        message = '❌ This order has been cancelled';
+        String cancelledBy = orderData['cancelled_by'] ?? 'Unknown';
+        String reason = orderData['cancellation_reason'] ?? 'No reason provided';
+        String time = _formatTimestamp(orderData['cancelled_at']); // Use existing timestamp formatter or raw timestamp if needed, but _formatTimestamp returns "X ago". 
+        // Actually, for "Cancelled on [Date]", maybe we want a specific date format?
+        // The user asked "who cancelled the order when, why".
+        
+        // Let's refine the message construction.
+        String actor = cancelledBy == 'Customer' ? 'You' : cancelledBy;
+        
+        // If we want exact date:
+        String dateStr = '';
+        if (orderData['cancelled_at'] != null) {
+           dateStr = DateFormat('dd MMM yyyy, hh:mm a').format((orderData['cancelled_at'] as Timestamp).toDate());
+        }
+
+        message = '❌ Cancelled by $actor.\nReason: $reason\nWhen: $dateStr';
+        
         bgColor = Colors.red.withOpacity(0.1);
         textColor = Colors.red.shade700;
         break;

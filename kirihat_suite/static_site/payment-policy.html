@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment Policy - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="description"
+        content="Learn about Kirihat's payment policy. Understand accepted payment methods, security measures, charges, and refund processes.">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,42 +40,774 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Payment Policy</h1>
-        <p>This is the placeholder content for Payment Policy. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Main Content -->
+    <main class="content-page">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span class="current">Payment Policy</span>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Payment Policy</h1>
+                <p class="last-updated">Last Updated: January 23, 2026</p>
+            </div>
+
+            <!-- Quick Summary Banner -->
+            <div class="policy-summary-banner">
+                <div class="summary-icon">💳</div>
+                <div>
+                    <h3>Safe & Secure Payments</h3>
+                    <p>We accept UPI and Cash on Delivery. All online transactions are encrypted and processed through
+                        secure payment gateways for your protection.</p>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+
+            <!-- Table of Contents -->
+            <div class="toc-box">
+                <h3>Table of Contents</h3>
+                <nav class="toc">
+                    <a href="#introduction">1. Introduction</a>
+                    <a href="#payment-methods">2. Accepted Payment Methods</a>
+                    <a href="#payment-security">3. Payment Security</a>
+                    <a href="#pricing-charges">4. Pricing and Charges</a>
+                    <a href="#payment-process">5. Payment Process</a>
+                    <a href="#failed-payments">6. Failed Payments</a>
+                    <a href="#refunds">7. Refunds</a>
+                    <a href="#partner-payments">8. Partner Payments</a>
+                    <a href="#disputes">9. Payment Disputes</a>
+                    <a href="#contact">10. Contact Us</a>
+                </nav>
+            </div>
+
+            <!-- Content Sections -->
+            <section id="introduction" class="content-section">
+                <h2>1. Introduction</h2>
+                <p>This Payment Policy explains how Kirihat processes payments, the payment methods we accept, security
+                    measures we implement, and how refunds are handled. We are committed to providing secure,
+                    convenient, and transparent payment experiences.</p>
+                <p>By making a purchase on Kirihat, you agree to the terms outlined in this policy.</p>
+            </section>
+
+            <section id="payment-methods" class="content-section">
+                <h2>2. Accepted Payment Methods</h2>
+                <p>Kirihat currently accepts the following payment methods:</p>
+
+                <div class="payment-methods-grid">
+                    <div class="payment-method-card featured">
+                        <div class="pm-badge">Most Popular</div>
+                        <div class="pm-icon">📱</div>
+                        <h3>UPI (Unified Payments Interface)</h3>
+                        <p class="pm-description">Pay instantly using any UPI app</p>
+
+                        <div class="pm-features">
+                            <h4>Supported UPI Apps:</h4>
+                            <div class="upi-apps">
+                                <span class="upi-app">Google Pay</span>
+                                <span class="upi-app">PhonePe</span>
+                                <span class="upi-app">Paytm</span>
+                                <span class="upi-app">BHIM</span>
+                                <span class="upi-app">Amazon Pay</span>
+                                <span class="upi-app">WhatsApp Pay</span>
+                                <span class="upi-app">And More</span>
+                            </div>
+                        </div>
+
+                        <div class="pm-benefits">
+                            <h4>Benefits:</h4>
+                            <ul>
+                                <li>✓ Instant payment confirmation</li>
+                                <li>✓ Fast refunds (24-48 hours)</li>
+                                <li>✓ Secure & encrypted</li>
+                                <li>✓ No card details needed</li>
+                                <li>✓ Direct bank transfer</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card">
+                        <div class="pm-icon">💵</div>
+                        <h3>Cash on Delivery (COD)</h3>
+                        <p class="pm-description">Pay with cash when you receive your order</p>
+
+                        <div class="pm-benefits">
+                            <h4>Benefits:</h4>
+                            <ul>
+                                <li>✓ No online payment needed</li>
+                                <li>✓ Pay after receiving product</li>
+                                <li>✓ Inspect before paying</li>
+                                <li>✓ No payment gateway fees</li>
+                            </ul>
+                        </div>
+
+                        <div class="info-box">
+                            <h4>COD Requirements:</h4>
+                            <ul>
+                                <li>Keep exact cash amount ready</li>
+                                <li>Be present at delivery address</li>
+                                <li>COD handling fee may apply</li>
+                                <li>COD may not be available for all products</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>2.1. Payment Method Availability</h3>
+                <div class="highlight-box">
+                    <p>The availability of payment methods may vary based on:</p>
+                    <ul>
+                        <li>Product category and value</li>
+                        <li>Your order history and account standing</li>
+                        <li>Seller/Vendor preferences</li>
+                        <li>Location and delivery area</li>
+                    </ul>
+                </div>
+
+                <h3>2.2. Future Payment Methods</h3>
+                <div class="info-box">
+                    <p>We are working on adding more payment options including:</p>
+                    <ul>
+                        <li>Credit/Debit Cards</li>
+                        <li>Net Banking</li>
+                        <li>Digital Wallets</li>
+                        <li>Buy Now Pay Later (BNPL)</li>
+                    </ul>
+                    <p>We'll notify you when these become available.</p>
+                </div>
+            </section>
+
+            <section id="payment-security" class="content-section">
+                <h2>3. Payment Security</h2>
+
+                <div class="security-banner">
+                    <div class="security-icon">🔒</div>
+                    <div>
+                        <h3>Your Payment Security is Our Priority</h3>
+                        <p>We implement industry-standard security measures to protect your financial information and
+                            transactions.</p>
+                    </div>
+                </div>
+
+                <h3>3.1. Security Measures</h3>
+                <div class="security-features">
+                    <div class="security-card">
+                        <div class="sec-icon">🔐</div>
+                        <h4>SSL Encryption</h4>
+                        <p>All payment data is encrypted using 256-bit SSL technology during transmission</p>
+                    </div>
+                    <div class="security-card">
+                        <div class="sec-icon">🏦</div>
+                        <h4>Secure Gateways</h4>
+                        <p>We use PCI-DSS compliant payment gateways approved by RBI</p>
+                    </div>
+                    <div class="security-card">
+                        <div class="sec-icon">🚫</div>
+                        <h4>No Storage</h4>
+                        <p>We never store your complete payment card details or UPI PIN</p>
+                    </div>
+                    <div class="security-card">
+                        <div class="sec-icon">✅</div>
+                        <h4>Two-Factor Auth</h4>
+                        <p>Additional verification through OTP for secure transactions</p>
+                    </div>
+                    <div class="security-card">
+                        <div class="sec-icon">🔍</div>
+                        <h4>Fraud Detection</h4>
+                        <p>Real-time monitoring to detect and prevent fraudulent activities</p>
+                    </div>
+                    <div class="security-card">
+                        <div class="sec-icon">🛡️</div>
+                        <h4>Compliance</h4>
+                        <p>Full compliance with RBI guidelines and Indian payment regulations</p>
+                    </div>
+                </div>
+
+                <h3>3.2. What We Don't Store</h3>
+                <div class="warning-box">
+                    <h4>⚠️ Your Financial Data is Safe</h4>
+                    <p>Kirihat NEVER stores:</p>
+                    <ul>
+                        <li>Complete card numbers (CVV/CVC)</li>
+                        <li>UPI PINs or MPINs</li>
+                        <li>Net banking passwords</li>
+                        <li>Complete bank account details</li>
+                    </ul>
+                    <p>All sensitive payment information is handled directly by our certified payment gateway partners.
+                    </p>
+                </div>
+
+                <h3>3.3. Safe Payment Tips</h3>
+                <div class="tips-grid">
+                    <div class="tip-card">
+                        <span class="tip-icon">✓</span>
+                        <p><strong>Do:</strong> Verify the order amount before payment</p>
+                    </div>
+                    <div class="tip-card">
+                        <span class="tip-icon">✓</span>
+                        <p><strong>Do:</strong> Keep payment confirmations for records</p>
+                    </div>
+                    <div class="tip-card">
+                        <span class="tip-icon">✗</span>
+                        <p><strong>Don't:</strong> Share OTP or PIN with anyone</p>
+                    </div>
+                    <div class="tip-card">
+                        <span class="tip-icon">✗</span>
+                        <p><strong>Don't:</strong> Click on suspicious payment links</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="pricing-charges" class="content-section">
+                <h2>4. Pricing and Charges</h2>
+
+                <h3>4.1. What You Pay</h3>
+                <p>Your total order amount may include the following charges:</p>
+
+                <div class="charges-breakdown">
+                    <div class="charge-item">
+                        <div class="charge-icon">🛒</div>
+                        <div class="charge-content">
+                            <h4>Product Price</h4>
+                            <p>Base price of items as listed by sellers</p>
+                            <span class="charge-note">Set by individual sellers</span>
+                        </div>
+                    </div>
+
+                    <div class="charge-item">
+                        <div class="charge-icon">📦</div>
+                        <div class="charge-content">
+                            <h4>Delivery Charges</h4>
+                            <p>Fee for delivering products to your location</p>
+                            <span class="charge-note">Varies by distance, mode, and offers</span>
+                        </div>
+                    </div>
+
+                    <div class="charge-item">
+                        <div class="charge-icon">💻</div>
+                        <div class="charge-content">
+                            <h4>Platform Fee</h4>
+                            <p>Service fee for using Kirihat platform</p>
+                            <span class="charge-note">Small percentage or fixed amount</span>
+                        </div>
+                    </div>
+
+                    <div class="charge-item">
+                        <div class="charge-icon">💳</div>
+                        <div class="charge-content">
+                            <h4>Payment Gateway Fee</h4>
+                            <p>Processing fee charged by payment providers</p>
+                            <span class="charge-note">Applicable for online payments only</span>
+                        </div>
+                    </div>
+
+                    <div class="charge-item">
+                        <div class="charge-icon">🎁</div>
+                        <div class="charge-content">
+                            <h4>Packaging Fee</h4>
+                            <p>Cost of packaging materials</p>
+                            <span class="charge-note">May vary by product type</span>
+                        </div>
+                    </div>
+
+                    <div class="charge-item">
+                        <div class="charge-icon">💵</div>
+                        <div class="charge-content">
+                            <h4>COD Handling Fee</h4>
+                            <p>Additional fee for cash on delivery orders</p>
+                            <span class="charge-note">Only if you choose COD</span>
+                        </div>
+                    </div>
+
+                    <div class="charge-item">
+                        <div class="charge-icon">📊</div>
+                        <div class="charge-content">
+                            <h4>Taxes (GST)</h4>
+                            <p>Applicable goods and services tax</p>
+                            <span class="charge-note">As per Indian tax laws</span>
+                        </div>
+                    </div>
+
+                    <div class="charge-item">
+                        <div class="charge-icon">🛍️</div>
+                        <div class="charge-content">
+                            <h4>Small Order Fee</h4>
+                            <p>Surcharge for orders below minimum value</p>
+                            <span class="charge-note">If order value is too low</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>4.2. Price Transparency</h3>
+                <div class="highlight-box">
+                    <p><strong>Complete Transparency:</strong> All charges are clearly displayed at checkout before you
+                        confirm your order. There are NO hidden fees.</p>
+                    <p>You will see a complete breakdown of:</p>
+                    <ul>
+                        <li>Item total</li>
+                        <li>Delivery charges</li>
+                        <li>All applicable fees</li>
+                        <li>Taxes</li>
+                        <li>Discounts (if any)</li>
+                        <li><strong>Final payable amount</strong></li>
+                    </ul>
+                </div>
+
+                <h3>4.3. Pricing Errors</h3>
+                <div class="info-box">
+                    <p>While we strive for accuracy, pricing errors may occasionally occur. If we discover an error:</p>
+                    <ul>
+                        <li>We will contact you before processing the order</li>
+                        <li>You can choose to proceed at the correct price or cancel</li>
+                        <li>If already paid, you'll receive a full refund if you choose to cancel</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="payment-process" class="content-section">
+                <h2>5. Payment Process</h2>
+
+                <h3>5.1. UPI Payment Process</h3>
+                <div class="process-timeline">
+                    <div class="timeline-step">
+                        <div class="step-circle">1</div>
+                        <div class="step-content">
+                            <h4>Select UPI</h4>
+                            <p>Choose UPI as payment method at checkout</p>
+                        </div>
+                    </div>
+                    <div class="timeline-connector"></div>
+                    <div class="timeline-step">
+                        <div class="step-circle">2</div>
+                        <div class="step-content">
+                            <h4>Enter UPI ID</h4>
+                            <p>Enter your UPI ID or scan QR code</p>
+                        </div>
+                    </div>
+                    <div class="timeline-connector"></div>
+                    <div class="timeline-step">
+                        <div class="step-circle">3</div>
+                        <div class="step-content">
+                            <h4>Verify Details</h4>
+                            <p>Check amount and order details</p>
+                        </div>
+                    </div>
+                    <div class="timeline-connector"></div>
+                    <div class="timeline-step">
+                        <div class="step-circle">4</div>
+                        <div class="step-content">
+                            <h4>Authenticate</h4>
+                            <p>Enter UPI PIN in your payment app</p>
+                        </div>
+                    </div>
+                    <div class="timeline-connector"></div>
+                    <div class="timeline-step">
+                        <div class="step-circle">5</div>
+                        <div class="step-content">
+                            <h4>Confirmation</h4>
+                            <p>Receive payment success notification</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>5.2. COD Payment Process</h3>
+                <div class="cod-process">
+                    <div class="cod-step">
+                        <span class="cod-num">1</span>
+                        <p>Select "Cash on Delivery" at checkout</p>
+                    </div>
+                    <div class="cod-step">
+                        <span class="cod-num">2</span>
+                        <p>Place your order (no payment now)</p>
+                    </div>
+                    <div class="cod-step">
+                        <span class="cod-num">3</span>
+                        <p>Keep exact cash amount ready</p>
+                    </div>
+                    <div class="cod-step">
+                        <span class="cod-num">4</span>
+                        <p>Pay the rider when you receive your order</p>
+                    </div>
+                    <div class="cod-step">
+                        <span class="cod-num">5</span>
+                        <p>Get payment receipt from the rider</p>
+                    </div>
+                </div>
+
+                <h3>5.3. Payment Confirmation</h3>
+                <div class="info-box">
+                    <p>After successful payment, you will receive:</p>
+                    <ul>
+                        <li>Order confirmation SMS/email</li>
+                        <li>Push notification in the app</li>
+                        <li>Payment receipt (for UPI payments)</li>
+                        <li>Order ID for tracking</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="failed-payments" class="content-section">
+                <h2>6. Failed Payments</h2>
+
+                <h3>6.1. Reasons for Payment Failure</h3>
+                <div class="failure-reasons">
+                    <div class="failure-card">
+                        <span class="fail-icon">💳</span>
+                        <h4>Insufficient Balance</h4>
+                        <p>Not enough money in bank account or UPI wallet</p>
+                    </div>
+                    <div class="failure-card">
+                        <span class="fail-icon">🔒</span>
+                        <h4>Bank Decline</h4>
+                        <p>Transaction declined by your bank</p>
+                    </div>
+                    <div class="failure-card">
+                        <span class="fail-icon">⏱️</span>
+                        <h4>Session Timeout</h4>
+                        <p>Payment not completed within time limit</p>
+                    </div>
+                    <div class="failure-card">
+                        <span class="fail-icon">❌</span>
+                        <h4>Wrong Details</h4>
+                        <p>Incorrect UPI ID, PIN, or payment information</p>
+                    </div>
+                    <div class="failure-card">
+                        <span class="fail-icon">📡</span>
+                        <h4>Network Issue</h4>
+                        <p>Poor internet connection during payment</p>
+                    </div>
+                    <div class="failure-card">
+                        <span class="fail-icon">🚫</span>
+                        <h4>Daily Limit Exceeded</h4>
+                        <p>UPI/bank transaction limit reached</p>
+                    </div>
+                </div>
+
+                <h3>6.2. What Happens When Payment Fails?</h3>
+                <ul class="styled-list">
+                    <li>Your order will be automatically cancelled</li>
+                    <li>You'll receive a notification about the failure</li>
+                    <li>No amount will be deducted from your account</li>
+                    <li>You can try placing the order again</li>
+                </ul>
+
+                <h3>6.3. If Amount is Deducted But Order Failed</h3>
+                <div class="warning-box">
+                    <h4>⚠️ Don't Worry!</h4>
+                    <p>If money was deducted but order shows as failed:</p>
+                    <ul>
+                        <li>This is usually a temporary hold by your bank</li>
+                        <li>Amount will be auto-refunded within 5-7 business days</li>
+                        <li>Check your bank statement after 3-5 days</li>
+                        <li>If not refunded, contact us with transaction details</li>
+                    </ul>
+                    <p><strong>Contact:</strong> <a href="mailto:support@kirihat.com">support@kirihat.com</a> | <a
+                            href="tel:+919957693472">+91 99576 93472</a></p>
+                </div>
+            </section>
+
+            <section id="refunds" class="content-section">
+                <h2>7. Refunds</h2>
+
+                <h3>7.1. When Are Refunds Issued?</h3>
+                <p>Refunds are processed in the following situations:</p>
+                <ul class="styled-list">
+                    <li>Order cancellation (before shipping)</li>
+                    <li>Product return (after quality check)</li>
+                    <li>Payment failure (auto-refund)</li>
+                    <li>Seller/Vendor cancels accepted order</li>
+                    <li>Product not delivered</li>
+                    <li>Defective/wrong product delivered</li>
+                </ul>
+
+                <h3>7.2. Refund Timeline</h3>
+                <div class="refund-timeline-table">
+                    <div class="timeline-row">
+                        <div class="timeline-situation">
+                            <h4>Order Cancellation</h4>
+                            <p>(Before shipping)</p>
+                        </div>
+                        <div class="timeline-duration">
+                            <strong>UPI:</strong> 24-48 hours<br>
+                            <strong>COD:</strong> N/A
+                        </div>
+                    </div>
+                    <div class="timeline-row">
+                        <div class="timeline-situation">
+                            <h4>Product Return</h4>
+                            <p>(After pickup & inspection)</p>
+                        </div>
+                        <div class="timeline-duration">
+                            <strong>UPI:</strong> 2-7 business days<br>
+                            <strong>COD:</strong> 5-7 business days
+                        </div>
+                    </div>
+                    <div class="timeline-row">
+                        <div class="timeline-situation">
+                            <h4>Payment Failure</h4>
+                            <p>(Auto-refund)</p>
+                        </div>
+                        <div class="timeline-duration">
+                            <strong>UPI:</strong> 5-7 business days<br>
+                            <strong>COD:</strong> N/A
+                        </div>
+                    </div>
+                </div>
+
+                <h3>7.3. Refund Method</h3>
+                <div class="refund-methods">
+                    <div class="refund-card">
+                        <div class="refund-icon">📱</div>
+                        <h4>UPI Payments</h4>
+                        <p>Refunded to the same UPI ID used for payment</p>
+                        <span class="refund-time">⏱️ 24-48 hours</span>
+                    </div>
+                    <div class="refund-card">
+                        <div class="refund-icon">💵</div>
+                        <h4>COD Orders</h4>
+                        <p>Refunded to your UPI ID or bank account (you must provide details)</p>
+                        <span class="refund-time">⏱️ 5-7 business days</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>For COD Refunds:</strong> You'll need to add your UPI ID or bank account details in the
+                        app to receive the refund.</p>
+                </div>
+
+                <h3>7.4. Checking Refund Status</h3>
+                <p>To check your refund status:</p>
+                <ol>
+                    <li>Go to "My Orders" in the app</li>
+                    <li>Select the cancelled/returned order</li>
+                    <li>View refund status and expected date</li>
+                    <li>Check your bank/UPI app after the expected date</li>
+                </ol>
+
+                <div class="highlight-box">
+                    <p><strong>Not Received Refund?</strong> If you haven't received your refund within the specified
+                        timeframe, contact our support team with your order ID and transaction details.</p>
+                </div>
+            </section>
+
+            <section id="partner-payments" class="content-section">
+                <h2>8. Partner Payments (Sellers, Vendors, Riders)</h2>
+
+                <h3>8.1. Payout Schedule</h3>
+                <p>Payment schedules for our partners:</p>
+
+                <div class="partner-payments-grid">
+                    <div class="partner-pay-card">
+                        <div class="partner-icon">🏪</div>
+                        <h4>Sellers</h4>
+                        <p><strong>Payout Frequency:</strong> Weekly</p>
+                        <p><strong>Timeline:</strong> Within 7 business days</p>
+                        <p><strong>Method:</strong> Direct bank transfer</p>
+                    </div>
+                    <div class="partner-pay-card">
+                        <div class="partner-icon">📦</div>
+                        <h4>Vendors</h4>
+                        <p><strong>Payout Frequency:</strong> Weekly</p>
+                        <p><strong>Timeline:</strong> Within 7 business days</p>
+                        <p><strong>Method:</strong> Direct bank transfer</p>
+                    </div>
+                    <div class="partner-pay-card">
+                        <div class="partner-icon">🚴</div>
+                        <h4>Riders</h4>
+                        <p><strong>Payout Frequency:</strong> Weekly</p>
+                        <p><strong>Timeline:</strong> Within 7 business days</p>
+                        <p><strong>Method:</strong> Direct bank transfer</p>
+                    </div>
+                </div>
+
+                <h3>8.2. Payment Deductions</h3>
+                <p>Partner payments may have the following deductions:</p>
+                <ul class="styled-list">
+                    <li>Platform commission/fees</li>
+                    <li>Payment gateway charges</li>
+                    <li>Penalties (if applicable)</li>
+                    <li>Returns/refunds processing</li>
+                    <li>Applicable taxes (TDS, if applicable)</li>
+                </ul>
+
+                <div class="info-box">
+                    <p>For detailed information on partner payment terms, please refer to:</p>
+                    <ul>
+                        <li><a href="seller-policy">Seller Policy</a></li>
+                        <li><a href="vendor-policy">Vendor Policy</a></li>
+                        <li><a href="rider-policy">Rider Policy</a></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="disputes" class="content-section">
+                <h2>9. Payment Disputes</h2>
+
+                <h3>9.1. Common Payment Issues</h3>
+                <div class="dispute-scenarios">
+                    <div class="dispute-item">
+                        <span class="disp-icon">💰</span>
+                        <div>
+                            <h4>Double Charge</h4>
+                            <p>Amount debited twice for single order</p>
+                            <p class="resolution">Resolution: Auto-refund or contact support</p>
+                        </div>
+                    </div>
+                    <div class="dispute-item">
+                        <span class="disp-icon">❌</span>
+                        <div>
+                            <h4>Payment Deducted, Order Failed</h4>
+                            <p>Money gone but order not placed</p>
+                            <p class="resolution">Resolution: Auto-refund in 5-7 days</p>
+                        </div>
+                    </div>
+                    <div class="dispute-item">
+                        <span class="disp-icon">🔄</span>
+                        <div>
+                            <h4>Refund Not Received</h4>
+                            <p>Refund initiated but not credited</p>
+                            <p class="resolution">Resolution: Wait 7 days, then contact support</p>
+                        </div>
+                    </div>
+                    <div class="dispute-item">
+                        <span class="disp-icon">📊</span>
+                        <div>
+                            <h4>Wrong Amount Charged</h4>
+                            <p>Charged more/less than order total</p>
+                            <p class="resolution">Resolution: Immediate investigation & correction</p>
+                        </div>
+                    </div>
+                </div>
+                <function_calls>
+                    <invoke name="artifacts">
+                        <parameter name="command">update</parameter>
+                        <parameter name="id">kirihat_payment_html</parameter>
+                        <parameter name="old_str">
+        </div>
+        </parameter>
+        <parameter name="new_str">
+            </div>
+            <h3>9.2. How to Raise a Dispute</h3>
+            <div class="process-steps">
+                <div class="step-card">
+                    <div class="step-num">1</div>
+                    <h4>Collect Details</h4>
+                    <p>Gather order ID, transaction ID, screenshots</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step-card">
+                    <div class="step-num">2</div>
+                    <h4>Contact Support</h4>
+                    <p>Email or call our support team</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step-card">
+                    <div class="step-num">3</div>
+                    <h4>Investigation</h4>
+                    <p>We investigate within 24-48 hours</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step-card">
+                    <div class="step-num">4</div>
+                    <h4>Resolution</h4>
+                    <p>Issue resolved within 1-7 business days</p>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h4>⚠️ Important Information for Disputes</h4>
+                <p>When raising a payment dispute, please provide:</p>
+                <ul>
+                    <li>Order ID</li>
+                    <li>Transaction/Reference ID</li>
+                    <li>Payment method used</li>
+                    <li>Date and time of transaction</li>
+                    <li>Amount charged</li>
+                    <li>Screenshots of payment confirmation (if available)</li>
+                    <li>Bank statement showing deduction (if applicable)</li>
+                </ul>
+            </div>
+
+            <h3>9.3. Dispute Resolution Timeline</h3>
+            <div class="highlight-box">
+                <p><strong>Response Time:</strong> 1-24 hours</p>
+                <p><strong>Investigation:</strong> 24-48 hours</p>
+                <p><strong>Resolution:</strong> 1-30 business days (depending on complexity)</p>
+            </div>
+            </section>
+
+            <section id="contact" class="content-section">
+                <h2>10. Contact Us</h2>
+                <p>For payment-related queries, disputes, or issues, please contact us:</p>
+
+                <div class="contact-card">
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email</h4>
+                            <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <div>
+                            <h4>Phone</h4>
+                            <a href="tel:+919957693472">+91 99576 93472</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">🕐</span>
+                        <div>
+                            <h4>Support Hours</h4>
+                            <p>9:00 AM - 5:00 PM IST</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>Quick Response:</strong> We respond to payment queries within 1-24 hours. For urgent
+                        payment issues, please call us directly.</p>
+                </div>
+            </section>
+
+            <!-- Related Policies -->
+            <section class="related-policies">
+                <h3>Related Policies</h3>
+                <div class="policy-grid">
+                    <a href="terms-and-conditions" class="policy-card">Terms & Conditions</a>
+                    <a href="return-refund-policy" class="policy-card">Return & Refund</a>
+                    <a href="cancellation-policy" class="policy-card">Cancellation Policy</a>
+                    <a href="privacy-policy" class="policy-card">Privacy Policy</a>
+                </div>
+            </section>
+            </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                        <a href="cancellation-policy">Cancellation</a>
+                        <a href="payment-policy">Payment Policy</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="faq">FAQ</a>
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +816,9 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
 </body>
+
 </html>
+</parameter>

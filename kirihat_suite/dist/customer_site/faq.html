@@ -1,22 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FAQ - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <title>FAQ - Frequently Asked Questions | Kirihat</title>
+    <meta name="description"
+        content="Find answers to common questions about Kirihat's quick commerce platform, delivery, payments, returns, and more.">
+    <meta name="keywords" content="kirihat faq, help, support, questions, quick commerce help">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/faq.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,42 +42,582 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>FAQ</h1>
-        <p>This is the placeholder content for FAQ. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Hero Section -->
+    <section class="faq-hero">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <div class="hero-content-faq">
+                <h1>Frequently Asked Questions</h1>
+                <p class="hero-subtitle">Quick answers to questions you may have</p>
+
+                <!-- Search Box -->
+                <div class="faq-search-box">
+                    <input type="text" id="faqSearch" placeholder="Search for answers..." aria-label="Search FAQs">
+                    <button class="search-btn" aria-label="Search">
+                        <span class="search-icon">🔍</span>
+                    </button>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+        </div>
+    </section>
+
+    <!-- Quick Links -->
+    <section class="faq-categories">
+        <div class="container">
+            <div class="category-pills">
+                <button class="category-pill active" data-category="all">All Questions</button>
+                <button class="category-pill" data-category="ordering">Ordering</button>
+                <button class="category-pill" data-category="delivery">Delivery</button>
+                <button class="category-pill" data-category="payment">Payment</button>
+                <button class="category-pill" data-category="returns">Returns</button>
+                <button class="category-pill" data-category="account">Account</button>
+                <button class="category-pill" data-category="partners">For Partners</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Content -->
+    <section class="faq-content">
+        <div class="container">
+            <!-- Ordering Questions -->
+            <div class="faq-category-section" data-category="ordering">
+                <h2 class="category-title">
+                    <span class="category-icon">🛒</span>
+                    Ordering & Shopping
+                </h2>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How do I place an order on Kirihat?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Placing an order on Kirihat is simple:</p>
+                            <ol>
+                                <li>Download the Kirihat app or visit our website</li>
+                                <li>Create an account or log in</li>
+                                <li>Browse products or search for what you need</li>
+                                <li>Add items to your cart</li>
+                                <li>Proceed to checkout and select delivery options</li>
+                                <li>Choose your payment method (UPI or COD)</li>
+                                <li>Confirm your order</li>
+                            </ol>
+                            <p>You'll receive a confirmation notification immediately after placing your order.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What is the minimum order value?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>The minimum order value varies by product category and may change based on ongoing
+                                offers. You'll see any minimum order requirements at checkout. For most categories,
+                                there is no minimum order value, but small orders may incur a convenience fee.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            Can I modify my order after placing it?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>You can modify or cancel your order <strong>before it is shipped</strong>. Once the order
+                                is picked up by a rider, modifications are not possible. To modify an order:</p>
+                            <ol>
+                                <li>Go to "My Orders" in the app</li>
+                                <li>Select the order you want to modify</li>
+                                <li>Click "Cancel Order" or contact customer support immediately</li>
+                            </ol>
+                            <p>If your order has already been dispatched, you can request a return after delivery.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What products are available on Kirihat?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Kirihat offers a wide range of products including:</p>
+                            <ul>
+                                <li>Fresh groceries and vegetables</li>
+                                <li>Dairy products and beverages</li>
+                                <li>Household essentials</li>
+                                <li>Personal care items</li>
+                                <li>Snacks and packaged foods</li>
+                                <li>And much more!</li>
+                            </ul>
+                            <p>Browse our app to see our complete catalog of products from trusted local sellers.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Questions -->
+            <div class="faq-category-section" data-category="delivery">
+                <h2 class="category-title">
+                    <span class="category-icon">🚚</span>
+                    Delivery & Shipping
+                </h2>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What are the delivery options available?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Kirihat offers two delivery modes:</p>
+                            <ul>
+                                <li><strong>Instant Delivery:</strong> Get your order in approximately 20 minutes (not
+                                    guaranteed, depends on availability and location)</li>
+                                <li><strong>Standard Delivery:</strong> Delivery within 2-10 hours</li>
+                            </ul>
+                            <p>Delivery times may vary based on product availability, traffic conditions, and weather.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What are the delivery charges?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Delivery charges depend on:</p>
+                            <ul>
+                                <li>Order value</li>
+                                <li>Product category</li>
+                                <li>Delivery mode (Instant or Standard)</li>
+                                <li>Current offers and promotions</li>
+                            </ul>
+                            <p>You'll see the exact delivery charges at checkout before confirming your order. We often
+                                offer free delivery on orders above a certain value.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            Which areas do you deliver to?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Currently, Kirihat delivers to PIN code <strong>783334</strong> in Dhubri, Assam. We're
+                                actively working on expanding to more areas. Join our waiting list to be notified when
+                                we launch in your location!</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            Can I track my order?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes! You can track your order in real-time through the Kirihat app. You'll receive
+                                updates at every stage:</p>
+                            <ul>
+                                <li>Order confirmed</li>
+                                <li>Order being prepared</li>
+                                <li>Out for delivery</li>
+                                <li>Delivered</li>
+                            </ul>
+                            <p>You can also see your rider's location on the map once the order is out for delivery.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What if I'm not available to receive the delivery?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Our riders attempt delivery <strong>one time only</strong>. If you're unavailable:</p>
+                            <ul>
+                                <li>The rider will try to contact you via phone</li>
+                                <li>If unreachable, the order may be cancelled</li>
+                                <li>You'll need to place a new order</li>
+                            </ul>
+                            <p>Please ensure you're available at the delivery address and your phone is accessible
+                                during the delivery window.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Questions -->
+            <div class="faq-category-section" data-category="payment">
+                <h2 class="category-title">
+                    <span class="category-icon">💳</span>
+                    Payment & Pricing
+                </h2>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What payment methods do you accept?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Kirihat accepts the following payment methods:</p>
+                            <ul>
+                                <li><strong>UPI:</strong> All UPI apps (GPay, PhonePe, Paytm, etc.)</li>
+                                <li><strong>Cash on Delivery (COD):</strong> Pay when you receive your order</li>
+                            </ul>
+                            <p>All online payments are processed through secure, encrypted payment gateways.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            Are there any additional charges?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Apart from product prices, you may see the following charges at checkout:</p>
+                            <ul>
+                                <li>Platform fee</li>
+                                <li>Delivery fee</li>
+                                <li>Payment gateway fee (for online payments)</li>
+                                <li>Convenience fee (for small orders)</li>
+                                <li>COD handling fee (if applicable)</li>
+                                <li>Packaging fee</li>
+                            </ul>
+                            <p>All charges are transparently displayed before you confirm your order.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            Is it safe to pay online on Kirihat?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes, absolutely! Your payment security is our priority:</p>
+                            <ul>
+                                <li>All transactions are encrypted with industry-standard SSL technology</li>
+                                <li>We use trusted payment gateways</li>
+                                <li>We never store your complete payment information</li>
+                                <li>Your financial data is protected with multiple layers of security</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How do refunds work?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Refunds are processed based on your original payment method:</p>
+                            <ul>
+                                <li><strong>UPI Payments:</strong> Refunded to your original UPI ID within 24-48 hours
+                                </li>
+                                <li><strong>COD Orders:</strong> You'll need to provide your UPI or bank account details
+                                    for refund processing (5-7 business days)</li>
+                            </ul>
+                            <p>Refunds are initiated within 2 business days after the returned product is picked up and
+                                inspected.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Returns & Refunds Questions -->
+            <div class="faq-category-section" data-category="returns">
+                <h2 class="category-title">
+                    <span class="category-icon">↩️</span>
+                    Returns & Refunds
+                </h2>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What is your return policy?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Return policies vary by product category. The return window is mentioned on each
+                                product's detail page. Generally:</p>
+                            <ul>
+                                <li>Products must be unused and in original packaging</li>
+                                <li>Return requests must be raised within the specified return window</li>
+                                <li>Some products (perishables, personal care items) are non-returnable</li>
+                            </ul>
+                            <p>For complete details, please visit our <a href="return-refund-policy">Return & Refund
+                                    Policy</a> page.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How do I return a product?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>To return a product:</p>
+                            <ol>
+                                <li>Go to "My Orders" in the app</li>
+                                <li>Select the order containing the product you want to return</li>
+                                <li>Click "Return Product" and select the reason</li>
+                                <li>Upload photos if required</li>
+                                <li>Submit the return request</li>
+                            </ol>
+                            <p>Once approved, a rider will be assigned to pick up the product from your address.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What if I receive a damaged or wrong product?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>We sincerely apologize if you receive a damaged or incorrect product. Please:</p>
+                            <ol>
+                                <li>Contact customer support immediately at <a href="tel:+919957693472">+91 99576
+                                        93472</a> or <a href="mailto:support@kirihat.com">support@kirihat.com</a></li>
+                                <li>Provide photos/videos of the damaged or wrong product</li>
+                                <li>Do not use or discard the product</li>
+                            </ol>
+                            <p>We'll arrange a free return pickup and either send a replacement or process a full
+                                refund. No penalty fees will apply for damaged or incorrect products.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            Are there any return charges?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Return charges depend on the reason for return:</p>
+                            <ul>
+                                <li><strong>Defective/Damaged Product:</strong> No charges - free return pickup</li>
+                                <li><strong>Wrong Product Delivered:</strong> No charges - free return pickup</li>
+                                <li><strong>Change of Mind:</strong> May incur return shipping fees depending on product
+                                    category</li>
+                            </ul>
+                            <p>Any applicable charges will be communicated when you raise the return request.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Questions -->
+            <div class="faq-category-section" data-category="account">
+                <h2 class="category-title">
+                    <span class="category-icon">👤</span>
+                    Account & Profile
+                </h2>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How do I create an account?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Creating an account is quick and easy:</p>
+                            <ol>
+                                <li>Download the Kirihat app or visit our website</li>
+                                <li>Click on "Sign Up" or "Register"</li>
+                                <li>Enter your mobile number</li>
+                                <li>Verify with OTP</li>
+                                <li>Add your name and email</li>
+                                <li>You're ready to shop!</li>
+                            </ol>
+                            <p>You must be at least 18 years old to create an account.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How do I change my delivery address?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>You can manage your delivery addresses in your account:</p>
+                            <ol>
+                                <li>Go to "Account" or "Profile"</li>
+                                <li>Select "Manage Addresses"</li>
+                                <li>Add new address or edit existing ones</li>
+                                <li>Select your preferred address at checkout</li>
+                            </ol>
+                            <p>You can save multiple addresses for easy ordering.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How do I delete my account?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>You can request account deletion at any time:</p>
+                            <ol>
+                                <li>Go to "Account Settings"</li>
+                                <li>Select "Delete Account"</li>
+                                <li>Confirm your decision</li>
+                            </ol>
+                            <p><strong>Important:</strong> Account deletion is permanent and cannot be undone. All your
+                                data will be deleted within 30 days, except for information we're legally required to
+                                retain.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            Is my personal information safe with Kirihat?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes! We take your privacy seriously:</p>
+                            <ul>
+                                <li>We use industry-standard encryption to protect your data</li>
+                                <li>Your information is stored on secure Firebase servers</li>
+                                <li>We never sell your personal information to third parties</li>
+                                <li>We comply with all Indian data protection laws</li>
+                            </ul>
+                            <p>Read our <a href="privacy-policy">Privacy Policy</a> for complete details.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partner Questions -->
+            <div class="faq-category-section" data-category="partners">
+                <h2 class="category-title">
+                    <span class="category-icon">🤝</span>
+                    For Partners (Sellers, Vendors, Riders)
+                </h2>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How can I become a seller on Kirihat?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>To become a seller:</p>
+                            <ol>
+                                <li>Visit our <a href="seller-policy">Seller Policy</a> page</li>
+                                <li>Review the requirements and commission structure</li>
+                                <li>Contact us at <a href="mailto:partnerships@kirihat.com">partnerships@kirihat.com</a>
+                                </li>
+                                <li>Submit required documents (business registration, ID proof, etc.)</li>
+                                <li>Our team will review and onboard you</li>
+                            </ol>
+                            <p>There are no upfront costs to join Kirihat as a seller!</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            How do I become a delivery rider?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>To join as a delivery rider:</p>
+                            <ol>
+                                <li>Must be 18+ years old (15+ for bicycle riders)</li>
+                                <li>Valid ID proof (Aadhaar, PAN, Voter ID, or Passport)</li>
+                                <li>For motorized vehicles: Driving license and vehicle RC</li>
+                                <li>Bank account for payments</li>
+                            </ol>
+                            <p>Contact us at <a href="mailto:partnerships@kirihat.com">partnerships@kirihat.com</a> to
+                                apply. Enjoy flexible hours and weekly payouts!</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            What is a vendor and how can I become one?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Vendors operate warehouses that store products for quick delivery. To become a vendor:
+                            </p>
+                            <ol>
+                                <li>Have warehouse space available</li>
+                                <li>Ability to manage inventory</li>
+                                <li>Contact us at <a href="mailto:partnerships@kirihat.com">partnerships@kirihat.com</a>
+                                </li>
+                            </ol>
+                            <p>Vendors earn steady income from storage services and inventory management. Read our <a
+                                    href="vendor-policy">Vendor Policy</a> for details.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            When do partners receive payments?
+                            <span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Payment schedules for partners:</p>
+                            <ul>
+                                <li><strong>Sellers:</strong> Weekly payouts within 7 business days</li>
+                                <li><strong>Vendors:</strong> Weekly payouts within 7 business days</li>
+                                <li><strong>Riders:</strong> Weekly payouts within 7 business days</li>
+                            </ul>
+                            <p>All payments are made via bank transfer to your registered account.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Still Have Questions -->
+    <section class="faq-contact">
+        <div class="container">
+            <div class="faq-contact-box">
+                <div class="faq-contact-content">
+                    <h3>Still Have Questions?</h3>
+                    <p>Can't find the answer you're looking for? Our customer support team is here to help.</p>
+                    <div class="contact-buttons">
+                        <a href="contact-us" class="contact-btn primary">Contact Support</a>
+                        <a href="tel:+919957693472" class="contact-btn secondary">Call Us</a>
+                    </div>
+                </div>
+                <div class="faq-contact-icon">💬</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="faq">FAQ</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>For Partners</h3>
+                    <div class="footer-grid">
+                        <a href="seller-policy">Become a Seller</a>
+                        <a href="vendor-policy">Become a Vendor</a>
+                        <a href="rider-policy">Become a Rider</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +626,9 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
+    <script src="js/faq.js"></script>
 </body>
+
 </html>

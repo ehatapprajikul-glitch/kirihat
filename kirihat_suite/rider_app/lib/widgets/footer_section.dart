@@ -13,7 +13,7 @@ class FooterSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "Kiri Hat",
+            "Kirihat",
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
           ),
           const SizedBox(height: 16),
@@ -47,7 +47,7 @@ class FooterSection extends StatelessWidget {
           const SizedBox(height: 24),
           Center(
             child: Text(
-              "© 2024 Kiri Hat. All rights reserved.",
+              "© 2024 Kirihat. All rights reserved.",
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ),

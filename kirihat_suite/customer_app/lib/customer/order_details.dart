@@ -93,6 +93,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     ? customReasonController.text
                     : selectedReason,
                 'cancelled_at': FieldValue.serverTimestamp(),
+                'cancelled_by': 'Customer',
               });
 
               // --- NOTIFY VENDOR ---
@@ -534,7 +535,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       final hasValidProductId = _isValidProductId(productId);
                       
                       return GestureDetector(
-                        onTap: hasValidProductId ? () => _navigateToProduct(item) : null,
+                        onTap: null, // Disabled as per request
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
@@ -578,11 +579,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                   Text("₹${item['price'] * item['quantity']}",
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
-                                  if (hasValidProductId) ...[
-                                    const SizedBox(width: 10),
-                                    const Icon(Icons.arrow_forward_ios,
-                                        size: 12, color: Colors.grey)
-                                  ],
                                 ],
                               ),
                               // Return/Replace Action Button

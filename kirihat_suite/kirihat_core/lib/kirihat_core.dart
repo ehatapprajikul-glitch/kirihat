@@ -30,6 +30,7 @@ export 'utils/app_colors.dart';
 export 'utils/cart_helper.dart';
 export 'utils/image_validation_helper.dart';
 export 'utils/currency_helper.dart';
+export 'utils/policy_links.dart';
 
 // Shared UI
 export 'shared/rider_settlement_history.dart';

@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grievance Redressal - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="description"
+        content="File a complaint or grievance with Kirihat. Learn about our grievance redressal mechanism, process, and timelines for resolution.">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,42 +40,613 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Grievance Redressal</h1>
-        <p>This is the placeholder content for Grievance Redressal. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Main Content -->
+    <main class="content-page">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span class="current">Grievance Redressal</span>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Grievance Redressal Mechanism</h1>
+                <p class="last-updated">Last Updated: January 23, 2026</p>
+            </div>
+
+            <!-- Quick Summary Banner -->
+            <div class="policy-summary-banner">
+                <div class="summary-icon">⚖️</div>
+                <div>
+                    <h3>We're Here to Help</h3>
+                    <p>Your concerns matter to us. Our grievance redressal mechanism ensures that all complaints are
+                        addressed fairly, promptly, and transparently.</p>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+
+            <!-- Grievance Officer Details -->
+            <section class="content-section">
+                <h2>Grievance Officer</h2>
+                <p>In accordance with the Information Technology Act, 2000 and the Consumer Protection Act, 2019, we
+                    have appointed a Grievance Officer to address your concerns.</p>
+
+                <div class="officer-card">
+                    <div class="officer-icon">👤</div>
+                    <div class="officer-details">
+                        <h3>Grievance Officer Details</h3>
+                        <div class="officer-info">
+                            <div class="info-row">
+                                <strong>Name:</strong>
+                                <span>Rakikul Islam</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Company:</strong>
+                                <span>Kirihat</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Email:</strong>
+                                <a href="mailto:grievance@kirihat.com">grievance@kirihat.com</a>
+                            </div>
+                            <div class="info-row">
+                                <strong>Alternate Email:</strong>
+                                <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                            </div>
+                            <div class="info-row">
+                                <strong>Phone:</strong>
+                                <a href="tel:+919957693472">+91 99576 93472</a>
+                            </div>
+                            <div class="info-row">
+                                <strong>Address:</strong>
+                                <span>Kirihat, Kachakhana, Golakganj, Hazratganj, Dhubri - 783334, Assam, India</span>
+                            </div>
+                            <div class="info-row">
+                                <strong>Working Hours:</strong>
+                                <span>Monday - Saturday: 9:00 AM - 5:00 PM IST</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ Important</h4>
+                    <p><strong>As per IT Rules, 2011:</strong> The Grievance Officer name must be designated and updated
+                        here. This is a legal requirement for Indian e-commerce platforms.</p>
+                </div>
+            </section>
+
+            <!-- What Can You Complain About -->
+            <section class="content-section">
+                <h2>What Can You Complain About?</h2>
+                <p>You can file a grievance regarding any of the following issues:</p>
+
+                <div class="grievance-types">
+                    <div class="grievance-card">
+                        <div class="griev-icon">📦</div>
+                        <h4>Product Issues</h4>
+                        <ul>
+                            <li>Defective or damaged products</li>
+                            <li>Wrong product delivered</li>
+                            <li>Product quality concerns</li>
+                            <li>Missing items</li>
+                        </ul>
+                    </div>
+
+                    <div class="grievance-card">
+                        <div class="griev-icon">🚚</div>
+                        <h4>Delivery Problems</h4>
+                        <ul>
+                            <li>Delayed delivery</li>
+                            <li>Failed delivery</li>
+                            <li>Rider behavior issues</li>
+                            <li>Delivery charges disputes</li>
+                        </ul>
+                    </div>
+
+                    <div class="grievance-card">
+                        <div class="griev-icon">💳</div>
+                        <h4>Payment Issues</h4>
+                        <ul>
+                            <li>Unauthorized charges</li>
+                            <li>Refund delays</li>
+                            <li>Payment failures</li>
+                            <li>Incorrect billing</li>
+                        </ul>
+                    </div>
+
+                    <div class="grievance-card">
+                        <div class="griev-icon">🔄</div>
+                        <h4>Return & Refund</h4>
+                        <ul>
+                            <li>Return request rejected</li>
+                            <li>Refund not received</li>
+                            <li>Return pickup delays</li>
+                            <li>Quality check disputes</li>
+                        </ul>
+                    </div>
+
+                    <div class="grievance-card">
+                        <div class="griev-icon">👤</div>
+                        <h4>Account Issues</h4>
+                        <ul>
+                            <li>Account suspension</li>
+                            <li>Data privacy concerns</li>
+                            <li>Unauthorized access</li>
+                            <li>Account deletion issues</li>
+                        </ul>
+                    </div>
+
+                    <div class="grievance-card">
+                        <div class="griev-icon">🛡️</div>
+                        <h4>Service Quality</h4>
+                        <ul>
+                            <li>Customer support issues</li>
+                            <li>Seller/Vendor misconduct</li>
+                            <li>Platform malfunction</li>
+                            <li>Unfair practices</li>
+                        </ul>
+                    </div>
+
+                    <div class="grievance-card">
+                        <div class="griev-icon">📜</div>
+                        <h4>Legal & Compliance</h4>
+                        <ul>
+                            <li>Terms violation by platform</li>
+                            <li>Misleading information</li>
+                            <li>Consumer rights violation</li>
+                            <li>Data breach concerns</li>
+                        </ul>
+                    </div>
+
+                    <div class="grievance-card">
+                        <div class="griev-icon">❓</div>
+                        <h4>Other Concerns</h4>
+                        <ul>
+                            <li>Unresolved complaints</li>
+                            <li>Feedback not addressed</li>
+                            <li>Any other grievances</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How to File a Grievance -->
+            <section class="content-section">
+                <h2>How to File a Grievance</h2>
+
+                <h3>Method 1: Email (Recommended)</h3>
+                <div class="method-box">
+                    <div class="method-icon">📧</div>
+                    <div class="method-content">
+                        <h4>Send Email to Grievance Officer</h4>
+                        <p><strong>Email:</strong> <a href="mailto:grievance@kirihat.com">grievance@kirihat.com</a></p>
+                        <p><strong>Subject Line Format:</strong> "Grievance - [Your Issue] - Order ID: [if applicable]"
+                        </p>
+
+                        <div class="email-template">
+                            <h5>Include the Following Information:</h5>
+                            <ul>
+                                <li>Your full name</li>
+                                <li>Registered email address</li>
+                                <li>Phone number</li>
+                                <li>Order ID (if applicable)</li>
+                                <li>Detailed description of the issue</li>
+                                <li>Date and time of incident</li>
+                                <li>Supporting documents/screenshots (if any)</li>
+                                <li>Expected resolution</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Method 2: Phone Call</h3>
+                <div class="method-box">
+                    <div class="method-icon">📞</div>
+                    <div class="method-content">
+                        <h4>Call Grievance Officer</h4>
+                        <p><strong>Phone:</strong> <a href="tel:+919957693472">+91 99576 93472</a></p>
+                        <p><strong>Hours:</strong> Monday - Saturday, 9:00 AM - 5:00 PM IST</p>
+                        <p>Be prepared with your order details and a clear explanation of your grievance.</p>
+                    </div>
+                </div>
+
+                <h3>Method 3: Written Letter</h3>
+                <div class="method-box">
+                    <div class="method-icon">✉️</div>
+                    <div class="method-content">
+                        <h4>Send a Formal Letter</h4>
+                        <p><strong>Address to:</strong></p>
+                        <p>Grievance Officer<br>
+                            Kirihat<br>
+                            Kachakhana, Golakganj, Hazratganj<br>
+                            Dhubri - 783334, Assam, India</p>
+                        <p>Include all details as mentioned in the email method above.</p>
+                    </div>
+                </div>
+
+                <h3>Method 4: Through App/Website</h3>
+                <div class="method-box">
+                    <div class="method-icon">📱</div>
+                    <div class="method-content">
+                        <h4>Submit via Platform</h4>
+                        <ol>
+                            <li>Log in to your Kirihat account</li>
+                            <li>Go to "Help & Support" section</li>
+                            <li>Select "File a Grievance"</li>
+                            <li>Fill in the grievance form</li>
+                            <li>Attach supporting documents</li>
+                            <li>Submit the form</li>
+                        </ol>
+                        <p>You'll receive an acknowledgment with a ticket number.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Grievance Resolution Process -->
+            <section class="content-section">
+                <h2>Grievance Resolution Process</h2>
+
+                <div class="process-timeline">
+                    <div class="timeline-step">
+                        <div class="step-circle">1</div>
+                        <div class="step-content">
+                            <h4>Acknowledgment</h4>
+                            <p>You'll receive an acknowledgment within <strong>1-24 hours</strong> with a unique
+                                grievance ID</p>
+                            <span class="step-time">Within 24 hours</span>
+                        </div>
+                    </div>
+
+                    <div class="timeline-connector"></div>
+
+                    <div class="timeline-step">
+                        <div class="step-circle">2</div>
+                        <div class="step-content">
+                            <h4>Investigation</h4>
+                            <p>Our team investigates the matter thoroughly, gathering all relevant information</p>
+                            <span class="step-time">1-5 business days</span>
+                        </div>
+                    </div>
+
+                    <div class="timeline-connector"></div>
+
+                    <div class="timeline-step">
+                        <div class="step-circle">3</div>
+                        <div class="step-content">
+                            <h4>Communication</h4>
+                            <p>We may contact you for additional information or clarification</p>
+                            <span class="step-time">As needed</span>
+                        </div>
+                    </div>
+
+                    <div class="timeline-connector"></div>
+
+                    <div class="timeline-step">
+                        <div class="step-circle">4</div>
+                        <div class="step-content">
+                            <h4>Resolution</h4>
+                            <p>We work towards a fair resolution based on facts and policies</p>
+                            <span class="step-time">1-30 business days</span>
+                        </div>
+                    </div>
+
+                    <div class="timeline-connector"></div>
+
+                    <div class="timeline-step">
+                        <div class="step-circle">5</div>
+                        <div class="step-content">
+                            <h4>Closure</h4>
+                            <p>You'll receive a detailed response with the resolution or explanation</p>
+                            <span class="step-time">Final communication</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timeline for Resolution -->
+            <section class="content-section">
+                <h2>Resolution Timeline</h2>
+
+                <div class="timeline-table">
+                    <div class="timeline-row">
+                        <div class="timeline-type">
+                            <h4>Simple Issues</h4>
+                            <p>Order tracking, delivery status, basic queries</p>
+                        </div>
+                        <div class="timeline-duration">
+                            <strong>1-3 business days</strong>
+                        </div>
+                    </div>
+
+                    <div class="timeline-row">
+                        <div class="timeline-type">
+                            <h4>Moderate Issues</h4>
+                            <p>Refund delays, return disputes, payment issues</p>
+                        </div>
+                        <div class="timeline-duration">
+                            <strong>3-7 business days</strong>
+                        </div>
+                    </div>
+
+                    <div class="timeline-row">
+                        <div class="timeline-type">
+                            <h4>Complex Issues</h4>
+                            <p>Account disputes, legal matters, fraud investigations</p>
+                        </div>
+                        <div class="timeline-duration">
+                            <strong>7-30 business days</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4>Commitment to Resolution</h4>
+                    <p>We are committed to resolving all grievances within <strong>30 business days</strong> of
+                        receiving the complaint. In exceptional circumstances requiring extended investigation, we will
+                        keep you informed of the progress.</p>
+                </div>
+            </section>
+
+            <!-- Escalation Process -->
+            <section class="content-section">
+                <h2>Escalation Process</h2>
+
+                <p>If you're not satisfied with the initial resolution, you can escalate your grievance:</p>
+
+                <div class="escalation-levels">
+                    <div class="escalation-card">
+                        <div class="esc-level">Level 1</div>
+                        <h4>Grievance Officer</h4>
+                        <p>First point of contact for all complaints</p>
+                        <p><a href="mailto:grievance@kirihat.com">grievance@kirihat.com</a></p>
+                    </div>
+
+                    <div class="escalation-arrow">↓</div>
+
+                    <div class="escalation-card">
+                        <div class="esc-level">Level 2</div>
+                        <h4>Senior Management</h4>
+                        <p>If Level 1 resolution is unsatisfactory</p>
+                        <p>Contact through grievance officer with reference ID</p>
+                    </div>
+
+                    <div class="escalation-arrow">↓</div>
+
+                    <div class="escalation-card">
+                        <div class="esc-level">Level 3</div>
+                        <h4>Legal/Regulatory Authorities</h4>
+                        <p>If internal escalation doesn't resolve the issue</p>
+                        <p>See "External Redressal" section below</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>Escalation Timeline</h4>
+                    <p>Allow <strong>7-15 business days</strong> at each level before escalating to the next level. This
+                        gives us adequate time to investigate and resolve your concern.</p>
+                </div>
+            </section>
+
+            <!-- External Redressal -->
+            <section class="content-section">
+                <h2>External Redressal Mechanisms</h2>
+
+                <p>If your grievance is not resolved satisfactorily through our internal process, you may approach the
+                    following external authorities:</p>
+
+                <div class="external-options">
+                    <div class="external-card">
+                        <div class="ext-icon">⚖️</div>
+                        <h4>Consumer Courts</h4>
+                        <p><strong>National Consumer Helpline:</strong> 1800-11-4000 or 14404</p>
+                        <p><strong>Website:</strong> <a href="https://consumerhelpline.gov.in"
+                                target="_blank">consumerhelpline.gov.in</a></p>
+                        <p>File complaints related to consumer rights violations, defective products, or unfair trade
+                            practices.</p>
+                    </div>
+
+                    <div class="external-card">
+                        <div class="ext-icon">🏛️</div>
+                        <h4>District Consumer Forum</h4>
+                        <p>For grievances involving up to ₹1 Crore</p>
+                        <p><strong>Location:</strong> Dhubri District Consumer Disputes Redressal Forum</p>
+                        <p>File complaints in person or online through the National Consumer Disputes Redressal
+                            Commission portal.</p>
+                    </div>
+
+                    <div class="external-card">
+                        <div class="ext-icon">💻</div>
+                        <h4>Cyber Crime Cell</h4>
+                        <p>For online fraud, data breach, or cyber security issues</p>
+                        <p><strong>Website:</strong> <a href="https://cybercrime.gov.in"
+                                target="_blank">cybercrime.gov.in</a></p>
+                        <p><strong>Helpline:</strong> 1930</p>
+                    </div>
+
+                    <div class="external-card">
+                        <div class="ext-icon">🏦</div>
+                        <h4>Banking Ombudsman</h4>
+                        <p>For payment and refund disputes</p>
+                        <p><strong>RBI Website:</strong> <a href="https://cms.rbi.org.in"
+                                target="_blank">cms.rbi.org.in</a></p>
+                        <p>File complaints if payment issues are not resolved by Kirihat or payment gateways.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Your Rights -->
+            <section class="content-section">
+                <h2>Your Rights as a Consumer</h2>
+
+                <div class="rights-grid">
+                    <div class="right-card">
+                        <div class="right-icon">✓</div>
+                        <h4>Right to Information</h4>
+                        <p>You have the right to know about the quality, quantity, price, and standards of
+                            products/services.</p>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">✓</div>
+                        <h4>Right to Choose</h4>
+                        <p>You have the freedom to select from a variety of products at competitive prices.</p>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">✓</div>
+                        <h4>Right to Be Heard</h4>
+                        <p>Your complaints and concerns will be heard and addressed fairly.</p>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">✓</div>
+                        <h4>Right to Redressal</h4>
+                        <p>You have the right to seek remedy against unfair trade practices or exploitation.</p>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">✓</div>
+                        <h4>Right to Consumer Education</h4>
+                        <p>You have the right to acquire knowledge about your rights and responsibilities.</p>
+                    </div>
+
+                    <div class="right-card">
+                        <div class="right-icon">✓</div>
+                        <h4>Right to Safety</h4>
+                        <p>You have the right to be protected against products/services hazardous to health.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tips for Effective Grievance -->
+            <section class="content-section">
+                <h2>Tips for Filing an Effective Grievance</h2>
+
+                <div class="tips-box">
+                    <div class="tip-item">
+                        <span class="tip-number">1</span>
+                        <div>
+                            <h4>Be Specific and Clear</h4>
+                            <p>Clearly describe the issue with specific details, dates, and order numbers.</p>
+                        </div>
+                    </div>
+
+                    <div class="tip-item">
+                        <span class="tip-number">2</span>
+                        <div>
+                            <h4>Provide Evidence</h4>
+                            <p>Attach screenshots, photos, emails, or any other supporting documents.</p>
+                        </div>
+                    </div>
+
+                    <div class="tip-item">
+                        <span class="tip-number">3</span>
+                        <div>
+                            <h4>State Your Expectation</h4>
+                            <p>Clearly mention what resolution you're expecting (refund, replacement, apology, etc.).
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="tip-item">
+                        <span class="tip-number">4</span>
+                        <div>
+                            <h4>Be Professional</h4>
+                            <p>Maintain a respectful and professional tone in all communications.</p>
+                        </div>
+                    </div>
+
+                    <div class="tip-item">
+                        <span class="tip-number">5</span>
+                        <div>
+                            <h4>Keep Records</h4>
+                            <p>Save all communication, reference numbers, and responses for future reference.</p>
+                        </div>
+                    </div>
+
+                    <div class="tip-item">
+                        <span class="tip-number">6</span>
+                        <div>
+                            <h4>Be Patient</h4>
+                            <p>Allow reasonable time for investigation and resolution before escalating.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact Section -->
+            <section class="content-section">
+                <h2>Contact Grievance Officer</h2>
+
+                <div class="contact-card">
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email (Primary)</h4>
+                            <a href="mailto:grievance@kirihat.com">grievance@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email (Alternate)</h4>
+                            <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <div>
+                            <h4>Phone</h4>
+                            <a href="tel:+919957693472">+91 99576 93472</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">🕐</span>
+                        <div>
+                            <h4>Working Hours</h4>
+                            <p>Monday - Saturday<br>9:00 AM - 5:00 PM IST</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Related Policies -->
+            <section class="related-policies">
+                <h3>Related Policies</h3>
+                <div class="policy-grid">
+                    <a href="terms-and-conditions" class="policy-card">Terms & Conditions</a>
+                    <a href="return-refund-policy" class="policy-card">Return & Refund</a>
+                    <a href="privacy-policy" class="policy-card">Privacy Policy</a>
+                    <a href="contact-us" class="policy-card">Contact Us</a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                        <a href="cancellation-policy">Cancellation</a>
+                        <a href="payment-policy">Payment Policy</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="faq">FAQ</a>
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +655,8 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
 </body>
+
 </html>

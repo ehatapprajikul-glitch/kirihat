@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/services/seller_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:kirihat_core/utils/policy_links.dart';
 
 class SellerProfileScreen extends StatefulWidget {
   final SellerModel seller;
@@ -155,6 +157,38 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   _buildDocCard('PAN Card', 'pan'),
                   const SizedBox(height: 16),
                   _buildDocCard('FSSAI License', 'fssai'),
+
+                  const SizedBox(height: 32),
+
+                   _buildSectionHeader('Legal & Compliance', Icons.gavel),
+                   Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.policy, color: Color(0xFF0D9759)),
+                          title: const Text("Seller Policy"),
+                          onTap: () => launchUrl(Uri.parse(PolicyLinks.sellerPolicy)),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.description, color: Color(0xFF0D9759)),
+                          title: const Text("Terms & Conditions"),
+                          onTap: () => launchUrl(Uri.parse(PolicyLinks.termsAndConditions)),
+                           trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.privacy_tip, color: Color(0xFF0D9759)),
+                          title: const Text("Privacy Policy"),
+                          onTap: () => launchUrl(Uri.parse(PolicyLinks.privacyPolicy)),
+                           trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                   ),
 
                   const SizedBox(height: 40),
                   SizedBox(

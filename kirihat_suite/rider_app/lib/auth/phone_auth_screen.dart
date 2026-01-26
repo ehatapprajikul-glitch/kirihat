@@ -201,7 +201,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
                 // Welcome Text
                 const Text(
-                  'Welcome to Kiri Hat',
+                  'Welcome to Kirihat',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,

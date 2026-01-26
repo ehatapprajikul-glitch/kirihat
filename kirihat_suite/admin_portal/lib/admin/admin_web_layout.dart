@@ -35,6 +35,7 @@ import 'catalog/category_specification_manager.dart';
 import 'catalog/price_override_requests_screen.dart';
 import 'setup/system_initialization_screen.dart';
 import 'layout_manager/home_layout_manager_screen.dart';
+import 'account_deletions_screen.dart';
 
 class AdminWebLayout extends StatefulWidget {
   const AdminWebLayout({super.key});
@@ -124,6 +125,8 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
         return const SystemInitializationScreen();
       case 'home_layouts':
         return const HomeLayoutManagerScreen();
+      case 'account_deletions':
+        return const AccountDeletionsScreen();
       default:
         return const Center(child: Text('Page Not Found'));
     }

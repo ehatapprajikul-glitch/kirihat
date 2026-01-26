@@ -7,6 +7,8 @@ import 'vendor_zones.dart';
 // import 'vendor_commission.dart'; // Deleted
 import 'vendor_settlements.dart';
 import 'vendor_location_setup.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:kirihat_core/utils/policy_links.dart';
 
 class VendorProfileScreen extends StatefulWidget {
   const VendorProfileScreen({super.key});
@@ -271,6 +273,25 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                     title: "Notifications",
                     subtitle: "Manage alerts & sounds",
                     onTap: () {},
+                  ),
+                  
+                  _buildSettingsTile(
+                    icon: Icons.policy,
+                    title: "Vendor Policy",
+                    subtitle: "Read our policies for vendors",
+                    onTap: () => launchUrl(Uri.parse(PolicyLinks.vendorPolicy)),
+                  ),
+                  _buildSettingsTile(
+                    icon: Icons.privacy_tip,
+                    title: "Privacy Policy",
+                    subtitle: "Data protection and privacy",
+                    onTap: () => launchUrl(Uri.parse(PolicyLinks.privacyPolicy)),
+                  ),
+                  _buildSettingsTile(
+                    icon: Icons.description,
+                    title: "Terms & Conditions",
+                    subtitle: "Platform terms of service",
+                    onTap: () => launchUrl(Uri.parse(PolicyLinks.termsAndConditions)),
                   ),
 
                   const SizedBox(height: 20),

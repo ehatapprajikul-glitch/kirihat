@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "463362132648-5vje6ng3tjnsnrk5p0smp8o9crov90qr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kirihat.live_app",
+            "certificate_hash": "b3c29747814cbf8cec37daf90677720a6a8dac81"
+          }
+        },
+        {
           "client_id": "463362132648-71elik5gpnmsi64vmjsepboh5nljusfe.apps.googleusercontent.com",
           "client_type": 3
         }

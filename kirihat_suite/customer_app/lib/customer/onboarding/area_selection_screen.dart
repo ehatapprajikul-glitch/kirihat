@@ -92,7 +92,7 @@ class _AreaSelectionScreenState extends State<AreaSelectionScreen> {
           );
         } else {
            // Check profile
-           final isProfileComplete = await UserService().isProfileComplete(userId);
+           final isProfileComplete = await UserService().checkProfileCompletionWithCache(userId);
            
            if (!isProfileComplete) {
               Navigator.pushReplacement(

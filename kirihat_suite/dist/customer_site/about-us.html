@@ -1,65 +1,373 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <title>About Us - Kirihat | Your Local Quick Commerce Partner</title>
+    <meta name="description"
+        content="Learn about Kirihat's mission to revolutionize quick commerce in India. Discover our story, values, and commitment to local communities.">
+    <meta name="keywords" content="about kirihat, quick commerce india, local grocery delivery, our story">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/about-us.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
-                <a href="about-us">About Us</a>
+                <a href="/">Home</a>
+                <a href="about-us" class="active">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
             </nav>
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>About Us</h1>
-        <p>This is the placeholder content for About Us. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Hero Section -->
+    <section class="about-hero">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <div class="hero-content-about">
+                <h1>Bringing Fresh Groceries to Your Doorstep</h1>
+                <p class="hero-subtitle">Connecting local communities through quick, reliable, and affordable commerce
+                </p>
+            </div>
+        </div>
+        <div class="hero-decoration"></div>
+    </section>
+
+    <!-- Our Story Section -->
+    <section class="our-story">
+        <div class="container">
+            <div class="story-content">
+                <div class="story-text">
+                    <span class="section-tag">Our Story</span>
+                    <h2>From a Local Idea to Your Neighborhood Partner</h2>
+                    <p>Kirihat was born from a simple observation: people in our community needed fresh groceries
+                        delivered quickly, reliably, and at fair prices. We saw an opportunity to connect local sellers,
+                        vendors, and customers in a way that benefits everyone.</p>
+                    <p>Starting in Dhubri, Assam, we're building more than just a delivery platform. We're creating a
+                        ecosystem that empowers local businesses, provides flexible earning opportunities for riders,
+                        and gives customers the convenience they deserve.</p>
+                    <p>Our name "Kirihat" reflects our commitment to local markets and community-driven commerce. Every
+                        order placed, every delivery made, strengthens our local economy.</p>
+                </div>
+                <div class="story-image">
+                    <div class="image-placeholder">
+                        <div class="placeholder-icon">🏪</div>
+                        <p>Local Shop Partner</p>
+                    </div>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+        </div>
+    </section>
+
+    <!-- Mission Vision Section -->
+    <section class="mission-vision">
+        <div class="container">
+            <div class="mv-grid">
+                <div class="mv-card mission">
+                    <div class="mv-icon">🎯</div>
+                    <h3>Our Mission</h3>
+                    <p>To revolutionize quick commerce in India by empowering local businesses, creating earning
+                        opportunities, and delivering exceptional value to customers through technology and
+                        community-focused service.</p>
+                </div>
+                <div class="mv-card vision">
+                    <div class="mv-icon">🔭</div>
+                    <h3>Our Vision</h3>
+                    <p>To become India's most trusted quick commerce platform, expanding to every neighborhood while
+                        maintaining our commitment to local businesses, quality service, and community development.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Values Section -->
+    <section class="core-values">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">What Drives Us</span>
+                <h2>Our Core Values</h2>
+                <p>These principles guide every decision we make and every relationship we build</p>
+            </div>
+
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-icon">🤝</div>
+                    <h4>Community First</h4>
+                    <p>We prioritize the needs of local communities, supporting neighborhood businesses and fostering
+                        economic growth from within.</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">⚡</div>
+                    <h4>Speed & Reliability</h4>
+                    <p>We promise fast, dependable service because we understand that your time matters and freshness
+                        cannot wait.</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">💚</div>
+                    <h4>Transparency</h4>
+                    <p>Clear pricing, honest communication, and fair practices for customers, sellers, vendors, and
+                        riders alike.</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">🌱</div>
+                    <h4>Growth Together</h4>
+                    <p>When our partners succeed, we succeed. We're committed to creating opportunities that help
+                        everyone thrive.</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">✨</div>
+                    <h4>Quality Assurance</h4>
+                    <p>From product selection to delivery, we maintain high standards to ensure you receive only the
+                        best.</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">🔒</div>
+                    <h4>Trust & Security</h4>
+                    <p>Your data, your transactions, and your experience are protected with industry-leading security
+                        measures.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How We Work Section -->
+    <section class="how-we-work">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Our Ecosystem</span>
+                <h2>How We Create Value</h2>
+                <p>A multi-sided platform that benefits everyone involved</p>
+            </div>
+
+            <div class="ecosystem-grid">
+                <div class="ecosystem-card">
+                    <div class="eco-number">1</div>
+                    <div class="eco-icon">👥</div>
+                    <h4>For Customers</h4>
+                    <p>Shop from thousands of products, enjoy fast delivery, and support local businesses—all from the
+                        comfort of your home.</p>
+                    <ul class="eco-benefits">
+                        <li>20-minute instant delivery option</li>
+                        <li>Wide product selection</li>
+                        <li>Transparent pricing</li>
+                        <li>Easy UPI & COD payments</li>
+                    </ul>
+                </div>
+
+                <div class="ecosystem-card">
+                    <div class="eco-number">2</div>
+                    <div class="eco-icon">🏪</div>
+                    <h4>For Sellers</h4>
+                    <p>Expand your reach beyond your physical store, access new customers, and grow your business with
+                        our technology.</p>
+                    <ul class="eco-benefits">
+                        <li>Zero upfront costs</li>
+                        <li>Access to digital marketplace</li>
+                        <li>Weekly payouts</li>
+                        <li>Marketing support</li>
+                    </ul>
+                </div>
+
+                <div class="ecosystem-card">
+                    <div class="eco-number">3</div>
+                    <div class="eco-icon">📦</div>
+                    <h4>For Vendors</h4>
+                    <p>Operate warehouses that enable quick commerce, manage inventory efficiently, and earn from
+                        storage services.</p>
+                    <ul class="eco-benefits">
+                        <li>Steady income stream</li>
+                        <li>Inventory management tools</li>
+                        <li>Flexible operations</li>
+                        <li>Growth opportunities</li>
+                    </ul>
+                </div>
+
+                <div class="ecosystem-card">
+                    <div class="eco-number">4</div>
+                    <div class="eco-icon">🚴</div>
+                    <h4>For Riders</h4>
+                    <p>Earn flexible income as a delivery partner with fair compensation, weekly payouts, and complete
+                        autonomy.</p>
+                    <ul class="eco-benefits">
+                        <li>Flexible working hours</li>
+                        <li>Competitive earnings</li>
+                        <li>Weekly payments</li>
+                        <li>Performance bonuses</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="about-stats">
+        <div class="container">
+            <div class="stats-grid-about">
+                <div class="stat-item-about">
+                    <div class="stat-number">2026</div>
+                    <p>Year Founded</p>
+                </div>
+                <div class="stat-item-about">
+                    <div class="stat-number">100+</div>
+                    <p>Local Sellers</p>
+                </div>
+                <div class="stat-item-about">
+                    <div class="stat-number">5000+</div>
+                    <p>Products Available</p>
+                </div>
+                <div class="stat-item-about">
+                    <div class="stat-number">20min</div>
+                    <p>Fastest Delivery</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Service Area Section -->
+    <section class="service-area">
+        <div class="container">
+            <div class="area-content">
+                <div class="area-text">
+                    <span class="section-tag">Where We Serve</span>
+                    <h2>Currently Serving Dhubri</h2>
+                    <p>We're proud to serve the PIN code <strong>783334</strong> area in Dhubri, Assam. Our focused
+                        approach allows us to maintain high service quality and build strong relationships with our
+                        local community.</p>
+
+                    <div class="expansion-note">
+                        <div class="expansion-icon">🗺️</div>
+                        <div>
+                            <h4>Expanding Soon</h4>
+                            <p>We're actively planning expansion to neighboring areas. Join our waiting list to be
+                                notified when we launch in your location.</p>
+                            <a href="contact-us" class="expansion-link">Get Notified →</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="area-visual">
+                    <div class="location-badge">
+                        <div class="pin-icon">📍</div>
+                        <div class="location-info">
+                            <h3>Dhubri, Assam</h3>
+                            <p>PIN: 783334</p>
+                            <span class="status-badge">Now Serving</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section (Optional - can be added when team grows) -->
+    <section class="our-commitment">
+        <div class="container">
+            <div class="commitment-box">
+                <h2>Our Commitment to You</h2>
+                <div class="commitment-grid">
+                    <div class="commitment-item">
+                        <div class="commit-icon">✓</div>
+                        <p><strong>Fresh Quality:</strong> We partner only with trusted sellers who maintain high
+                            quality standards</p>
+                    </div>
+                    <div class="commitment-item">
+                        <div class="commit-icon">✓</div>
+                        <p><strong>Fair Pricing:</strong> Transparent pricing with no hidden fees or surprise charges
+                        </p>
+                    </div>
+                    <div class="commitment-item">
+                        <div class="commit-icon">✓</div>
+                        <p><strong>Fast Delivery:</strong> Your order reaches you as quickly as possible, often within
+                            20 minutes</p>
+                    </div>
+                    <div class="commitment-item">
+                        <div class="commit-icon">✓</div>
+                        <p><strong>Local Focus:</strong> Supporting neighborhood businesses and keeping money in the
+                            community</p>
+                    </div>
+                    <div class="commitment-item">
+                        <div class="commit-icon">✓</div>
+                        <p><strong>Customer First:</strong> Your satisfaction drives everything we do, from product
+                            selection to support</p>
+                    </div>
+                    <div class="commitment-item">
+                        <div class="commit-icon">✓</div>
+                        <p><strong>Secure Platform:</strong> Your data and transactions protected with industry-standard
+                            security</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="about-cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Experience Kirihat?</h2>
+                <p>Join thousands of happy customers and local businesses in our growing community</p>
+                <div class="cta-buttons">
+                    <a href="/app/" class="btn-large">Start Shopping</a>
+                    <a href="contact-us" class="btn-secondary">Get in Touch</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="faq">FAQ</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>For Partners</h3>
+                    <div class="footer-grid">
+                        <a href="seller-policy">Become a Seller</a>
+                        <a href="vendor-policy">Become a Vendor</a>
+                        <a href="rider-policy">Become a Rider</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +376,8 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
 </body>
+
 </html>

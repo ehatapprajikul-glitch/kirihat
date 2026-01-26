@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Return Refund Policy - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <title>Return & Refund Policy - Kirihat</title>
+    <meta name="description"
+        content="Learn about Kirihat's return and refund policy. Understand our return windows, refund process, and eligibility criteria for returns.">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,42 +40,615 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Return Refund Policy</h1>
-        <p>This is the placeholder content for Return Refund Policy. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Main Content -->
+    <main class="content-page">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span class="current">Return & Refund Policy</span>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Return & Refund Policy</h1>
+                <p class="last-updated">Last Updated: January 23, 2026</p>
+            </div>
+
+            <!-- Quick Summary Banner -->
+            <div class="policy-summary-banner">
+                <div class="summary-icon">↩️</div>
+                <div>
+                    <h3>Quick Summary</h3>
+                    <p>At Kirihat, we want you to be completely satisfied with your purchase. If you're not happy with
+                        your order, we offer easy returns with refunds processed within 2 business days after pickup.
+                    </p>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+
+            <!-- Table of Contents -->
+            <div class="toc-box">
+                <h3>Table of Contents</h3>
+                <nav class="toc">
+                    <a href="#introduction">1. Introduction</a>
+                    <a href="#return-eligibility">2. Return Eligibility</a>
+                    <a href="#non-returnable">3. Non-Returnable Products</a>
+                    <a href="#how-to-return">4. How to Initiate a Return</a>
+                    <a href="#inspection">5. Return Inspection</a>
+                    <a href="#fees">6. Return Fees and Charges</a>
+                    <a href="#refund-process">7. Refund Process</a>
+                    <a href="#exchanges">8. Exchanges</a>
+                    <a href="#damaged-products">9. Damaged or Defective Products</a>
+                    <a href="#cancellation">10. Cancellation vs. Return</a>
+                    <a href="#fraud">11. Fraudulent Returns</a>
+                    <a href="#responsibilities">12. Customer Responsibilities</a>
+                    <a href="#contact">13. Contact Us</a>
+                </nav>
+            </div>
+
+            <!-- Content Sections -->
+            <section id="introduction" class="content-section">
+                <h2>1. Introduction</h2>
+                <p>At Kirihat, we strive to ensure customer satisfaction with every purchase. This Return and Refund
+                    Policy outlines the conditions under which products can be returned and refunds can be processed.
+                </p>
+                <p>Please read this policy carefully before making a purchase. By placing an order on Kirihat, you agree
+                    to the terms outlined in this policy.</p>
+            </section>
+
+            <section id="return-eligibility" class="content-section">
+                <h2>2. Return Eligibility</h2>
+
+                <h3>2.1. Return Window</h3>
+                <div class="highlight-box">
+                    <p><strong>Important:</strong> The return period for each product is specified on the product
+                        details page. Return periods typically range from 0 days (non-returnable) to 7 days from the
+                        date of delivery, depending on the product category.</p>
+                </div>
+                <p>You must initiate a return request within the specified return window for the product.</p>
+
+                <h3>2.2. Returnable Products</h3>
+                <p>Most products sold on Kirihat are eligible for return, except those listed under "Non-Returnable
+                    Products" (Section 3).</p>
+
+                <h3>2.3. Return Conditions</h3>
+                <p>To be eligible for a return, products must meet the following conditions:</p>
+
+                <div class="condition-grid">
+                    <div class="condition-card">
+                        <div class="condition-icon">✓</div>
+                        <h4>Unused Condition</h4>
+                        <p>Product must be unused, unworn, and in the same condition as received</p>
+                    </div>
+                    <div class="condition-card">
+                        <div class="condition-icon">✓</div>
+                        <h4>Original Packaging</h4>
+                        <p>Product must be in original packaging with all tags and labels intact</p>
+                    </div>
+                    <div class="condition-card">
+                        <div class="condition-icon">✓</div>
+                        <h4>Not Tampered</h4>
+                        <p>Product must not be opened, unsealed, or tampered with (for sealed items)</p>
+                    </div>
+                    <div class="condition-card">
+                        <div class="condition-icon">✓</div>
+                        <h4>No Damage</h4>
+                        <p>Product must not show signs of use, wear, or customer-caused damage</p>
+                    </div>
+                </div>
+
+                <h3>2.4. Required Items for Return</h3>
+                <p>Products must be returned with:</p>
+                <ul class="styled-list">
+                    <li>Original packaging (box, plastic wrapping, etc.)</li>
+                    <li>Product manuals and warranty cards</li>
+                    <li>All accessories and free gifts received</li>
+                    <li>Original invoice or order confirmation</li>
+                </ul>
+            </section>
+
+            <section id="non-returnable" class="content-section">
+                <h2>3. Non-Returnable Products</h2>
+                <div class="warning-box">
+                    <h3>⚠️ These Products Cannot Be Returned</h3>
+                    <p>The following products are NOT eligible for return:</p>
+                </div>
+
+                <div class="non-returnable-grid">
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">🥗</span>
+                        <strong>Perishable Goods</strong>
+                        <p>Fresh food, dairy, bakery items</p>
+                    </div>
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">🧴</span>
+                        <strong>Personal Care</strong>
+                        <p>Cosmetics, undergarments, grooming items</p>
+                    </div>
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">🎁</span>
+                        <strong>Custom Products</strong>
+                        <p>Customized or personalized items</p>
+                    </div>
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">📱</span>
+                        <strong>Digital Goods</strong>
+                        <p>Digital products, gift cards</p>
+                    </div>
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">⚠️</span>
+                        <strong>Damaged by Customer</strong>
+                        <p>Products damaged due to misuse or negligence</p>
+                    </div>
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">🔓</span>
+                        <strong>Tampered Seals</strong>
+                        <p>Products with broken or tampered seals</p>
+                    </div>
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">📦</span>
+                        <strong>No Packaging</strong>
+                        <p>Products without original packaging or tags</p>
+                    </div>
+                    <div class="non-returnable-item">
+                        <span class="nr-icon">🚫</span>
+                        <strong>Marked Non-Returnable</strong>
+                        <p>Products explicitly marked as non-returnable</p>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>Note:</strong> If you have concerns about a non-returnable product, please contact our
+                        customer support team at <a href="mailto:support@kirihat.com">support@kirihat.com</a> or <a
+                            href="tel:+919957693472">+91 99576 93472</a>.</p>
+                </div>
+            </section>
+
+            <section id="how-to-return" class="content-section">
+                <h2>4. How to Initiate a Return</h2>
+
+                <h3>4.1. Return Request Process</h3>
+                <div class="process-steps">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h4>Login to Your Account</h4>
+                        <p>Log in to your Kirihat account</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h4>Go to My Orders</h4>
+                        <p>Navigate to the "My Orders" section</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h4>Select Order</h4>
+                        <p>Select the order with the product to return</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">4</div>
+                        <h4>Click Return</h4>
+                        <p>Click "Return Product" and select reason</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">5</div>
+                        <h4>Upload Images</h4>
+                        <p>Upload product images if required</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">6</div>
+                        <h4>Submit Request</h4>
+                        <p>Submit your return request</p>
+                    </div>
+                </div>
+
+                <h3>4.2. Return Approval</h3>
+                <ul class="styled-list">
+                    <li>Our team will review your return request within <strong>1-24 hours</strong></li>
+                    <li>You will receive an email/SMS notification regarding approval or rejection</li>
+                    <li>If approved, a Rider will be assigned to pick up the product from your delivery address</li>
+                </ul>
+
+                <h3>4.3. Product Pickup</h3>
+                <div class="info-box">
+                    <h4>Pickup Instructions</h4>
+                    <ul>
+                        <li>The Rider will collect the product from your registered delivery address</li>
+                        <li>Please ensure the product is properly packed in its original packaging</li>
+                        <li>Hand over the product to the Rider and obtain a pickup confirmation</li>
+                        <li><strong>Do not ship the product on your own</strong> without prior approval from Kirihat
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="inspection" class="content-section">
+                <h2>5. Return Inspection and Quality Check</h2>
+
+                <h3>5.1. Inspection Process</h3>
+                <p>Upon receiving the returned product, our team will conduct a quality inspection to verify:</p>
+                <ul class="styled-list">
+                    <li>Product condition matches the return conditions outlined in Section 2.3</li>
+                    <li>Product has not been used, damaged, or tampered with</li>
+                    <li>All original packaging, tags, and accessories are included</li>
+                </ul>
+
+                <h3>5.2. Inspection Timeline</h3>
+                <div class="timeline-box">
+                    <div class="timeline-item">
+                        <div class="timeline-icon">📦</div>
+                        <strong>Product Picked Up</strong>
+                        <p>Rider collects product</p>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon">🔍</div>
+                        <strong>2-3 Days</strong>
+                        <p>Quality inspection</p>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon">✓</div>
+                        <strong>Approved/Rejected</strong>
+                        <p>Decision communicated</p>
+                    </div>
+                </div>
+
+                <h3>5.3. Inspection Outcomes</h3>
+                <div class="outcome-cards">
+                    <div class="outcome-card success">
+                        <div class="outcome-icon">✓</div>
+                        <h4>Pass Inspection</h4>
+                        <p>If the product passes inspection, your refund will be initiated as per Section 7.</p>
+                    </div>
+                    <div class="outcome-card failure">
+                        <div class="outcome-icon">✗</div>
+                        <h4>Fail Inspection</h4>
+                        <p>If the product fails inspection, the return may be rejected and the product will be sent back
+                            to you at your expense.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="fees" class="content-section">
+                <h2>6. Return Fees and Charges</h2>
+
+                <h3>6.1. Return Shipping Fee</h3>
+                <p>Return shipping fees may be charged to the customer depending on the product category and reason for
+                    return:</p>
+
+                <div class="fee-comparison">
+                    <div class="fee-card free">
+                        <div class="fee-badge">FREE Return</div>
+                        <h4>No Charges</h4>
+                        <ul>
+                            <li>Defective product</li>
+                            <li>Damaged product</li>
+                            <li>Wrong product delivered</li>
+                        </ul>
+                        <p class="fee-note">Kirihat bears all costs</p>
+                    </div>
+                    <div class="fee-card paid">
+                        <div class="fee-badge">Charges May Apply</div>
+                        <h4>Return Fee</h4>
+                        <ul>
+                            <li>Change of mind</li>
+                            <li>Incorrect order by customer</li>
+                            <li>Customer preference</li>
+                        </ul>
+                        <p class="fee-note">Category-based fees</p>
+                    </div>
+                </div>
+
+                <h3>6.2. Penalty Fees</h3>
+                <div class="warning-box">
+                    <h4>⚠️ Penalty Fees May Apply</h4>
+                    <p>Customers may be charged penalty fees in the following cases:</p>
+                    <ul>
+                        <li>Product is damaged due to customer misuse or negligence</li>
+                        <li>Product packaging is damaged or discarded</li>
+                        <li>Product is used or tampered with before return</li>
+                        <li>Return request is fraudulent or made with malicious intent</li>
+                    </ul>
+                </div>
+
+                <h3>6.3. Restocking Fee</h3>
+                <p>A restocking fee may be applied for certain high-value products or categories, as specified on the
+                    product page.</p>
+            </section>
+
+            <section id="refund-process" class="content-section">
+                <h2>7. Refund Process</h2>
+
+                <h3>7.1. Refund Initiation</h3>
+                <div class="highlight-box">
+                    <p><strong>Timeline:</strong> Refunds will be initiated within <strong>2 business days</strong>
+                        after the returned product is picked up by the Rider and passes quality inspection.</p>
+                    <p>You will receive an email/SMS notification when your refund is processed.</p>
+                </div>
+
+                <h3>7.2. Refund Method</h3>
+                <p>Refunds will be processed based on the original payment method:</p>
+
+                <div class="refund-methods">
+                    <div class="refund-method-card">
+                        <div class="method-icon">📱</div>
+                        <h4>UPI Payments</h4>
+                        <p class="method-timeline">24-48 hours</p>
+                        <p>Refund will be credited to the original UPI ID used for payment</p>
+                    </div>
+                    <div class="refund-method-card">
+                        <div class="method-icon">💵</div>
+                        <h4>Cash on Delivery (COD)</h4>
+                        <p class="method-timeline">5-7 business days</p>
+                        <p>Customers must provide valid UPI details or bank account information. Refunds will be
+                            processed after verification.</p>
+                    </div>
+                </div>
+
+                <h3>7.3. Refund Amount</h3>
+                <p>The refund amount will include:</p>
+                <ul class="styled-list">
+                    <li>Product price and applicable taxes</li>
+                </ul>
+
+                <p>The following charges are <strong>generally non-refundable</strong> unless the return is due to a
+                    defective or incorrect product:</p>
+                <ul class="styled-list">
+                    <li>Delivery charges</li>
+                    <li>Platform fees</li>
+                    <li>Payment gateway fees</li>
+                    <li>Other service charges</li>
+                </ul>
+
+                <p>If penalty fees or return shipping fees apply, they will be deducted from the refund amount.</p>
+
+                <h3>7.4. Refund Delays</h3>
+                <div class="info-box">
+                    <p>Refunds may take up to <strong>7-10 business days</strong> to reflect in your account, depending
+                        on your bank or payment provider.</p>
+                    <p>If you do not receive your refund within the specified timeframe, please contact us at <a
+                            href="mailto:support@kirihat.com">support@kirihat.com</a> or <a href="tel:+919957693472">+91
+                            99576 93472</a>.</p>
+                </div>
+            </section>
+
+            <section id="exchanges" class="content-section">
+                <h2>8. Exchanges</h2>
+
+                <h3>8.1. Current Exchange Policy</h3>
+                <div class="highlight-box">
+                    <p><strong>Currently, Kirihat does not offer direct product exchanges.</strong></p>
+                </div>
+
+                <h3>8.2. Alternative Process</h3>
+                <p>If you wish to exchange a product, you must:</p>
+                <ol>
+                    <li>Return the original product as per this Return and Refund Policy</li>
+                    <li>Receive your refund</li>
+                    <li>Place a new order for the desired product</li>
+                </ol>
+
+                <h3>8.3. Future Updates</h3>
+                <p>We may introduce exchange options in the future. Any changes will be reflected in this policy.</p>
+            </section>
+
+            <section id="damaged-products" class="content-section">
+                <h2>9. Damaged or Defective Products</h2>
+
+                <h3>9.1. Reporting Damaged/Defective Products</h3>
+                <p>If you receive a damaged, defective, or incorrect product:</p>
+
+                <div class="action-steps">
+                    <div class="action-card urgent">
+                        <div class="action-icon">⏱️</div>
+                        <h4>Act Immediately</h4>
+                        <p>Contact our customer support immediately at:</p>
+                        <p><a href="tel:+919957693472">+91 99576 93472</a></p>
+                        <p><a href="mailto:support@kirihat.com">support@kirihat.com</a></p>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-icon">📸</div>
+                        <h4>Provide Evidence</h4>
+                        <p>Upload clear photos/videos of the damaged or defective product</p>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-icon">🚫</div>
+                        <h4>Do Not Use</h4>
+                        <p>Do not use or discard the product</p>
+                    </div>
+                </div>
+
+                <h3>9.2. Resolution for Damaged/Defective Products</h3>
+                <div class="info-box">
+                    <p>For damaged or defective products, we will:</p>
+                    <ul>
+                        <li>Arrange a <strong>free return pickup</strong> at no cost to you</li>
+                        <li>Send a replacement if available</li>
+                        <li>Process a <strong>full refund</strong> including all charges</li>
+                        <li><strong>No penalty fees</strong> will apply</li>
+                    </ul>
+                </div>
+
+                <h3>9.3. Damaged Product Claims</h3>
+                <div class="warning-box">
+                    <p><strong>Important:</strong> Damaged product claims must be raised within <strong>24 hours of
+                            delivery</strong>. Claims raised after 24 hours may not be accepted.</p>
+                </div>
+            </section>
+
+            <section id="cancellation" class="content-section">
+                <h2>10. Cancellation vs. Return</h2>
+
+                <div class="comparison-table">
+                    <div class="comparison-header">
+                        <h3>Understanding the Difference</h3>
+                    </div>
+                    <div class="comparison-row">
+                        <div class="comparison-item">
+                            <h4>❌ Cancellation</h4>
+                            <p><strong>When:</strong> Before the product is shipped</p>
+                            <p><strong>Process:</strong> Cancel from "My Orders" section</p>
+                            <p><strong>Refund:</strong> Full refund within 24-48 hours (UPI)</p>
+                            <p><a href="cancellation-policy">View Cancellation Policy →</a></p>
+                        </div>
+                        <div class="comparison-item">
+                            <h4>↩️ Return</h4>
+                            <p><strong>When:</strong> After the product has been delivered</p>
+                            <p><strong>Process:</strong> Request return, pickup arranged</p>
+                            <p><strong>Refund:</strong> Within 2 days after pickup + inspection</p>
+                            <p><strong>This Policy</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="fraud" class="content-section">
+                <h2>11. Fraudulent Returns</h2>
+
+                <div class="warning-box">
+                    <h3>⚠️ Zero Tolerance for Fraud</h3>
+                    <p>Kirihat has zero tolerance for fraudulent return activities.</p>
+                </div>
+
+                <h3>11.1. Fraudulent Activities Include:</h3>
+                <ul class="styled-list">
+                    <li>Returning used products as unused</li>
+                    <li>Replacing original products with counterfeit or different items</li>
+                    <li>Returning damaged products falsely claiming they were received damaged</li>
+                    <li>Excessive or unreasonable return requests</li>
+                </ul>
+
+                <h3>11.2. Consequences of Fraudulent Returns:</h3>
+                <div class="consequence-cards">
+                    <div class="consequence-card">
+                        <div class="cons-icon">❌</div>
+                        <p>Return request will be rejected</p>
+                    </div>
+                    <div class="consequence-card">
+                        <div class="cons-icon">🚫</div>
+                        <p>Refund will be withheld</p>
+                    </div>
+                    <div class="consequence-card">
+                        <div class="cons-icon">⛔</div>
+                        <p>Account may be suspended or banned</p>
+                    </div>
+                    <div class="consequence-card">
+                        <div class="cons-icon">⚖️</div>
+                        <p>Legal action and police complaints may be filed</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="responsibilities" class="content-section">
+                <h2>12. Customer Responsibilities</h2>
+
+                <p>As a customer, you are responsible for:</p>
+
+                <div class="responsibility-grid">
+                    <div class="responsibility-item">
+                        <div class="resp-icon">📦</div>
+                        <h4>Check at Delivery</h4>
+                        <p>Carefully checking the product upon delivery before accepting it</p>
+                    </div>
+                    <div class="responsibility-item">
+                        <div class="resp-icon">⏰</div>
+                        <h4>Report Issues</h4>
+                        <p>Reporting any issues within 24 hours of delivery</p>
+                    </div>
+                    <div class="responsibility-item">
+                        <div class="resp-icon">✨</div>
+                        <h4>Maintain Condition</h4>
+                        <p>Ensuring the product is returned in original condition with all packaging</p>
+                    </div>
+                    <div class="responsibility-item">
+                        <div class="resp-icon">💳</div>
+                        <h4>Provide Details</h4>
+                        <p>Providing accurate bank/UPI details for refund processing (COD orders)</p>
+                    </div>
+                    <div class="responsibility-item">
+                        <div class="resp-icon">📋</div>
+                        <h4>Follow Process</h4>
+                        <p>Following the return process as outlined in this policy</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contact" class="content-section">
+                <h2>13. Contact Us</h2>
+                <p>For return and refund-related queries, please contact us at:</p>
+
+                <div class="contact-card">
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email</h4>
+                            <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <div>
+                            <h4>Phone</h4>
+                            <a href="tel:+919957693472">+91 99576 93472</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">🕐</span>
+                        <div>
+                            <h4>Support Hours</h4>
+                            <p>9:00 AM - 5:00 PM IST</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>We are committed to resolving your concerns within 1-24 hours of receiving your
+                            request.</strong></p>
+                </div>
+            </section>
+
+            <!-- Related Policies -->
+            <section class="related-policies">
+                <h3>Related Policies</h3>
+                <div class="policy-grid">
+                    <a href="terms-and-conditions" class="policy-card">Terms & Conditions</a>
+                    <a href="cancellation-policy" class="policy-card">Cancellation Policy</a>
+                    <a href="shipping-delivery-policy" class="policy-card">Shipping & Delivery</a>
+                    <a href="privacy-policy" class="policy-card">Privacy Policy</a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                        <a href="cancellation-policy">Cancellation</a>
+                        <a href="payment-policy">Payment Policy</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="faq">FAQ</a>
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +657,7 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <script src="js/main.js"></script>
 </body>
+
 </html>

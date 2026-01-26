@@ -78,32 +78,43 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
       final user = userCredential.user!;
 
       debugPrint('✅ OTP verified successfully: ${user.uid}');
+      
+      // Prepare parallel tasks for lightning speed
+      final List<Future> setupTasks = [];
 
-      if (userCredential.additionalUserInfo?.isNewUser == true) {
-        // Critical: User record must exist before other ops might rely on it (though parallel is often fine, let's keep this critical step or verify safe parallelization. 
-        // Actually, cart migration relies on UID, not necessarily the firestore doc existing, but safer to let user doc creation happen.
-        // However, 'isNewUser' only covers creation. Let's optimize:
-        await _createOrUpdateUser(user.uid, widget.phoneNumber);
+      // Task 1: Create/Update User (Optimized)
+      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+
+      // Task 1: Create/Update User (Optimized)
+      if (isNewUser) {
+        // New user: Just set the doc, no need to read first
+        setupTasks.add(_firestore.collection('users').doc(user.uid).set({
+          'phone': widget.phoneNumber,        // Standard field used by profile
+          'phone_number': widget.phoneNumber, // Legacy support
+          'role': 'customer',
+          'created_at': FieldValue.serverTimestamp(),
+        }));
+      } else {
+        // Existing user: Optional - update last login or check existence if needed. 
+        // For speed, we assume existing user has a doc. 
+        // If critical data is missing, we could do a lazy repair here, but skipping read is fastest.
       }
 
-      debugPrint('🚀 Performing parallel login setup...');
-      
-      // Run these independent high-latency tasks in parallel
-      await Future.wait([
-        // Task 1: Migrate Guest Cart
-        CartHelper.migrateGuestCartToFirestore(user.uid)
-            .then((_) => debugPrint('✅ Cart Migrated'))
-            .catchError((e) => debugPrint('⚠️ Cart Migration Warning: $e')),
+      // Task 2: Migrate Guest Cart
+      setupTasks.add(CartHelper.migrateGuestCartToFirestore(user.uid));
 
-        // Task 2: Set Session Mode
-        SessionService().setCustomerMode(true)
-            .then((_) => debugPrint('✅ Customer Mode Set')),
-            
-        // You could add more parallel tasks here if needed
-      ]);
+      // Task 3: Set Session Mode
+      setupTasks.add(SessionService().setCustomerMode(true));
+
+      // Execute all setup tasks in parallel
+      await Future.wait(setupTasks);
+      debugPrint('🚀 Login setup complete (Parallel)');
 
       if (mounted) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, {
+          'success': true,
+          'isNewUser': isNewUser,
+        });
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage;
@@ -201,18 +212,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
     }
   }
 
-  Future<void> _createOrUpdateUser(String uid, String phoneNumber) async {
-    final userDoc = _firestore.collection('users').doc(uid);
-    final docSnapshot = await userDoc.get();
 
-    if (!docSnapshot.exists) {
-      await userDoc.set({
-        'phone_number': phoneNumber,
-        'role': 'customer',
-        'created_at': FieldValue.serverTimestamp(),
-      });
-    }
-  }
 
   Future<void> _resendOTP() async {
     setState(() => _isLoading = true);

@@ -13,12 +13,9 @@ class ProductSearchDelegate extends SearchDelegate<String> {
   final SearchService _searchService = SearchService();
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
-  Timer? _debounce;
-  
   // Cache for search results to avoid flickering
-  List<Map<String, dynamic>> _searchResults = [];
-  bool _isLoading = false;
-
+  // Timer? _debounce; // Moved to _DebouncedSearchResults
+  
   final bool autoStartListening;
   bool _hasAutoStarted = false;
 
@@ -299,40 +296,141 @@ class ProductSearchDelegate extends SearchDelegate<String> {
     }
     
     // Global Autocomplete (using SearchService)
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _searchService.searchProducts(query), // Already minimal/optimized
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        
-        final suggestions = snapshot.data!;
-        
-        if (suggestions.isEmpty) {
-          return const ListTile(
-             title: Text('Searching...'),
-             leading: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-          );
-        }
+    return _DebouncedSearchResults(
+      query: query,
+      searchService: _searchService,
+      onTap: (product) {
+        query = product['name'];
+        showResults(context);
+      },
+      onSearchSubmitted: (q) {
+        query = q;
+        showResults(context);
+      }
+    );
+  }
+}
 
-        return ListView.builder(
-          itemCount: suggestions.length,
-          itemBuilder: (context, index) {
-            final product = suggestions[index];
-            return ListTile(
-              leading: ClipRRect(
-                 borderRadius: BorderRadius.circular(4),
-                 child: product['imageUrl'] != null
-                     ? Image.network(product['imageUrl'], width: 40, height: 40, fit: BoxFit.cover,
-                         errorBuilder: (_,__,___) => const Icon(Icons.image))
-                     : const Icon(Icons.search, color: Colors.grey),
-              ),
-              title: Text(product['name'] ?? ''),
-              subtitle: Text(product['category'] ?? ''),
-              onTap: () {
-                query = product['name'];
-                showResults(context);
-              },
-            );
-          },
+class _DebouncedSearchResults extends StatefulWidget {
+  final String query;
+  final SearchService searchService;
+  final Function(Map<String, dynamic>) onTap;
+  final Function(String) onSearchSubmitted;
+
+  const _DebouncedSearchResults({
+    required this.query,
+    required this.searchService,
+    required this.onTap,
+    required this.onSearchSubmitted,
+  });
+
+  @override
+  State<_DebouncedSearchResults> createState() => _DebouncedSearchResultsState();
+}
+
+class _DebouncedSearchResultsState extends State<_DebouncedSearchResults> {
+  Timer? _debounce;
+  List<Map<String, dynamic>> _results = [];
+  bool _isLoading = false;
+  String? _lastQuery;
+
+  @override
+  void initState() {
+    super.initState();
+    _onQueryChanged();
+  }
+
+  @override
+  void didUpdateWidget(_DebouncedSearchResults oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.query != oldWidget.query) {
+      _onQueryChanged();
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onQueryChanged() {
+    // If query is empty or too short, clear
+    if (widget.query.trim().length < 2) {
+      if (mounted) {
+        setState(() {
+          _results = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+       _performSearch();
+    });
+    
+    // Show loading immediately if query changed significantly? 
+    // Or wait for timer?
+    // Professional feel: Don't show loading on every keystroke. 
+    // Only show loading when timer fires and request starts.
+  }
+
+  Future<void> _performSearch() async {
+    if (!mounted) return;
+    
+    setState(() => _isLoading = true);
+
+    try {
+      final results = await widget.searchService.searchProducts(widget.query);
+      if (mounted) {
+        setState(() {
+          _results = results;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Search error: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_results.isEmpty && widget.query.length >= 2) {
+       // Only show "No results" if we actually searched (timer finished) 
+       // We can track if we've searched for THIS query.
+       // For now, simple text is fine.
+       return ListTile(
+         title: Text('Search for "${widget.query}"'),
+         leading: const Icon(Icons.search),
+         onTap: () => widget.onSearchSubmitted(widget.query),
+       );
+    }
+
+    return ListView.builder(
+      itemCount: _results.length,
+      itemBuilder: (context, index) {
+        final product = _results[index];
+        return ListTile(
+          leading: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: product['imageUrl'] != null
+                  ? Image.network(product['imageUrl'], width: 40, height: 40, fit: BoxFit.cover,
+                      errorBuilder: (_,__,___) => const Icon(Icons.image))
+                  : const Icon(Icons.search, color: Colors.grey),
+          ),
+          title: Text(product['name'] ?? ''),
+          subtitle: Text(product['category'] ?? ''),
+          trailing: product['isAvailable'] == false 
+             ? const Text("Out of Stock", style: TextStyle(color: Colors.red, fontSize: 10)) 
+             : null,
+          onTap: () => widget.onTap(product),
         );
       },
     );

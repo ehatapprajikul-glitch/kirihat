@@ -1,22 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cancellation Policy - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="description"
+        content="Learn about Kirihat's order cancellation policy. Understand cancellation timeframes, refund process, and policies for customers, sellers, and vendors.">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
                 <a href="contact-us">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
@@ -24,42 +40,583 @@
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Cancellation Policy</h1>
-        <p>This is the placeholder content for Cancellation Policy. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Main Content -->
+    <main class="content-page">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span class="current">Cancellation Policy</span>
+            </div>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Cancellation Policy</h1>
+                <p class="last-updated">Last Updated: January 23, 2026</p>
+            </div>
+
+            <!-- Quick Summary Banner -->
+            <div class="policy-summary-banner">
+                <div class="summary-icon">❌</div>
+                <div>
+                    <h3>Easy Cancellation</h3>
+                    <p>You can cancel your order anytime before it's shipped. Full refund will be processed within 24-48
+                        hours for UPI payments.</p>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+
+            <!-- Table of Contents -->
+            <div class="toc-box">
+                <h3>Table of Contents</h3>
+                <nav class="toc">
+                    <a href="#introduction">1. Introduction</a>
+                    <a href="#customer-cancellation">2. Customer Cancellation</a>
+                    <a href="#seller-vendor-cancellation">3. Seller & Vendor Cancellation</a>
+                    <a href="#rider-cancellation">4. Rider Cancellation</a>
+                    <a href="#cancellation-fees">5. Cancellation Fees</a>
+                    <a href="#refund-process">6. Refund Process</a>
+                    <a href="#non-cancellable">7. Non-Cancellable Orders</a>
+                    <a href="#auto-cancellation">8. Automatic Cancellation</a>
+                    <a href="#cancellation-vs-return">9. Cancellation vs Return</a>
+                    <a href="#contact">10. Contact Us</a>
+                </nav>
+            </div>
+
+            <!-- Content Sections -->
+            <section id="introduction" class="content-section">
+                <h2>1. Introduction</h2>
+                <p>This Cancellation Policy outlines the terms and conditions under which orders can be cancelled on the
+                    Kirihat platform. We understand that circumstances change, and we've made the cancellation process
+                    as simple as possible.</p>
+                <p>By placing an order on Kirihat, you agree to the terms outlined in this policy.</p>
+            </section>
+
+            <section id="customer-cancellation" class="content-section">
+                <h2>2. Customer Cancellation</h2>
+
+                <h3>2.1. When Can You Cancel?</h3>
+                <div class="highlight-box">
+                    <p><strong>Customers can cancel orders BEFORE the product is shipped.</strong></p>
+                    <p>Once the order is picked up by a rider (status: "Out for Delivery"), cancellation is no longer
+                        possible.</p>
+                </div>
+
+                <h3>2.2. Cancellation Window</h3>
+                <div class="cancellation-timeline">
+                    <div class="cancel-stage allowed">
+                        <div class="stage-icon">✓</div>
+                        <h4>Cancellation Allowed</h4>
+                        <ul>
+                            <li>Order Placed</li>
+                            <li>Order Confirmed</li>
+                            <li>Being Prepared</li>
+                        </ul>
+                        <p class="stage-note">You can cancel anytime during these stages</p>
+                    </div>
+                    <div class="cancel-stage not-allowed">
+                        <div class="stage-icon">✗</div>
+                        <h4>Cancellation NOT Allowed</h4>
+                        <ul>
+                            <li>Out for Delivery</li>
+                            <li>Delivered</li>
+                        </ul>
+                        <p class="stage-note">Use Return Policy after delivery</p>
+                    </div>
+                </div>
+
+                <h3>2.3. How to Cancel an Order</h3>
+                <div class="process-steps">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h4>Open App</h4>
+                        <p>Log in to your Kirihat account</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h4>My Orders</h4>
+                        <p>Go to "My Orders" section</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h4>Select Order</h4>
+                        <p>Choose the order to cancel</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">4</div>
+                        <h4>Cancel</h4>
+                        <p>Click "Cancel Order"</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">5</div>
+                        <h4>Reason</h4>
+                        <p>Select cancellation reason</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-card">
+                        <div class="step-num">6</div>
+                        <h4>Confirm</h4>
+                        <p>Confirm cancellation</p>
+                    </div>
+                </div>
+
+                <h3>2.4. Cancellation Reasons</h3>
+                <p>When cancelling an order, you'll be asked to select a reason:</p>
+                <div class="reasons-grid">
+                    <div class="reason-item">
+                        <span class="reason-icon">🔄</span>
+                        <p>Ordered by mistake</p>
+                    </div>
+                    <div class="reason-item">
+                        <span class="reason-icon">💭</span>
+                        <p>Changed my mind</p>
+                    </div>
+                    <div class="reason-item">
+                        <span class="reason-icon">💰</span>
+                        <p>Found better price</p>
+                    </div>
+                    <div class="reason-item">
+                        <span class="reason-icon">⏰</span>
+                        <p>Delivery taking too long</p>
+                    </div>
+                    <div class="reason-item">
+                        <span class="reason-icon">📝</span>
+                        <p>Want to modify order</p>
+                    </div>
+                    <div class="reason-item">
+                        <span class="reason-icon">❓</span>
+                        <p>Other reasons</p>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>Note:</strong> Providing accurate cancellation reasons helps us improve our service. Your
+                        feedback is valuable to us.</p>
+                </div>
+            </section>
+
+            <section id="seller-vendor-cancellation" class="content-section">
+                <h2>3. Seller & Vendor Cancellation</h2>
+
+                <h3>3.1. Before Accepting Order</h3>
+                <div class="highlight-box">
+                    <p>Sellers and Vendors can cancel (reject) orders <strong>before accepting them</strong> if:</p>
+                    <ul>
+                        <li>Product is out of stock</li>
+                        <li>Unable to fulfill the order</li>
+                        <li>Product information is incorrect</li>
+                        <li>Technical issues prevent order processing</li>
+                    </ul>
+                </div>
+
+                <h3>3.2. After Accepting Order</h3>
+                <div class="warning-box">
+                    <h4>⚠️ Important</h4>
+                    <p><strong>Once a Seller or Vendor accepts an order, they CANNOT cancel it.</strong></p>
+                    <p>Sellers and Vendors must fulfill accepted orders. Repeated cancellations after acceptance may
+                        result in:</p>
+                    <ul>
+                        <li>Account suspension</li>
+                        <li>Penalties or fines</li>
+                        <li>Removal from the platform</li>
+                        <li>Loss of selling privileges</li>
+                    </ul>
+                </div>
+
+                <h3>3.3. Emergency Situations</h3>
+                <p>In exceptional circumstances (natural disasters, emergencies, force majeure), Sellers/Vendors may
+                    request order cancellation by contacting Kirihat support immediately.</p>
+            </section>
+
+            <section id="rider-cancellation" class="content-section">
+                <h2>4. Rider Cancellation</h2>
+
+                <h3>4.1. When Riders Can Cancel</h3>
+                <p>Delivery riders may cancel orders in the following situations:</p>
+
+                <div class="rider-cancel-scenarios">
+                    <div class="scenario-card">
+                        <div class="scenario-icon">📵</div>
+                        <h4>Customer Unreachable</h4>
+                        <p>Customer phone is switched off, not answering calls, or unreachable after multiple attempts
+                        </p>
+                    </div>
+                    <div class="scenario-card">
+                        <div class="scenario-icon">❌</div>
+                        <h4>Customer Unavailable</h4>
+                        <p>Customer is not present at the delivery address when rider arrives</p>
+                    </div>
+                    <div class="scenario-card">
+                        <div class="scenario-icon">🚫</div>
+                        <h4>Customer Refuses Delivery</h4>
+                        <p>Customer refuses to accept the order without valid reason</p>
+                    </div>
+                    <div class="scenario-card">
+                        <div class="scenario-icon">🗺️</div>
+                        <h4>Wrong/Inaccessible Address</h4>
+                        <p>Incorrect address provided or location is inaccessible</p>
+                    </div>
+                    <div class="scenario-card">
+                        <div class="scenario-icon">💸</div>
+                        <h4>Payment Issues (COD)</h4>
+                        <p>Customer doesn't have cash ready for COD orders</p>
+                    </div>
+                    <div class="scenario-card">
+                        <div class="scenario-icon">⚠️</div>
+                        <h4>Fraudulent/Fake Order</h4>
+                        <p>Rider suspects the order is fake or fraudulent</p>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ Consequences for Customers</h4>
+                    <p>If a rider cancels your order due to your unavailability or fraudulent activity:</p>
+                    <ul>
+                        <li>The order will be cancelled immediately</li>
+                        <li>You may not receive a full refund (cancellation fee may apply)</li>
+                        <li>Your account may be flagged or suspended</li>
+                        <li>Repeated incidents may result in permanent account ban</li>
+                    </ul>
+                </div>
+
+                <h3>4.2. Rider Responsibilities</h3>
+                <div class="info-box">
+                    <p>Before cancelling an order, riders must:</p>
+                    <ul>
+                        <li>Make reasonable attempts to contact the customer</li>
+                        <li>Wait at the delivery location for a reasonable time</li>
+                        <li>Try to resolve any delivery issues</li>
+                        <li>Document the reason for cancellation</li>
+                        <li>Report the cancellation to Kirihat immediately</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="cancellation-fees" class="content-section">
+                <h2>5. Cancellation Fees</h2>
+
+                <h3>5.1. Customer-Initiated Cancellation</h3>
+                <div class="fee-structure">
+                    <div class="fee-card no-fee">
+                        <div class="fee-badge">NO FEE</div>
+                        <h4>Free Cancellation</h4>
+                        <p><strong>When:</strong> Before order is shipped</p>
+                        <p><strong>Refund:</strong> 100% refund of order value</p>
+                        <ul>
+                            <li>✓ Product price refunded</li>
+                            <li>✓ Taxes refunded</li>
+                            <li>✗ Delivery charges may not be refunded</li>
+                            <li>✗ Platform fees may not be refunded</li>
+                        </ul>
+                    </div>
+
+                    <div class="fee-card with-fee">
+                        <div class="fee-badge">FEE MAY APPLY</div>
+                        <h4>Late Cancellation</h4>
+                        <p><strong>When:</strong> After order is being prepared or ready for pickup</p>
+                        <p><strong>Fee:</strong> Cancellation fee may be charged in some cases</p>
+                        <ul>
+                            <li>⚠️ Partial refund possible</li>
+                            <li>⚠️ Preparation costs may be deducted</li>
+                            <li>⚠️ Delivery charges non-refundable</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>5.2. Rider-Cancelled Orders</h3>
+                <div class="warning-box">
+                    <p><strong>If a rider cancels your order due to your fault:</strong></p>
+                    <ul>
+                        <li>Cancellation fee: Up to 100% of delivery charges</li>
+                        <li>Product amount: Refunded</li>
+                        <li>Delivery fee: May not be refunded</li>
+                        <li>Platform fee: May not be refunded</li>
+                    </ul>
+                </div>
+
+                <h3>5.3. Seller/Vendor-Cancelled Orders</h3>
+                <div class="info-box">
+                    <p><strong>If a seller or vendor cancels your order:</strong></p>
+                    <ul>
+                        <li>No cancellation fee for customer</li>
+                        <li>100% refund of all charges</li>
+                        <li>Seller/Vendor may face penalties</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="refund-process" class="content-section">
+                <h2>6. Refund Process</h2>
+
+                <h3>6.1. Refund Timeline</h3>
+                <div class="refund-timeline">
+                    <div class="timeline-step">
+                        <div class="timeline-icon">❌</div>
+                        <h4>Order Cancelled</h4>
+                        <p>You cancel the order or it's cancelled by seller/rider</p>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon">⏱️</div>
+                        <h4>Processing</h4>
+                        <p>Refund is initiated immediately</p>
+                    </div>
+                    <div class="timeline-arrow">→</div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon">💰</div>
+                        <h4>Refund Credited</h4>
+                        <p>Amount reflects in your account</p>
+                    </div>
+                </div>
+
+                <h3>6.2. Refund Methods</h3>
+                <div class="refund-methods">
+                    <div class="refund-method-card">
+                        <div class="method-icon">📱</div>
+                        <h4>UPI Payments</h4>
+                        <p class="method-timeline">24-48 hours</p>
+                        <p>Refund will be credited to the original UPI ID used for payment</p>
+                        <div class="method-note">
+                            <strong>Fast & Automatic</strong>
+                        </div>
+                    </div>
+                    <div class="refund-method-card">
+                        <div class="method-icon">💵</div>
+                        <h4>Cash on Delivery (COD)</h4>
+                        <p class="method-timeline">Not Applicable</p>
+                        <p>Since no payment was made, no refund is needed. Order is simply cancelled.</p>
+                        <div class="method-note">
+                            <strong>Instant Cancellation</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>6.3. Refund Amount Breakdown</h3>
+                <div class="refund-breakdown">
+                    <div class="breakdown-item refunded">
+                        <div class="breakdown-icon">✓</div>
+                        <div>
+                            <strong>Refunded</strong>
+                            <ul>
+                                <li>Product price</li>
+                                <li>Applicable taxes</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="breakdown-item maybe">
+                        <div class="breakdown-icon">?</div>
+                        <div>
+                            <strong>May Be Refunded</strong>
+                            <ul>
+                                <li>Delivery charges (depends on timing)</li>
+                                <li>Platform fees (depends on timing)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="breakdown-item not-refunded">
+                        <div class="breakdown-icon">✗</div>
+                        <div>
+                            <strong>Not Refunded</strong>
+                            <ul>
+                                <li>Payment gateway fees (if any)</li>
+                                <li>Cancellation penalties (if applicable)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>6.4. Refund Delays</h3>
+                <div class="info-box">
+                    <p>If you don't receive your refund within the specified timeframe:</p>
+                    <ul>
+                        <li>Check your UPI app or bank statement</li>
+                        <li>Wait for 3-5 business days (bank processing time)</li>
+                        <li>Contact customer support: <a href="tel:+919957693472">+91 99576 93472</a> or <a
+                                href="mailto:support@kirihat.com">support@kirihat.com</a></li>
+                        <li>Provide order ID and cancellation details</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="non-cancellable" class="content-section">
+                <h2>7. Non-Cancellable Orders</h2>
+
+                <div class="warning-box">
+                    <h3>⚠️ These Orders Cannot Be Cancelled</h3>
+                    <p>The following orders are non-cancellable:</p>
+                </div>
+
+                <div class="non-cancel-grid">
+                    <div class="non-cancel-item">
+                        <span class="nc-icon">🚚</span>
+                        <strong>Out for Delivery</strong>
+                        <p>Orders already picked up by riders</p>
+                    </div>
+                    <div class="non-cancel-item">
+                        <span class="nc-icon">✓</span>
+                        <strong>Delivered</strong>
+                        <p>Orders already delivered to you</p>
+                    </div>
+                    <div class="non-cancel-item">
+                        <span class="nc-icon">🎁</span>
+                        <strong>Custom Products</strong>
+                        <p>Customized or personalized items</p>
+                    </div>
+                    <div class="non-cancel-item">
+                        <span class="nc-icon">⏰</span>
+                        <strong>Special Orders</strong>
+                        <p>Orders marked as non-cancellable at checkout</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>What to do instead:</strong> If your order is non-cancellable, you can use our <a
+                            href="return-refund-policy">Return & Refund Policy</a> after receiving the product.</p>
+                </div>
+            </section>
+
+            <section id="auto-cancellation" class="content-section">
+                <h2>8. Automatic Cancellation</h2>
+
+                <p>Orders may be automatically cancelled by the system in the following situations:</p>
+
+                <div class="auto-cancel-scenarios">
+                    <div class="auto-scenario">
+                        <div class="auto-icon">⏱️</div>
+                        <h4>No Seller Acceptance</h4>
+                        <p>If no seller accepts the order within a specified time, it will be auto-cancelled</p>
+                        <span class="auto-time">Timeout: 15-30 minutes</span>
+                    </div>
+                    <div class="auto-scenario">
+                        <div class="auto-icon">💳</div>
+                        <h4>Payment Failure</h4>
+                        <p>If online payment fails or is declined, the order is automatically cancelled</p>
+                        <span class="auto-time">Immediate</span>
+                    </div>
+                    <div class="auto-scenario">
+                        <div class="auto-icon">📦</div>
+                        <h4>Out of Stock</h4>
+                        <p>If all sellers mark the product as out of stock</p>
+                        <span class="auto-time">Within 1 hour</span>
+                    </div>
+                    <div class="auto-scenario">
+                        <div class="auto-icon">🚫</div>
+                        <h4>Service Unavailable</h4>
+                        <p>If delivery service is temporarily unavailable in your area</p>
+                        <span class="auto-time">Immediate notification</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>Notification:</strong> You will be notified immediately via SMS/email/push notification
+                        if your order is auto-cancelled. Full refund will be processed automatically.</p>
+                </div>
+            </section>
+
+            <section id="cancellation-vs-return" class="content-section">
+                <h2>9. Cancellation vs Return</h2>
+
+                <div class="comparison-table">
+                    <div class="comparison-header">
+                        <h3>Understanding the Difference</h3>
+                    </div>
+                    <div class="comparison-row">
+                        <div class="comparison-item">
+                            <h4>❌ Cancellation</h4>
+                            <p><strong>Timing:</strong> BEFORE product is shipped</p>
+                            <p><strong>When to use:</strong> Change of mind, ordered by mistake, found better price</p>
+                            <p><strong>Process:</strong> Click "Cancel Order" in app</p>
+                            <p><strong>Refund:</strong> Immediate (24-48 hours for UPI)</p>
+                            <p><strong>Fees:</strong> Usually free, may apply in late cancellations</p>
+                            <p><strong>This Policy</strong></p>
+                        </div>
+                        <div class="comparison-item">
+                            <h4>↩️ Return</h4>
+                            <p><strong>Timing:</strong> AFTER product is delivered</p>
+                            <p><strong>When to use:</strong> Defective product, wrong item, not as described</p>
+                            <p><strong>Process:</strong> Request return, rider pickup arranged</p>
+                            <p><strong>Refund:</strong> 2 days after pickup + quality check</p>
+                            <p><strong>Fees:</strong> May apply based on reason</p>
+                            <p><a href="return-refund-policy">Return & Refund Policy →</a></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contact" class="content-section">
+                <h2>10. Contact Us</h2>
+                <p>For cancellation-related queries or issues, please contact us:</p>
+
+                <div class="contact-card">
+                    <div class="contact-item">
+                        <span class="contact-icon">📧</span>
+                        <div>
+                            <h4>Email</h4>
+                            <a href="mailto:support@kirihat.com">support@kirihat.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <div>
+                            <h4>Phone</h4>
+                            <a href="tel:+919957693472">+91 99576 93472</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">🕐</span>
+                        <div>
+                            <h4>Support Hours</h4>
+                            <p>9:00 AM - 5:00 PM IST</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p><strong>Quick Response:</strong> We respond to cancellation queries within 1-24 hours. For urgent
+                        cancellations, call us directly.</p>
+                </div>
+            </section>
+
+            <!-- Related Policies -->
+            <section class="related-policies">
+                <h3>Related Policies</h3>
+                <div class="policy-grid">
+                    <a href="return-refund-policy" class="policy-card">Return & Refund Policy</a>
+                    <a href="shipping-delivery-policy" class="policy-card">Shipping & Delivery</a>
+                    <a href="terms-and-conditions" class="policy-card">Terms & Conditions</a>
+                    <a href="payment-policy" class="policy-card">Payment Policy</a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                        <a href="cancellation-policy">Cancellation</a>
+                        <a href="payment-policy">Payment Policy</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="faq">FAQ</a>
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +625,8 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
 </body>
+
 </html>

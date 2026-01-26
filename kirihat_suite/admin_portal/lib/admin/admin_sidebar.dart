@@ -223,6 +223,11 @@ class AdminSidebar extends StatelessWidget {
                   page: 'data_monitoring',
                 ),
                 _buildNavItem(
+                  icon: Icons.person_off,
+                  label: 'Account Deletions',
+                  page: 'account_deletions',
+                ),
+                _buildNavItem(
                   icon: Icons.bar_chart,
                   label: 'Analytics & Reports',
                   page: 'analytics',

@@ -30,7 +30,13 @@ class CustomerHeader extends StatelessWidget {
               color: const Color(0xFF0D9759),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.shopping_bag, color: Colors.white, size: 24),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           

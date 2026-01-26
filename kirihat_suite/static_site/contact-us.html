@@ -1,65 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact Us - Kirihat</title>
-    <meta name="description" content="Policy page for Kirihat platform.">
-    <link rel="stylesheet" href="css/style.css">
+    <title>Contact Us - Kirihat | Get in Touch with Our Team</title>
+    <meta name="description"
+        content="Contact Kirihat for support, partnerships, or inquiries. We're here to help you with your quick commerce needs in Dhubri, Assam.">
+    <meta name="keywords" content="contact kirihat, customer support, kirihat dhubri, get in touch">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/contact-us.css">
+
+    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#16a34a">
 </head>
+
 <body>
+    <!-- Header -->
     <header class="header" id="header">
         <div class="container">
-            <div class="logo"><a href="index.html" style="text-decoration:none; color:inherit;">Kirihat</a></div>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <a href="/" class="logo">Kirihat</a>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
             <nav class="nav" id="mainNav">
-                <a href="index.html">Home</a>
+                <a href="/">Home</a>
                 <a href="about-us">About Us</a>
-                <a href="contact-us">Contact</a>
+                <a href="contact-us" class="active">Contact</a>
                 <a href="/app/" class="btn-primary">Launch App</a>
             </nav>
         </div>
     </header>
 
-    <main class="container content-page">
-        <h1>Contact Us</h1>
-        <p>This is the placeholder content for Contact Us. Detailed terms will be added here.</p>
-        <p>Last updated: January 24, 2026</p>
-    </main>
-
-    <footer class="footer">
+    <!-- Hero Section -->
+    <section class="contact-hero">
         <div class="container">
-            <div class="footer-section">
-                <h3>Policies</h3>
-                <div class="footer-grid">
-                    <a href="terms-and-conditions">Terms & Conditions</a>
-                    <a href="privacy-policy">Privacy Policy</a>
-                    <a href="return-refund-policy">Return & Refund</a>
-                    <a href="shipping-delivery-policy">Shipping & Delivery</a>
-                    <a href="cancellation-policy">Cancellation</a>
-                    <a href="payment-policy">Payment Policy</a>
-                    <a href="seller-policy">Seller Policy</a>
-                    <a href="vendor-policy">Vendor Policy</a>
-                    <a href="rider-policy">Rider Policy</a>
-                    <a href="product-listing-policy">Product Listing</a>
-                    <a href="dispute-resolution-policy">Dispute Resolution</a>
-                    <a href="acceptable-use-policy">Acceptable Use</a>
-                    <a href="pricing-fee-structure">Pricing & Fees</a>
-                    <a href="intellectual-property-policy">IP Policy</a>
-                    <a href="cookie-policy">Cookie Policy</a>
+            <div class="hero-content-contact">
+                <h1>Get in Touch</h1>
+                <p class="hero-subtitle">We'd love to hear from you. Our team is here to help with any questions or
+                    concerns.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Contact Cards -->
+    <section class="quick-contact">
+        <div class="container">
+            <div class="quick-contact-grid">
+                <div class="quick-contact-card">
+                    <div class="qc-icon">📞</div>
+                    <h3>Call Us</h3>
+                    <p>Speak directly with our team</p>
+                    <a href="tel:+919957693472" class="qc-link">+91 99576 93472</a>
+                    <span class="qc-hours">Mon-Sat: 9AM - 5PM IST</span>
+                </div>
+
+                <div class="quick-contact-card">
+                    <div class="qc-icon">📧</div>
+                    <h3>Email Us</h3>
+                    <p>Send us a detailed message</p>
+                    <a href="mailto:support@kirihat.com" class="qc-link">support@kirihat.com</a>
+                    <span class="qc-hours">Response within 24 hours</span>
+                </div>
+
+                <div class="quick-contact-card">
+                    <div class="qc-icon">📍</div>
+                    <h3>Visit Us</h3>
+                    <p>Our office location</p>
+                    <p class="qc-address">Kachakhana, Golakganj<br>Dhubri - 783334, Assam</p>
+                    <span class="qc-hours">Mon-Sat: 9AM - 6PM IST</span>
+                </div>
+
+                <div class="quick-contact-card">
+                    <div class="qc-icon">💬</div>
+                    <h3>Live Chat</h3>
+                    <p>Get instant assistance</p>
+                    <a href="/app/" class="qc-link">Open App Chat</a>
+                    <span class="qc-hours">Available 9AM - 9PM IST</span>
                 </div>
             </div>
-            <div class="footer-section">
-                <h3>Company</h3>
-                <div class="footer-grid">
-                    <a href="faq">FAQ</a>
-                    <a href="about-us">About Us</a>
-                    <a href="contact-us">Contact Us</a>
-                    <a href="grievance-redressal">Grievance Redressal</a>
-                    <a href="community-guidelines">Community Guidelines</a>
+        </div>
+    </section>
+
+    <!-- Contact Form Section -->
+    <section class="contact-form-section">
+        <div class="container">
+            <div class="form-wrapper">
+                <div class="form-header">
+                    <h2>Send Us a Message</h2>
+                    <p>Fill out the form below and we'll get back to you as soon as possible</p>
+                </div>
+
+                <form id="contactForm" class="contact-form">
+                    <!-- Success Message (Hidden by default) -->
+                    <div id="successMessage" class="form-message success-message" style="display: none;">
+                        <div class="message-icon">✓</div>
+                        <div>
+                            <h4>Message Sent Successfully!</h4>
+                            <p>Thank you for contacting us. We'll respond within 24 hours.</p>
+                        </div>
+                    </div>
+
+                    <!-- Error Message (Hidden by default) -->
+                    <div id="errorMessage" class="form-message error-message" style="display: none;">
+                        <div class="message-icon">⚠</div>
+                        <div>
+                            <h4>Something went wrong</h4>
+                            <p>Please try again or contact us directly via email or phone.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Full Name *</label>
+                            <input type="text" id="name" name="name" required placeholder="Enter your name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" required placeholder="your.email@example.com">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="tel" id="phone" name="phone" required placeholder="+91 XXXXX XXXXX"
+                                pattern="[0-9+\s-]{10,15}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subject">Subject *</label>
+                            <select id="subject" name="subject" required>
+                                <option value="">Select a subject</option>
+                                <option value="customer-support">Customer Support</option>
+                                <option value="order-inquiry">Order Inquiry</option>
+                                <option value="seller-partnership">Become a Seller</option>
+                                <option value="vendor-partnership">Become a Vendor</option>
+                                <option value="rider-partnership">Become a Rider</option>
+                                <option value="feedback">Feedback/Suggestion</option>
+                                <option value="complaint">Complaint</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message">Message *</label>
+                        <textarea id="message" name="message" rows="6" required
+                            placeholder="Tell us how we can help you..."></textarea>
+                        <span class="char-count"><span id="charCount">0</span>/500 characters</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="privacy" name="privacy" required>
+                            <span>I agree to the <a href="privacy-policy" target="_blank">Privacy Policy</a> and <a
+                                    href="terms-and-conditions" target="_blank">Terms & Conditions</a></span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <span class="btn-text">Send Message</span>
+                        <span class="btn-loading" style="display: none;">
+                            <span class="spinner"></span> Sending...
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Department Contact Section -->
+    <section class="departments">
+        <div class="container">
+            <div class="section-header-contact">
+                <h2>Contact Specific Departments</h2>
+                <p>Reach out to the right team for faster assistance</p>
+            </div>
+
+            <div class="dept-grid">
+                <div class="dept-card">
+                    <div class="dept-icon">🛒</div>
+                    <h4>Customer Support</h4>
+                    <p>Help with orders, deliveries, and general queries</p>
+                    <a href="mailto:support@kirihat.com" class="dept-email">support@kirihat.com</a>
+                    <span class="dept-response">Response time: 1-24 hours</span>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon">🤝</div>
+                    <h4>Partnership Inquiries</h4>
+                    <p>Become a seller, vendor, or rider partner</p>
+                    <a href="mailto:partnerships@kirihat.com" class="dept-email">partnerships@kirihat.com</a>
+                    <span class="dept-response">Response time: 2-3 business days</span>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon">⚖️</div>
+                    <h4>Grievance Redressal</h4>
+                    <p>Formal complaints and dispute resolution</p>
+                    <a href="mailto:grievance@kirihat.com" class="dept-email">grievance@kirihat.com</a>
+                    <span class="dept-response">Response time: 1-24 hours</span>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon">💼</div>
+                    <h4>Business Development</h4>
+                    <p>Corporate partnerships and bulk orders</p>
+                    <a href="mailto:business@kirihat.com" class="dept-email">business@kirihat.com</a>
+                    <span class="dept-response">Response time: 2-3 business days</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Teaser -->
+    <section class="faq-teaser">
+        <div class="container">
+            <div class="faq-teaser-content">
+                <div class="faq-teaser-text">
+                    <h3>Looking for Quick Answers?</h3>
+                    <p>Check out our FAQ page for instant answers to common questions about orders, delivery, payments,
+                        and more.</p>
+                    <a href="faq" class="faq-btn">Browse FAQs →</a>
+                </div>
+                <div class="faq-teaser-icon">
+                    <div class="faq-icon-bg">❓</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Map Section (Placeholder) -->
+    <section class="map-section">
+        <div class="container">
+            <h3>Find Us Here</h3>
+            <div class="map-placeholder">
+                <div class="map-content">
+                    <div class="map-icon">🗺️</div>
+                    <h4>Kirihat Office</h4>
+                    <p>Kachakhana, Golakganj, Hazratganj<br>Dhubri - 783334, Assam, India</p>
+                    <a href="https://maps.google.com/?q=Dhubri+Assam+783334" target="_blank" class="map-link">Open in
+                        Google Maps →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Business Hours -->
+    <section class="business-hours">
+        <div class="container">
+            <div class="hours-wrapper">
+                <div class="hours-header">
+                    <div class="hours-icon">🕐</div>
+                    <h3>Business Hours</h3>
+                </div>
+                <div class="hours-grid">
+                    <div class="hours-item">
+                        <div class="day">Monday - Saturday</div>
+                        <div class="time">9:00 AM - 6:00 PM IST</div>
+                    </div>
+                    <div class="hours-item">
+                        <div class="day">Sunday</div>
+                        <div class="time">Closed</div>
+                    </div>
+                    <div class="hours-item">
+                        <div class="day">Customer Support</div>
+                        <div class="time">9:00 AM - 5:00 PM IST</div>
+                    </div>
+                    <div class="hours-item">
+                        <div class="day">Delivery Hours</div>
+                        <div class="time">6:00 AM - 9:00 PM IST</div>
+                    </div>
+                </div>
+                <div class="hours-note">
+                    <p>📌 Orders can be placed 24/7 through our app. Deliveries are made during delivery hours only.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <div class="footer-grid">
+                        <a href="about-us">About Us</a>
+                        <a href="contact-us">Contact Us</a>
+                        <a href="faq">FAQ</a>
+                        <a href="grievance-redressal">Grievance Redressal</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Policies</h3>
+                    <div class="footer-grid">
+                        <a href="terms-and-conditions">Terms & Conditions</a>
+                        <a href="privacy-policy">Privacy Policy</a>
+                        <a href="return-refund-policy">Return & Refund</a>
+                        <a href="shipping-delivery-policy">Shipping & Delivery</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>For Partners</h3>
+                    <div class="footer-grid">
+                        <a href="seller-policy">Become a Seller</a>
+                        <a href="vendor-policy">Become a Vendor</a>
+                        <a href="rider-policy">Become a Rider</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -68,20 +328,9 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            document.getElementById('mainNav').classList.toggle('active');
-        }
-
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.getElementById('header');
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
+    <script src="js/contact.js"></script>
 </body>
+
 </html>

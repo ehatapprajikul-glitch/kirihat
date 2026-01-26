@@ -35,7 +35,7 @@ class _PincodeGateScreenState extends State<PincodeGateScreen> {
       // If logged in, perform additional profile check
       if (user != null) {
         final isProfileComplete =
-            await UserService().isProfileComplete(user.uid);
+            await UserService().checkProfileCompletionWithCache(user.uid);
         
         if (!isProfileComplete) {
             // Redirect to Account Setup
@@ -213,10 +213,12 @@ class _PincodeEntryScreenState extends State<PincodeEntryScreen> {
                             color: const Color(0xFF0D9759).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            size: 50,
-                            color: Color(0xFF0D9759),
+                          child: Padding(
+                            padding: const EdgeInsets.all(15.0),
+                            child: Image.asset(
+                              'assets/images/app_icon.png',
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
                       ),

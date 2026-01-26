@@ -4,6 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../auth/login_screen.dart';
 import 'rider_earnings.dart';
 import 'rider_history.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:kirihat_core/utils/policy_links.dart';
+import 'delete_account_screen.dart';
 
 class RiderProfileScreen extends StatelessWidget {
   const RiderProfileScreen({super.key});
@@ -93,6 +96,25 @@ class RiderProfileScreen extends StatelessWidget {
                   },
                 ),
                 const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.policy, color: Colors.blue),
+                  title: const Text("Rider Policy"),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  onTap: () => launchUrl(Uri.parse(PolicyLinks.riderPolicy)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip, color: Colors.blue),
+                  title: const Text("Privacy Policy"),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  onTap: () => launchUrl(Uri.parse(PolicyLinks.privacyPolicy)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.description, color: Colors.blue),
+                  title: const Text("Terms & Conditions"),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  onTap: () => launchUrl(Uri.parse(PolicyLinks.termsAndConditions)),
+                ),
+                const Divider(),
                 Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: SizedBox(
@@ -114,7 +136,15 @@ class RiderProfileScreen extends StatelessWidget {
                       },
                     ),
                   ),
-                )
+                ),
+                TextButton(
+                  onPressed: () {
+                     Navigator.push(context, MaterialPageRoute(builder: (_) => const DeleteAccountEnhancedScreen()));
+                  },
+                  child: const Text("Delete Account",
+                      style: TextStyle(color: Colors.grey)),
+                ),
+                const SizedBox(height: 20),
               ],
             );
           },

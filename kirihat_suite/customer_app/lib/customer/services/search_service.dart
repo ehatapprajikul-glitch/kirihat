@@ -47,60 +47,77 @@ class SearchService {
   /// - Tags
   /// - Category
   /// - Subcategory
+  /// Optimized parallel search with minimal reads
   Future<List<Map<String, dynamic>>> searchProducts(String query) async {
-    if (query.length < 2) return [];
+    if (query.trim().length < 2) return [];
 
-    final searchLower = query.toLowerCase();
-    
-    // Get current vendor ID
+    final searchLower = query.toLowerCase().trim();
+    // Capitalize for Name prefix search (assuming standard Title Case in DB)
+    final searchCapitalized = searchLower.isNotEmpty 
+        ? searchLower[0].toUpperCase() + searchLower.substring(1) 
+        : searchLower;
+        
+    // Get vendor for inventory/pricing
     final prefs = await SharedPreferences.getInstance();
     final vendorId = prefs.getString(_vendorKey);
     
-    if (vendorId == null) {
-      print('⚠️ No vendor ID found, search may show out-of-stock products');
-    }
-    
     try {
-      // Fetch a broader set of products and filter client-side
-      // This is more reliable than Firestore's limited text search
-      final snapshot = await _firestore
-          .collection('master_products')
-          .limit(100) // Fetch more products for better client-side filtering
-          .get();
+      // 1. Execute Parallel Queries
+      final results = await Future.wait([
+        // A. Name Prefix Search (Case sensitive fallback)
+        _firestore.collection('master_products')
+            .where('name', isGreaterThanOrEqualTo: searchCapitalized)
+            .where('name', isLessThan: '$searchCapitalized\uf8ff')
+            .limit(10)
+            .get(),
+            
+        // B. Keywords Search (Exact match on tags/keywords)
+        _firestore.collection('master_products')
+            .where('keywords', arrayContains: searchLower)
+            .limit(10)
+            .get(),
+            
+        // C. Category Search (Exact match)
+        _firestore.collection('master_products')
+            .where('category', isEqualTo: searchCapitalized)
+            .limit(5)
+            .get(),
+      ]);
 
-      final List<Map<String, dynamic>> matchedProducts = [];
-      final Set<String> seenIds = {};
+      // 2. Merge & Deduplicate
+      final Map<String, Map<String, dynamic>> distinctProducts = {};
 
-      for (var doc in snapshot.docs) {
-        if (seenIds.contains(doc.id)) continue;
-
-        final data = doc.data();
-        data['id'] = doc.id;
-
-        // Check if query matches any searchable field
-        if (_matchesSearch(data, searchLower)) {
-          matchedProducts.add(data);
-          seenIds.add(doc.id);
-        }
-
-        // Limit results to 20
-        if (matchedProducts.length >= 20) break;
+      for (var snapshot in results) {
+         for (var doc in snapshot.docs) {
+           if (!distinctProducts.containsKey(doc.id)) {
+             final data = doc.data();
+             data['id'] = doc.id;
+             distinctProducts[doc.id] = data;
+           }
+         }
       }
 
-      // Sort by relevance (exact matches first)
-      matchedProducts.sort((a, b) {
+      var mergedList = distinctProducts.values.toList();
+
+      // 3. Client-side ranking (Re-sort by relevance)
+      mergedList.sort((a, b) {
         final aScore = _calculateRelevanceScore(a, searchLower);
         final bScore = _calculateRelevanceScore(b, searchLower);
         return bScore.compareTo(aScore);
       });
+      
+      // 4. Enrich with Inventory (Only for the top 20 results to save reads)
+      if (mergedList.length > 20) {
+        mergedList = mergedList.sublist(0, 20);
+      }
 
-      // Enrich with vendor inventory data if vendor ID is available
       final enrichedProducts = vendorId != null 
-          ? await _enrichWithVendorInventory(matchedProducts, vendorId)
-          : matchedProducts;
+          ? await _enrichWithVendorInventory(mergedList, vendorId)
+          : mergedList;
 
-      print('🔍 Search for "$query" found ${enrichedProducts.length} products');
+      print('🔍 Smart Search for "$query": found ${enrichedProducts.length} items');
       return enrichedProducts;
+      
     } catch (e) {
       print('❌ Search error: $e');
       return [];

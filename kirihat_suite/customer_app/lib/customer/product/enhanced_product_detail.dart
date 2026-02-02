@@ -630,19 +630,31 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
         
         if (images.length > 1 && _settingsService.showImageDots)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: images.asMap().entries.map((entry) {
-                return Container(
-                  width: _currentImageIndex == entry.key ? 24 : 8,
+                final isActive = _currentImageIndex == entry.key;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  width: isActive ? 32 : 8,
                   height: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
-                    color: _currentImageIndex == entry.key
+                    color: isActive
                         ? const Color(0xFF0D9759)
                         : Colors.grey[300],
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF0D9759).withOpacity(0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
                   ),
                 );
               }).toList(),

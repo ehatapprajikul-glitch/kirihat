@@ -1075,7 +1075,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         final data = doc.data() as Map<String, dynamic>;
                         final categoryId = doc.id;
                         final name = data['name'] ?? 'Category';
-                        final iconUrl = data['icon'];
+                        
                         
                         return FutureBuilder<QuerySnapshot>(
                           future: FirebaseFirestore.instance
@@ -1085,87 +1085,70 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               .get(),
                           builder: (context, childrenSnapshot) {
                             final hasChildren = childrenSnapshot.hasData && childrenSnapshot.data!.docs.isNotEmpty;
-                            
                             final isSelected = _selectedCategoryId == categoryId;
                         
-                        return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                              elevation: isSelected ? 4 : 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: isSelected ? const Color(0xFF34A853) : Colors.grey[300]!,
-                                  width: isSelected ? 2 : 1,
+                            return Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: Colors.grey.shade200,
+                                    width: 1,
+                                  ),
                                 ),
+                                color: isSelected ? const Color(0xFF34A853).withOpacity(0.05) : Colors.white,
                               ),
                               child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                leading: Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? const Color(0xFF34A853).withOpacity(0.1) : Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: iconUrl != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.network(
-                                            iconUrl,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Icon(
-                                              hasChildren ? Icons.folder : Icons.category,
-                                              color: isSelected ? const Color(0xFF34A853) : Colors.grey[600],
-                                            ),
-                                          ),
-                                        )
-                                      : Icon(
-                                          hasChildren ? Icons.folder : Icons.category,
-                                          color: isSelected ? const Color(0xFF34A853) : Colors.grey[600],
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                title: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                          color: isSelected ? const Color(0xFF34A853) : Colors.black87,
                                         ),
-                                ),
-                                title: Text(
-                                  name,
-                                  style: TextStyle(
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                    color: isSelected ? const Color(0xFF34A853) : Colors.black87,
-                                  ),
-                                ),
-                                subtitle: hasChildren
-                                    ? Text(
-                                        'Tap to browse subcategories',
-                                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                      ),
+                                    ),
+                                    if (hasChildren)
+                                      const Icon(
+                                        Icons.chevron_right,
+                                        color: Colors.grey,
+                                        size: 20,
                                       )
-                                    : null,
-                                trailing: hasChildren
-                                    ? IconButton(
-                                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                                        onPressed: () {
-                                          setState(() {
-                                            _breadcrumbIds.add(categoryId);
-                                            _breadcrumbNames.add(name);
-                                            _currentParentId = categoryId;
-                                            _searchQuery = '';
-                                            _searchController.clear();
-                                          });
-                                        },
-                                        color: const Color(0xFF34A853),
-                                      )
-                                    : (isSelected
-                                        ? const Icon(Icons.check_circle, color: Color(0xFF34A853))
-                                        : null),
+                                    else if (isSelected)
+                                      const Icon(
+                                        Icons.check,
+                                        color: Color(0xFF34A853),
+                                        size: 20,
+                                      ),
+                                  ],
+                                ),
                                 onTap: () {
-                                  // Select this category
-                                  setState(() {
-                                    _selectedCategoryId = categoryId;
-                                    _selectedCategory = name;
-                                    _selectedCategoryLevel = data['level'] ?? 0;
-                                    _selectedCategoryPath = List<String>.from(data['path'] ?? []);
-                                    _selectedCategoryPathNames = List<String>.from(data['path_names'] ?? []);
-                                    _currentTemplate = null;
-                                  });
-                                  Navigator.pop(context);
-                                  _loadTemplate();
+                                  if (hasChildren) {
+                                    // Navigate to subcategories
+                                    setState(() {
+                                      _breadcrumbIds.add(categoryId);
+                                      _breadcrumbNames.add(name);
+                                      _currentParentId = categoryId;
+                                      _searchQuery = '';
+                                      _searchController.clear();
+                                    });
+                                  } else {
+                                    // Select this category
+                                    setState(() {
+                                      _selectedCategoryId = categoryId;
+                                      _selectedCategory = name;
+                                      _selectedCategoryLevel = data['level'] ?? 0;
+                                      _selectedCategoryPath = List<String>.from(data['path'] ?? []);
+                                      _selectedCategoryPathNames = List<String>.from(data['path_names'] ?? []);
+                                      _currentTemplate = null;
+                                    });
+                                    Navigator.pop(context);
+                                    _loadTemplate();
+                                  }
                                 },
                               ),
                             );

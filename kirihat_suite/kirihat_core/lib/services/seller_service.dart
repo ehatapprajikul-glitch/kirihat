@@ -512,6 +512,19 @@ class SellerService {
     }
   }
 
+  /// Update minimum stock level for a product
+  Future<void> updateProductMinStock(String productId, int minStockLevel) async {
+    try {
+      await _firestore
+          .collection('master_products')
+          .doc(productId)
+          .update({'min_stock_level': minStockLevel});
+    } catch (e) {
+      print('Error updating minimum stock: $e');
+      rethrow;
+    }
+  }
+
   // Get nearby warehouses (by city)
   Stream<List<WarehouseModel>> getNearbyWarehouses(String city) {
     // Normalizing city name for better matching (simple lowercase check)

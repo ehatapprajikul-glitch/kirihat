@@ -25,7 +25,10 @@
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <link rel='icon' type='image/png' href='images/favicon.png'>
 </head>
 
 <body>
@@ -70,22 +73,63 @@
                 <div class="step-indicator">
                     <div class="step-item active" data-step="1">
                         <div class="step-number">1</div>
-                        <div class="step-label">Business Details</div>
+                        <div class="step-label">Create Account</div>
                     </div>
                     <div class="step-item" data-step="2">
                         <div class="step-number">2</div>
-                        <div class="step-label">Location & Licenses</div>
+                        <div class="step-label">Business Details</div>
                     </div>
                     <div class="step-item" data-step="3">
                         <div class="step-number">3</div>
+                        <div class="step-label">Location & Docs</div>
+                    </div>
+                    <div class="step-item" data-step="4">
+                        <div class="step-number">4</div>
                         <div class="step-label">Bank Account</div>
                     </div>
                 </div>
 
                 <!-- Form -->
                 <form id="sellerRegistrationForm" class="registration-form">
-                    <!-- Step 1: Business Details -->
+                    <!-- Step 1: Create Account -->
                     <div class="form-step active" data-step="1">
+                        <h2>Create Account</h2>
+                        <p class="step-description">Create your seller login credentials</p>
+
+                        <div class="form-group">
+                            <label for="email">Email Address <span class="required">*</span></label>
+                            <input type="email" id="email" name="email" required placeholder="your.email@example.com">
+                            <span class="error-message"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password <span class="required">*</span></label>
+                            <input type="password" id="password" name="password" required minlength="6"
+                                placeholder="Create a strong password (min 6 chars)">
+                            <span class="error-message"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password <span class="required">*</span></label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6"
+                                placeholder="Re-enter your password">
+                            <span class="error-message"></span>
+                        </div>
+
+                        <div class="info-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <span>You will use this email and password to log in to the Seller Dashboard.</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Business Details -->
+                    <div class="form-step" data-step="2">
                         <h2>Business Details</h2>
                         <p class="step-description">Tell us about your business</p>
 
@@ -104,13 +148,6 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="email">Email Address <span class="required">*</span></label>
-                            <input type="email" id="email" name="email" required
-                                placeholder="your.email@example.com">
-                            <span class="error-message"></span>
-                        </div>
-
-                        <div class="form-group">
                             <label for="phone">Phone Number <span class="required">*</span></label>
                             <div class="phone-input">
                                 <span class="phone-prefix">+91</span>
@@ -121,10 +158,10 @@
                         </div>
                     </div>
 
-                    <!-- Step 2: Location & Licenses -->
-                    <div class="form-step" data-step="2">
-                        <h2>Location & Licenses</h2>
-                        <p class="step-description">Provide your business location and licensing information</p>
+                    <!-- Step 3: Location & Documents -->
+                    <div class="form-step" data-step="3">
+                        <h2>Location & Documents</h2>
+                        <p class="step-description">Provide address and upload verification documents</p>
 
                         <div class="form-group">
                             <label for="pincode">Pincode <span class="required">*</span></label>
@@ -158,8 +195,15 @@
                             <label for="gstNumber">GST Number</label>
                             <input type="text" id="gstNumber" name="gstNumber" maxlength="15"
                                 placeholder="Enter GST number (optional)">
-                            <span class="help-text">Required for business registration</span>
                             <span class="error-message"></span>
+                        </div>
+
+                        <!-- File Upload: GST -->
+                        <div class="form-group file-upload-group">
+                            <label for="gstFile">Upload GST Certificate</label>
+                            <input type="file" id="gstFile" name="gstFile" accept="image/*,.pdf">
+                            <div class="file-preview" id="gstPreview"></div>
+                            <span class="help-text">Supported: JPG, PNG, PDF</span>
                         </div>
 
                         <div class="form-group">
@@ -169,6 +213,14 @@
                             <span class="error-message"></span>
                         </div>
 
+                        <!-- File Upload: PAN -->
+                        <div class="form-group file-upload-group">
+                            <label for="panFile">Upload PAN Card</label>
+                            <input type="file" id="panFile" name="panFile" accept="image/*,.pdf">
+                            <div class="file-preview" id="panPreview"></div>
+                            <span class="help-text">Supported: JPG, PNG, PDF</span>
+                        </div>
+
                         <div class="form-group">
                             <label for="fssaiLicense">FSSAI License</label>
                             <input type="text" id="fssaiLicense" name="fssaiLicense" maxlength="14"
@@ -176,10 +228,18 @@
                             <span class="help-text">Required for food products</span>
                             <span class="error-message"></span>
                         </div>
+
+                        <!-- File Upload: FSSAI -->
+                        <div class="form-group file-upload-group">
+                            <label for="fssaiFile">Upload FSSAI License</label>
+                            <input type="file" id="fssaiFile" name="fssaiFile" accept="image/*,.pdf">
+                            <div class="file-preview" id="fssaiPreview"></div>
+                            <span class="help-text">Supported: JPG, PNG, PDF</span>
+                        </div>
                     </div>
 
-                    <!-- Step 3: Bank Account -->
-                    <div class="form-step" data-step="3">
+                    <!-- Step 4: Bank Account -->
+                    <div class="form-step" data-step="4">
                         <h2>Bank Account Details</h2>
                         <p class="step-description">Add bank details for receiving payments</p>
 

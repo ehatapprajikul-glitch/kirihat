@@ -5,8 +5,9 @@ import 'package:kirihat_core/services/seller_service.dart';
 import 'seller_sidebar.dart';
 import 'products/seller_products_screen.dart';
 import 'area/seller_area_screen.dart';
-import 'inventory/seller_inventory_screen.dart';
+import 'inventory/enhanced_seller_inventory_screen.dart';
 import 'shipments/seller_shipments_screen.dart';
+import 'analytics/enhanced_seller_analytics_screen.dart';
 import 'analytics/seller_analytics_screen.dart';
 import 'billing/seller_billing_screen.dart';
 import 'profile/seller_profile_screen.dart';
@@ -57,11 +58,11 @@ class _SellerDashboardState extends State<SellerDashboard> {
       case 'area':
         return SellerAreaScreen(seller: _seller!);
       case 'inventory':
-        return SellerInventoryScreen(seller: _seller!);
+        return EnhancedSellerInventoryScreen(seller: _seller!);
       case 'shipments':
         return SellerShipmentsScreen(seller: _seller!);
       case 'sells':
-        return SellerAnalyticsScreen(seller: _seller!);
+        return EnhancedSellerAnalyticsScreen(seller: _seller!);
       case 'billing':
         return SellerBillingScreen(seller: _seller!);
       case 'profile':

@@ -844,18 +844,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         String? sellerId = processedItem['seller_id'];
         String? productId = processedItem['product_id'] ?? processedItem['id'];
 
-        // If seller_id is missing (stale cart), fetch it from Master Product
-        if ((sellerId == null || sellerId.isEmpty) && productId != null) {
+        // If seller_id OR cost_price is missing, fetch from Master Product
+        if (productId != null && 
+            ((sellerId == null || sellerId.isEmpty) || processedItem['cost_price'] == null)) {
           try {
             var doc = await FirebaseFirestore.instance.collection('master_products').doc(productId).get();
             if (doc.exists) {
-              sellerId = doc.data()?['seller_id'];
-              if (sellerId != null && sellerId.isNotEmpty) {
-                processedItem['seller_id'] = sellerId; // Update item with recovered ID
+              var data = doc.data();
+              if (sellerId == null || sellerId.isEmpty) {
+                sellerId = data?['seller_id'];
+                if (sellerId != null && sellerId.isNotEmpty) {
+                  processedItem['seller_id'] = sellerId; 
+                }
+              }
+              // Add Cost Price for Analytics
+              if (processedItem['cost_price'] == null && data?['cost_price'] != null) {
+                processedItem['cost_price'] = data?['cost_price'];
               }
             }
           } catch (e) {
-            debugPrint("Error recovering seller_id for $productId: $e");
+            debugPrint("Error recovering details for $productId: $e");
           }
         }
         

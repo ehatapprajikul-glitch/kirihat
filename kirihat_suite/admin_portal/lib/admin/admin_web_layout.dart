@@ -15,6 +15,7 @@ import 'monitoring/data_monitoring.dart';
 import 'analytics/analytics_reports.dart';
 import 'settings/platform_settings.dart';
 import 'settings/product_display_settings.dart';
+import 'settings/fee_configuration_screen.dart';
 import 'catalog/master_products_screen.dart';
 import 'catalog/product_requests_screen.dart';
 import 'catalog/category_management_screen.dart';
@@ -85,6 +86,8 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
         return const AnalyticsReports();
       case 'settings':
         return const PlatformSettings();
+      case 'fee_configuration':
+        return const FeeConfigurationScreen();
       case 'product_display_settings':
         return const ProductDisplaySettings();
       case 'master_products':

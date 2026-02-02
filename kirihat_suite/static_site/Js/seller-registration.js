@@ -9,13 +9,22 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
+const auth = firebase.auth();
+const storage = firebase.storage();
 
 // Form State
 let currentStep = 1;
-const totalSteps = 3;
+const totalSteps = 4;
 const formData = {};
+const fileData = {
+    gstFile: null,
+    panFile: null,
+    fssaiFile: null
+};
 
 // DOM Elements
 const form = document.getElementById('sellerRegistrationForm');
@@ -30,49 +39,43 @@ const errorMessage = document.getElementById('errorMessage');
 document.addEventListener('DOMContentLoaded', () => {
     updateStepIndicator();
     attachEventListeners();
+
+    // Check if user is already logged in
+    auth.onAuthStateChanged(user => {
+        if (user && currentStep === 1) {
+            // If already logged in, pre-fill email and perhaps skip step 1?
+            // For now, we'll let them stay on step 1 but maybe show a message
+            document.getElementById('email').value = user.email;
+        }
+    });
 });
 
 // Event Listeners
 function attachEventListeners() {
     nextBtn.addEventListener('click', handleNext);
     backBtn.addEventListener('click', handleBack);
-    form.addEventListener('submit', handleSubmit);
+    form.addEventListener('submit', handleSubmit); // Fix: this was attached to 'submit' event but button type is button for next steps
 
     // Phone number formatting
     const phoneInput = document.getElementById('phone');
-    phoneInput.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
-    });
+    if (phoneInput) {
+        phoneInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+        });
+    }
 
     // Pincode formatting
     const pincodeInput = document.getElementById('pincode');
-    pincodeInput.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
-    });
-
-    // GST formatting
-    const gstInput = document.getElementById('gstNumber');
-    if (gstInput) {
-        gstInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase().slice(0, 15);
+    if (pincodeInput) {
+        pincodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
         });
     }
 
-    // PAN formatting
-    const panInput = document.getElementById('panNumber');
-    if (panInput) {
-        panInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase().slice(0, 10);
-        });
-    }
-
-    // IFSC formatting
-    const ifscInput = document.getElementById('ifscCode');
-    if (ifscInput) {
-        ifscInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase().slice(0, 11);
-        });
-    }
+    // File Inputs
+    setupFileInput('gstFile', 'gstPreview');
+    setupFileInput('panFile', 'panPreview');
+    setupFileInput('fssaiFile', 'fssaiPreview');
 
     // Real-time validation
     const inputs = form.querySelectorAll('input, textarea');
@@ -86,9 +89,82 @@ function attachEventListeners() {
     });
 }
 
+function setupFileInput(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+
+    if (!input || !preview) return;
+
+    input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            fileData[inputId] = file;
+
+            // Show preview
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                    preview.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = `<div class="file-info">📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)</div>`;
+                preview.classList.add('show');
+            }
+        } else {
+            fileData[inputId] = null;
+            preview.innerHTML = '';
+            preview.classList.remove('show');
+        }
+    });
+}
+
 // Navigation Functions
-function handleNext() {
-    if (validateCurrentStep()) {
+async function handleNext() {
+    // Validate current step fields locally first
+    if (!validateCurrentStep()) {
+        return;
+    }
+
+    // Special logic for Step 1 (Create Account)
+    if (currentStep === 1) {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        if (password !== confirmPassword) {
+            showFieldError(document.getElementById('confirmPassword'), 'Passwords do not match');
+            return;
+        }
+
+        // Show loading
+        nextBtn.classList.add('loading');
+        nextBtn.disabled = true;
+
+        try {
+            // Check if user is already logged in with this email
+            const currentUser = auth.currentUser;
+            if (!currentUser || currentUser.email !== email) {
+                // Create user
+                await auth.createUserWithEmailAndPassword(email, password);
+            }
+            // Proceed
+            saveCurrentStepData();
+            currentStep++;
+            showStep(currentStep);
+        } catch (error) {
+            console.error(error);
+            if (error.code === 'auth/email-already-in-use') {
+                showFieldError(document.getElementById('email'), 'Email is already registered. Please login or use another email.');
+            } else {
+                showErrorModal(error.message);
+            }
+        } finally {
+            nextBtn.classList.remove('loading');
+            nextBtn.disabled = false;
+        }
+    } else {
         saveCurrentStepData();
         currentStep++;
         showStep(currentStep);
@@ -106,7 +182,9 @@ function showStep(step) {
 
     // Show current step
     const currentStepElement = document.querySelector(`.form-step[data-step="${step}"]`);
-    currentStepElement.classList.add('active');
+    if (currentStepElement) {
+        currentStepElement.classList.add('active');
+    }
 
     // Update buttons
     backBtn.style.display = step === 1 ? 'none' : 'flex';
@@ -167,6 +245,12 @@ function validateField(field) {
             errorMsg = 'Please enter a valid email address';
         }
     }
+    // Password validation
+    else if (fieldName === 'password' && value) {
+        if (value.length < 6) {
+            errorMsg = 'Password must be at least 6 characters';
+        }
+    }
     // Phone validation
     else if (fieldName === 'phone' && value) {
         if (value.length !== 10) {
@@ -177,27 +261,6 @@ function validateField(field) {
     else if (fieldName === 'pincode' && value) {
         if (value.length !== 6) {
             errorMsg = 'Pincode must be 6 digits';
-        }
-    }
-    // GST validation (optional but if provided, must be valid)
-    else if (fieldName === 'gstNumber' && value) {
-        const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-        if (!gstRegex.test(value)) {
-            errorMsg = 'Please enter a valid GST number';
-        }
-    }
-    // PAN validation (optional but if provided, must be valid)
-    else if (fieldName === 'panNumber' && value) {
-        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-        if (!panRegex.test(value)) {
-            errorMsg = 'Please enter a valid PAN number';
-        }
-    }
-    // IFSC validation (optional but if provided, must be valid)
-    else if (fieldName === 'ifscCode' && value) {
-        const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-        if (!ifscRegex.test(value)) {
-            errorMsg = 'Please enter a valid IFSC code';
         }
     }
 
@@ -232,11 +295,20 @@ function clearFieldError(field) {
 // Data Management
 function saveCurrentStepData() {
     const currentStepElement = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-    const inputs = currentStepElement.querySelectorAll('input, textarea');
+    const inputs = currentStepElement.querySelectorAll('input:not([type="file"]), textarea');
 
     inputs.forEach(input => {
-        formData[input.name] = input.value.trim();
+        if (input.name !== 'password' && input.name !== 'confirmPassword') {
+            formData[input.name] = input.value.trim();
+        }
     });
+}
+
+// Helper: Upload file to Firebase Storage
+async function uploadFile(file, path) {
+    const ref = storage.ref(path);
+    await ref.put(file);
+    return await ref.getDownloadURL();
 }
 
 // Form Submission
@@ -254,9 +326,28 @@ async function handleSubmit(e) {
     submitBtn.classList.add('loading');
 
     try {
+        const user = auth.currentUser;
+        if (!user) {
+            throw new Error('User authentication failed. Please reload and try again.');
+        }
+
+        // Upload documents
+        const documentUrls = {};
+        const userId = user.uid;
+
+        if (fileData.gstFile) {
+            documentUrls.gst = await uploadFile(fileData.gstFile, `seller_documents/${userId}/gst_${Date.now()}`);
+        }
+        if (fileData.panFile) {
+            documentUrls.pan = await uploadFile(fileData.panFile, `seller_documents/${userId}/pan_${Date.now()}`);
+        }
+        if (fileData.fssaiFile) {
+            documentUrls.fssai = await uploadFile(fileData.fssaiFile, `seller_documents/${userId}/fssai_${Date.now()}`);
+        }
+
         // Prepare seller data
         const sellerData = {
-            user_id: '', // Will be set after admin approval
+            user_id: userId, // KEY CHANGE: Use the authenticated user ID
             business_name: formData.businessName,
             owner_name: formData.ownerName,
             email: formData.email,
@@ -266,6 +357,15 @@ async function handleSubmit(e) {
             city: formData.city,
             state: formData.state,
             serviceable_pincodes: [],
+            gst_number: formData.gstNumber || null,
+            pan_number: formData.panNumber || null,
+            fssai_license: formData.fssaiLicense || null,
+            bank_account: {
+                account_number: formData.accountNumber,
+                ifsc: formData.ifscCode,
+                account_holder: formData.accountHolderName
+            },
+            documents: documentUrls,
             status: 'pending',
             verified: false,
             created_at: firebase.firestore.FieldValue.serverTimestamp(),
@@ -275,27 +375,12 @@ async function handleSubmit(e) {
             rating: 0
         };
 
-        // Add optional fields
-        if (formData.gstNumber) {
-            sellerData.gst_number = formData.gstNumber;
-        }
-        if (formData.panNumber) {
-            sellerData.pan_number = formData.panNumber;
-        }
-        if (formData.fssaiLicense) {
-            sellerData.fssai_license = formData.fssaiLicense;
-        }
-
-        // Add bank account if provided
-        if (formData.accountNumber && formData.ifscCode && formData.accountHolderName) {
-            sellerData.bank_account = {
-                account_number: formData.accountNumber,
-                ifsc: formData.ifscCode,
-                account_holder: formData.accountHolderName
-            };
-        }
-
         // Submit to Firestore
+        // We use add() or .doc(userId).set() ? 
+        // Logic: Usually one user = one seller account. Let's use user_id as doc ID or distinct doc?
+        // seller-registration.html uses db.collection('sellers').add() which generates auto ID.
+        // It's safer to use .add() but since we have user_id, we can query it later.
+
         await db.collection('sellers').add(sellerData);
 
         // Show success modal
@@ -304,7 +389,7 @@ async function handleSubmit(e) {
         // Reset form
         form.reset();
         currentStep = 1;
-        showStep(1);
+        // Don't show step 1 since we are done. Success modal handles redirection.
 
     } catch (error) {
         console.error('Error submitting seller registration:', error);
@@ -322,7 +407,7 @@ function showSuccessModal() {
 }
 
 function showErrorModal(message) {
-    errorMessage.textContent = message || 'An error occurred while submitting your application. Please try again.';
+    errorMessage.textContent = message || 'An error occurred. Please try again.';
     errorModal.classList.add('show');
     document.body.style.overflow = 'hidden';
 }

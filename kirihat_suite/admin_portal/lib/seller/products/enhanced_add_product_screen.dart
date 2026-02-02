@@ -774,14 +774,8 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
           );
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7, 
-            childAspectRatio: 0.8, // Slightly taller to accommodate larger text
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
+        return ListView.builder(
+          padding: EdgeInsets.zero,
           itemCount: allCategories.length,
           itemBuilder: (context, index) {
             var category = allCategories[index];
@@ -789,7 +783,6 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
             final categoryId = category.id;
             final name = data['name'] ?? 'Category';
             final level = data['level'] ?? 0;
-            final iconUrl = data['icon'];
             final isSelected = _selectedCategoryId == categoryId;
 
             return FutureBuilder<QuerySnapshot>(
@@ -801,142 +794,60 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
               builder: (context, childrenSnapshot) {
                 final hasChildren = childrenSnapshot.hasData && childrenSnapshot.data!.docs.isNotEmpty;
                 
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategoryId = categoryId;
-                        _selectedCategory = name;
-                        _selectedCategoryLevel = level;
-                        _selectedCategoryPath = List<String>.from(data['path'] ?? []);
-                        _selectedCategoryPathNames = List<String>.from(data['path_names'] ?? []);
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? LinearGradient(
-                                colors: [const Color(0xFF34A853).withOpacity(0.15), const Color(0xFF34A853).withOpacity(0.05)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: isSelected ? null : Colors.white,
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF34A853) : Colors.grey[300]!,
-                          width: isSelected ? 2 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: const Color(0xFF34A853).withOpacity(0.3),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                )
-                              ]
-                            : [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 2,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Stack(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF34A853).withOpacity(0.1) : Colors.grey[100],
-                                  shape: BoxShape.circle,
-                                ),
-                                child: iconUrl != null
-                                    ? ClipOval(
-                                        child: Image.network(
-                                          iconUrl,
-                                          width: 42, // Increased from 32
-                                          height: 42, // Increased from 32
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Icon(
-                                            hasChildren ? Icons.folder : Icons.category,
-                                            size: 28, // Increased from 20
-                                            color: isSelected ? const Color(0xFF34A853) : Colors.grey[600],
-                                          ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        hasChildren ? Icons.folder : Icons.category,
-                                        size: 28, // Increased from 20
-                                        color: isSelected ? const Color(0xFF34A853) : Colors.grey[600],
-                                      ),
-                              ),
-                              if (hasChildren)
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.blue,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.arrow_forward, size: 10, color: Colors.white), // Increased from 8
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            name,
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                              color: isSelected ? const Color(0xFF34A853) : Colors.black87,
-                              fontSize: 12.5, // Increased from 11
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (hasChildren && !isSelected) ...[
-                            const SizedBox(height: 4),
-                            OutlinedButton.icon(
-                              onPressed: () => _navigateIntoCategory(categoryId, name),
-                              icon: const Icon(Icons.arrow_forward, size: 10),
-                              label: const Text('Browse', style: TextStyle(fontSize: 10)), // Increased from 9
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                minimumSize: const Size(0, 20),
-                                side: const BorderSide(color: Colors.blue, width: 0.5),
-                              ),
-                            ),
-                          ],
-                          if (isSelected) ...[
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF34A853),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.check, color: Colors.white, size: 10),
-                                  SizedBox(width: 2),
-                                  Text('Selected', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)), // Increased from 9
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1,
                       ),
                     ),
+                    color: isSelected ? const Color(0xFF34A853).withOpacity(0.05) : Colors.white,
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected ? const Color(0xFF34A853) : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        if (hasChildren)
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey,
+                            size: 20,
+                          )
+                        else if (isSelected)
+                          const Icon(
+                            Icons.check,
+                            color: Color(0xFF34A853),
+                            size: 20,
+                          ),
+                      ],
+                    ),
+                    onTap: () {
+                      if (hasChildren) {
+                        // Navigate to subcategories
+                        _navigateIntoCategory(categoryId, name);
+                      } else {
+                        // Select this category
+                        setState(() {
+                          _selectedCategoryId = categoryId;
+                          _selectedCategory = name;
+                          _selectedCategoryLevel = level;
+                          _selectedCategoryPath = List<String>.from(data['path'] ?? []);
+                          _selectedCategoryPathNames = List<String>.from(data['path_names'] ?? []);
+                        });
+                      }
+                    },
                   ),
                 );
               },

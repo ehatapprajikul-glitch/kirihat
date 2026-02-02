@@ -611,14 +611,8 @@ class _AdminMasterProductEditorState extends State<AdminMasterProductEditor> {
           );
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(20),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 5,
-            childAspectRatio: 0.85,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
+        return ListView.builder(
+          padding: EdgeInsets.zero,
           itemCount: categories.length,
           itemBuilder: (context, index) {
             var category = categories[index];
@@ -626,7 +620,6 @@ class _AdminMasterProductEditorState extends State<AdminMasterProductEditor> {
             final categoryId = category.id;
             final name = data['name'] ?? 'Category';
             final level = data['level'] ?? 0;
-            final iconUrl = data['icon'];
             final isSelected = _selectedCategoryId == categoryId;
 
             return FutureBuilder<QuerySnapshot>(
@@ -638,150 +631,67 @@ class _AdminMasterProductEditorState extends State<AdminMasterProductEditor> {
               builder: (context, childrenSnapshot) {
                 final hasChildren = childrenSnapshot.hasData && childrenSnapshot.data!.docs.isNotEmpty;
                 
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      // Select this category
-                      if (_selectedCategoryId != categoryId) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Category selected. Specifications will be loaded.")),
-                        );
-                        setState(() {
-                          _selectedCategoryId = categoryId;
-                          _selectedCategory = name;
-                          _selectedCategoryLevel = level;
-                          _selectedCategoryPath = List<String>.from(data['path'] ?? []);
-                          _selectedCategoryPathNames = List<String>.from(data['path_names'] ?? []);
-                          _specifications = {}; // Reset specs
-                        });
-                        _loadSpecificationTemplate();
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? LinearGradient(
-                                colors: [const Color(0xFF0D9759).withOpacity(0.15), const Color(0xFF0D9759).withOpacity(0.05)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: isSelected ? null : Colors.white,
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF0D9759) : Colors.grey[300]!,
-                          width: isSelected ? 2.5 : 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: const Color(0xFF0D9759).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ]
-                            : [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Stack(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF0D9759).withOpacity(0.1) : Colors.grey[100],
-                                  shape: BoxShape.circle,
-                                ),
-                                child: iconUrl != null
-                                    ? ClipOval(
-                                        child: Image.network(
-                                          iconUrl,
-                                          width: 48,
-                                          height: 48,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Icon(
-                                            hasChildren ? Icons.folder : Icons.category,
-                                            size: 32,
-                                            color: isSelected ? const Color(0xFF0D9759) : Colors.grey[600],
-                                          ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        hasChildren ? Icons.folder : Icons.category,
-                                        size: 32,
-                                        color: isSelected ? const Color(0xFF0D9759) : Colors.grey[600],
-                                      ),
-                              ),
-                              if (hasChildren)
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.blue,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.arrow_forward, size: 12, color: Colors.white),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            name,
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                              color: isSelected ? const Color(0xFF0D9759) : Colors.black87,
-                              fontSize: 13,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (hasChildren && !isSelected) ...[
-                            const SizedBox(height: 6),
-                            OutlinedButton.icon(
-                              onPressed: () => _navigateIntoCategory(categoryId, name),
-                              icon: const Icon(Icons.arrow_forward, size: 12),
-                              label: const Text('Browse', style: TextStyle(fontSize: 10)),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                minimumSize: const Size(0, 24),
-                                side: const BorderSide(color: Colors.blue, width: 1),
-                              ),
-                            ),
-                          ],
-                          if (isSelected) ...[
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0D9759),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.check, color: Colors.white, size: 14),
-                                  SizedBox(width: 4),
-                                  Text('Selected', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1,
                       ),
                     ),
+                    color: isSelected ? const Color(0xFF0D9759).withOpacity(0.05) : Colors.white,
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected ? const Color(0xFF0D9759) : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        if (hasChildren)
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey,
+                            size: 20,
+                          )
+                        else if (isSelected)
+                          const Icon(
+                            Icons.check,
+                            color: Color(0xFF0D9759),
+                            size: 20,
+                          ),
+                      ],
+                    ),
+                    onTap: () {
+                      if (hasChildren) {
+                        // Navigate to subcategories
+                        _navigateIntoCategory(categoryId, name);
+                      } else {
+                        // Select this category
+                        if (_selectedCategoryId != categoryId) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Category selected. Specifications will be loaded.")),
+                          );
+                          setState(() {
+                            _selectedCategoryId = categoryId;
+                            _selectedCategory = name;
+                            _selectedCategoryLevel = level;
+                            _selectedCategoryPath = List<String>.from(data['path'] ?? []);
+                            _selectedCategoryPathNames = List<String>.from(data['path_names'] ?? []);
+                            _specifications = {}; // Reset specs
+                          });
+                          _loadSpecificationTemplate();
+                        }
+                      }
+                    },
                   ),
                 );
               },

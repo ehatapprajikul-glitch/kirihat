@@ -340,7 +340,7 @@ class UniqueOrderStatusTracker extends StatelessWidget {
            dateStr = DateFormat('dd MMM yyyy, hh:mm a').format((orderData['cancelled_at'] as Timestamp).toDate());
         }
 
-        message = '❌ Cancelled by $actor.\nReason: $reason\nWhen: $dateStr';
+        message = '❌ Cancelled by $actor.\nReason: $reason\nat: $dateStr';
         
         bgColor = Colors.red.withOpacity(0.1);
         textColor = Colors.red.shade700;

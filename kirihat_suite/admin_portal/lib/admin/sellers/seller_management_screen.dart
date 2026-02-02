@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/models/seller_model.dart';
 import 'package:kirihat_core/services/seller_service.dart';
 import 'package:kirihat_core/utils/currency_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SellerManagementScreen extends StatefulWidget {
   const SellerManagementScreen({super.key});
@@ -163,6 +164,7 @@ class _SellerManagementScreenState extends State<SellerManagementScreen> {
                 if (seller.panNumber != null)
                   _buildInfoRow(Icons.credit_card, 'PAN', seller.panNumber!),
                 const Divider(height: 24),
+                _buildDocumentsSection(seller), // New Documents Section
                 _buildStatsRow(seller),
                 const SizedBox(height: 16),
                 _buildActionButtons(seller),
@@ -172,6 +174,51 @@ class _SellerManagementScreenState extends State<SellerManagementScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildDocumentsSection(SellerModel seller) {
+    if (seller.documents == null || seller.documents!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Documents',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: seller.documents!.entries.map((entry) {
+            // Determine icon and color based on file type or name
+            IconData icon = Icons.description;
+            if (entry.key.contains('gst')) icon = Icons.receipt;
+            if (entry.key.contains('pan')) icon = Icons.credit_card;
+            
+            return ActionChip(
+              avatar: Icon(icon, size: 16),
+              label: Text(entry.key.toUpperCase()),
+              onPressed: () => _launchUrl(entry.value),
+              backgroundColor: Colors.blue.shade50,
+            );
+          }).toList(),
+        ),
+        const Divider(height: 24),
+      ],
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      // Fallback or error handling
+      debugPrint('Could not launch $url');
+    }
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {

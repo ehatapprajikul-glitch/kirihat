@@ -6,6 +6,7 @@ import 'package:kirihat_core/models/seller_product_request.dart';
 import 'package:kirihat_core/utils/currency_helper.dart';
 import 'enhanced_add_product_screen.dart';
 import 'widgets/draft_manager_widget.dart';
+import 'widgets/barcode_quantity_dialog.dart';
 
 class SellerProductsScreen extends StatefulWidget {
   final SellerModel seller;
@@ -19,6 +20,8 @@ class SellerProductsScreen extends StatefulWidget {
 class _SellerProductsScreenState extends State<SellerProductsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final Set<String> _selectedProductIds = {};
+  bool _isSelectionMode = false;
 
   @override
   void initState() {
@@ -55,6 +58,45 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
                       ),
                     ),
                     const Spacer(),
+                    if (_isSelectionMode) ...[
+                      Text(
+                        '${_selectedProductIds.length} selected',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() => _isSelectionMode = false);
+                          _selectedProductIds.clear();
+                        },
+                        icon: const Icon(Icons.close),
+                        label: const Text('Cancel'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: _selectedProductIds.isEmpty
+                            ? null
+                            : _showBarcodeDialog,
+                        icon: const Icon(Icons.print),
+                        label: const Text('Print Barcodes'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9759),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
@@ -165,108 +207,152 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
             var data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+            final productId = snapshot.data!.docs[index].id;
+            final isSelected = _selectedProductIds.contains(productId);
+            
             return Card(
               margin: const EdgeInsets.only(bottom: 16),
               elevation: 2,
               surfaceTintColor: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                        image: data['imageUrl'] != null
-                            ? DecorationImage(
-                                image: NetworkImage(data['imageUrl']),
-                                fit: BoxFit.cover,
-                              )
+              color: isSelected ? const Color(0xFF0D9759).withOpacity(0.1) : Colors.white,
+              child: InkWell(
+                onTap: _isSelectionMode
+                    ? () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedProductIds.remove(productId);
+                          } else {
+                            _selectedProductIds.add(productId);
+                          }
+                        });
+                      }
+                    : null,
+                onLongPress: () {
+                  setState(() {
+                    _isSelectionMode = true;
+                    _selectedProductIds.add(productId);
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Selection Checkbox
+                      if (_isSelectionMode)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Checkbox(
+                            value: isSelected,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedProductIds.add(productId);
+                                } else {
+                                  _selectedProductIds.remove(productId);
+                                }
+                              });
+                            },
+                            activeColor: const Color(0xFF0D9759),
+                          ),
+                        ),
+                      
+                      // Image
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                          image: data['imageUrl'] != null
+                              ? DecorationImage(
+                                  image: NetworkImage(data['imageUrl']),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: data['imageUrl'] == null
+                            ? const Icon(Icons.image, color: Colors.grey)
                             : null,
                       ),
-                      child: data['imageUrl'] == null
-                          ? const Icon(Icons.image, color: Colors.grey)
-                          : null,
-                    ),
-                    const SizedBox(width: 16),
-                    
-                    // Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            data['name'] ?? 'Unnamed',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${data['category'] ?? 'Uncategorized'} • ${data['subcategory'] ?? ''}',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Text(
-                                CurrencyHelper.format(data['mrp']),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0D9759),
-                                  fontSize: 15,
-                                ),
+                      const SizedBox(width: 16),
+                      
+                      // Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data['name'] ?? 'Unnamed',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
                               ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.green[50],
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.green.shade200),
-                                ),
-                                child: const Text(
-                                  'Active',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontSize: 12,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${data['category'] ?? 'Uncategorized'} • ${data['subcategory'] ?? ''}',
+                              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Text(
+                                  CurrencyHelper.format(data['mrp']),
+                                  style: const TextStyle(
                                     fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0D9759),
+                                    fontSize: 15,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Edit Button
-                              IconButton(
-                                icon: const Icon(Icons.edit, size: 20, color: Colors.blue),
-                                tooltip: "Edit Product",
-                                onPressed: () {
-                                     Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => EnhancedAddProductScreen(
-                                              seller: widget.seller,
-                                              productToEdit: {
-                                                'id': snapshot.data!.docs[index].id,
-                                                ...data,
-                                              },
-                                          ),
-                                        ),
-                                      );
-                                },
-                              )
-                            ],
-                          ),
-                        ],
+                                const Spacer(),
+                                if (!_isSelectionMode) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[50],
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.green.shade200),
+                                    ),
+                                    child: const Text(
+                                      'Active',
+                                      style: TextStyle(
+                                        color: Colors.green,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Edit Button
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, size: 20, color: Colors.blue),
+                                    tooltip: "Edit Product",
+                                    onPressed: () {
+                                         Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => EnhancedAddProductScreen(
+                                                  seller: widget.seller,
+                                                  productToEdit: {
+                                                    'id': productId,
+                                                    ...data,
+                                                  },
+                                              ),
+                                            ),
+                                          );
+                                    },
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -471,6 +557,58 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
         );
       },
     );
+  }
+
+  Future<void> _showBarcodeDialog() async {
+    // Fetch the full product data for selected IDs
+    final selectedProducts = <Map<String, dynamic>>[];
+    
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('master_products')
+          .where('seller_id', isEqualTo: widget.seller.id)
+          .where('isActive', isEqualTo: true)
+          .get();
+      
+      for (var doc in snapshot.docs) {
+        if (_selectedProductIds.contains(doc.id)) {
+          selectedProducts.add({
+            'id': doc.id,
+            ...doc.data(),
+          });
+        }
+      }
+      
+      if (selectedProducts.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No products selected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+      
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (context) => BarcodeQuantityDialog(
+            selectedProducts: selectedProducts,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading products: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime date) {

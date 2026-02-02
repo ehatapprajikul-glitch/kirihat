@@ -308,6 +308,13 @@ class MainDashboard extends StatelessWidget {
                 Colors.blueGrey,
                 () => onNavigate('settings'),
               ),
+              _buildQuickAction(
+                context,
+                'Fee Configuration',
+                Icons.monetization_on,
+                Colors.amber,
+                () => onNavigate('fee_configuration'),
+              ),
             ],
           ),
 

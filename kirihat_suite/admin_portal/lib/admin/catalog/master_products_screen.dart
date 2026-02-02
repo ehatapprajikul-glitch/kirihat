@@ -216,32 +216,11 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
                 );
               }
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  int crossAxisCount = 4;
-                  double width = constraints.maxWidth;
-                  if (width > 1400) {
-                    crossAxisCount = 5;
-                  } else if (width > 1100) {
-                    crossAxisCount = 4;
-                  } else if (width > 750) {
-                    crossAxisCount = 3;
-                  } else {
-                    crossAxisCount = 2;
-                  }
-
-                  return GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      childAspectRatio: 0.65, // Consistent aspect ratio
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: filteredDocs.length,
-                    itemBuilder: (context, index) {
-                      return _buildProductCard(filteredDocs[index]);
-                    },
-                  );
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredDocs.length,
+                itemBuilder: (context, index) {
+                  return _buildProductCard(filteredDocs[index]);
                 },
               );
             },
@@ -274,125 +253,180 @@ class _MasterProductsScreenState extends State<MasterProductsScreen> {
 
     return Card(
       elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         side: BorderSide(color: Colors.grey.shade200),
       ),
-      color: const Color(0xFFF1F5F9), // Light grey background
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Image Area
-          Expanded(
-             flex: 4, 
-             child: Stack(
-               children: [
-                 Container(
-                   decoration: const BoxDecoration(
-                     color: Colors.white,
-                     borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                   ),
-                   width: double.infinity,
-                   child: data['imageUrl'] != null
-                       ? ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                            child: Image.network(
-                              data['imageUrl'],
-                              fit: BoxFit.contain, 
-                              errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 40, color: Colors.grey),
-                            ),
-                         )
-                       : const Icon(Icons.image, size: 40, color: Colors.grey),
-                 ),
-                 // Category Badge
-                 if (data['category'] != null)
-                   Positioned(
-                     top: 8,
-                     left: 8,
-                     child: Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                       decoration: BoxDecoration(
-                         color: Colors.black54,
-                         borderRadius: BorderRadius.circular(4),
-                       ),
-                       child: Text(
-                         data['category'],
-                         style: const TextStyle(color: Colors.white, fontSize: 10),
-                       ),
-                     ),
-                   ),
-               ],
-             ),
-          ),
-          
-          // Content Area
-          Expanded(
-            flex: 3, 
-            child: Padding(
-              padding: const EdgeInsets.all(10), 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data['name'] ?? 'Unnamed',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Color(0xFF1E293B),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                         data['unit'] ?? '',
-                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'MRP: ${CurrencyHelper.format(data['mrp'] ?? 0)}',
-                        style: const TextStyle(
-                          color: Color(0xFF0D9759),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                            onPressed: () => _showProductForm(context, {'id': docId, ...data}),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            tooltip: 'Edit',
+      child: InkWell(
+        onTap: () => _showProductForm(context, {'id': docId, ...data}),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Product Image
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: data['imageUrl'] != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          data['imageUrl'],
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.image,
+                            size: 32,
+                            color: Colors.grey,
                           ),
+                        ),
+                      )
+                    : const Icon(Icons.image, size: 32, color: Colors.grey),
+              ),
+              const SizedBox(width: 16),
+
+              // Product Information
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Name
+                    Text(
+                      data['name'] ?? 'Unnamed Product',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: Color(0xFF1E293B),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Category & Subcategory (Text badges, no icons)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        if (data['category'] != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: const Color(0xFF0D9759).withOpacity(0.3),
+                              ),
+                            ),
+                            child: Text(
+                              data['category'],
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF0D9759),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        if (data['subcategory'] != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Colors.blue.shade200,
+                              ),
+                            ),
+                            child: Text(
+                              data['subcategory'],
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.blue[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Brand and Unit
+                    Row(
+                      children: [
+                        if (data['brand'] != null && data['brand'].toString().isNotEmpty) ...[
+                          Icon(Icons.branding_watermark, size: 14, color: Colors.grey[600]),
                           const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                            onPressed: () => _confirmDelete(docId, data['name']),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            tooltip: 'Delete',
+                          Text(
+                            data['brand'],
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        if (data['unit'] != null) ...[
+                          Icon(Icons.scale, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            data['unit'],
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                            ),
                           ),
                         ],
-                      )
-                    ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // MRP
+                    Text(
+                      'MRP: ${CurrencyHelper.format(data['mrp'] ?? 0)}',
+                      style: const TextStyle(
+                        color: Color(0xFF0D9759),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Action Buttons
+              Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    color: Colors.blue,
+                    onPressed: () => _showProductForm(context, {'id': docId, ...data}),
+                    tooltip: 'Edit',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    color: Colors.red,
+                    onPressed: () => _confirmDelete(docId, data['name']),
+                    tooltip: 'Delete',
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

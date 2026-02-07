@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kirihat_core/utils/currency_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kirihat_core/services/coupon_service.dart';
+import 'package:kirihat_core/services/fee_configuration_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -815,7 +816,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Fetch Commission Settings for this Vendor
+      // 1. Fetch Current Fee Configuration (Snapshot for historical accuracy)
+      final feeService = FeeConfigurationService();
+      final feeConfig = await feeService.getFeeConfiguration();
+      
+      // 2. Fetch Commission Settings for this Vendor
       double commissionRate = 0;
       double deliveryFeeShare = 0;
 
@@ -844,9 +849,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         String? sellerId = processedItem['seller_id'];
         String? productId = processedItem['product_id'] ?? processedItem['id'];
 
-        // If seller_id OR cost_price is missing, fetch from Master Product
-        if (productId != null && 
-            ((sellerId == null || sellerId.isEmpty) || processedItem['cost_price'] == null)) {
+        // Always fetch from Master Product to get seller info and base price
+        if (productId != null) {
           try {
             var doc = await FirebaseFirestore.instance.collection('master_products').doc(productId).get();
             if (doc.exists) {
@@ -860,6 +864,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               // Add Cost Price for Analytics
               if (processedItem['cost_price'] == null && data?['cost_price'] != null) {
                 processedItem['cost_price'] = data?['cost_price'];
+              }
+              
+              // CRITICAL: Store seller's base price for seller analytics
+              // The 'price' field contains vendor's selling price (what customer pays)
+              // We need seller's base price for correct seller profit calculations
+              if (data?['selling_price'] != null) {
+                processedItem['vendor_selling_price'] = processedItem['price']; // Customer pays this
+                processedItem['seller_base_price'] = data?['selling_price']; // Seller gets this
+                // Keep 'selling_price' as vendor's price for customer total
+                processedItem['selling_price'] = processedItem['price'];
               }
             }
           } catch (e) {
@@ -933,6 +947,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'state': _stateCtrl.text.trim(),
           'pincode': _pinCtrl.text.trim(),
         },
+        // Fee Snapshot for Historical Accuracy
+        'fees_snapshot': {
+          'platform_fee_percentage': feeConfig.platformFeePercentage,
+          'delivery_fee_default': feeConfig.deliveryFeeDefault,
+          'payment_gateway_fee_percentage': feeConfig.paymentGatewayFeePercentage,
+          'payment_gateway_fixed_fee': feeConfig.paymentGatewayFixedFee,
+          'packaging_fee': feeConfig.packagingFee,
+          'captured_at': FieldValue.serverTimestamp(),
+        },
         'created_at': FieldValue.serverTimestamp(),
         // Initialize fields for Rider Logic
         'rider_commission': 0, // Will be calculated when Rider Accepts
@@ -952,8 +975,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
       
-      // DECREMENT STOCK
-      // We iterate through items and update master_products directly.
+      // DECREMENT STOCK for BOTH vendor_inventory AND master_products
+      // We iterate through items and update both collections
       // Note: In a high-concurrency app, this should be a Transaction.
       // For now, we use a simple batch/loop with FieldValue.increment.
       
@@ -965,10 +988,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
          int quantity = item['quantity'] ?? 0;
          
          if (productId != null && quantity > 0) {
+             // 1. Decrease seller's master_products stock
              var productRef = FirebaseFirestore.instance.collection('master_products').doc(productId);
              batch.update(productRef, {
                 'stock_quantity': FieldValue.increment(-quantity)
              });
+             
+             // 2. Decrease vendor's inventory stock
+             // Find vendor_inventory document for this product and vendor
+             try {
+               var vendorInventoryQuery = await FirebaseFirestore.instance
+                   .collection('vendor_inventory')
+                   .where('vendor_id', isEqualTo: widget.vendorId)
+                   .where('product_id', isEqualTo: productId)
+                   .limit(1)
+                   .get();
+               
+               if (vendorInventoryQuery.docs.isNotEmpty) {
+                 var vendorInvRef = vendorInventoryQuery.docs.first.reference;
+                 batch.update(vendorInvRef, {
+                   'stock_quantity': FieldValue.increment(-quantity)
+                 });
+               } else {
+                 debugPrint("Warning: No vendor_inventory found for product $productId");
+               }
+             } catch (e) {
+               debugPrint("Error finding vendor_inventory for $productId: $e");
+             }
+             
              stockUpdatesNeeded = true;
          }
       }

@@ -13,6 +13,7 @@ import 'notifications/notification_composer.dart';
 import 'support/customer_support.dart';
 import 'monitoring/data_monitoring.dart';
 import 'analytics/analytics_reports.dart';
+import 'analytics/search_analytics_screen.dart';
 import 'settings/platform_settings.dart';
 import 'settings/product_display_settings.dart';
 import 'settings/fee_configuration_screen.dart';
@@ -130,6 +131,8 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
         return const HomeLayoutManagerScreen();
       case 'account_deletions':
         return const AccountDeletionsScreen();
+      case 'search_analytics':
+        return const SearchAnalyticsScreen();
       default:
         return const Center(child: Text('Page Not Found'));
     }

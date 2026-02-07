@@ -115,13 +115,131 @@ class ProductService {
     }
   }
 
-  /// Enrich inventory documents with master product data
+  /// Get products by collection ID
+  Future<List<Map<String, dynamic>>> getProductsByCollection({
+    required String vendorId,
+    required String collectionId,
+    int limit = 10,
+  }) async {
+    try {
+      // 1. Fetch collection doc to get product IDs
+      final collectionDoc = await _firestore
+          .collection('product_collections')
+          .doc(collectionId)
+          .get();
+
+      if (!collectionDoc.exists) {
+        print('❌ Collection not found: $collectionId');
+        return [];
+      }
+
+      final data = collectionDoc.data();
+      final productIds = List<String>.from(data?['product_ids'] ?? []);
+
+      if (productIds.isEmpty) return [];
+
+      // 2. Fetch products using existing helper, respecting limit
+      // We take more than limit initially because some might not be available in this vendor's inventory
+      final limitedIds = productIds.take(limit * 2).toList(); 
+      
+      final products = await getFeaturedProducts(
+        vendorId: vendorId,
+        productIds: limitedIds,
+      );
+
+      return products.take(limit).toList();
+
+    } catch (e) {
+      print('❌ Error fetching collection products: $e');
+      return [];
+    }
+  }
+
+  /// Get products by category name
+  Future<List<Map<String, dynamic>>> getProductsByCategory({
+    required String vendorId,
+    required String category,
+    int limit = 10,
+  }) async {
+    try {
+      // 1. Fetch products from master catalog by category
+      final productsSnap = await _firestore
+          .collection('master_products')
+          .where('category', isEqualTo: category)
+          .limit(limit * 3) // Fetch extra to ensure inventory availability
+          .get();
+
+      if (productsSnap.docs.isEmpty) return [];
+
+      // 2. Enrich with vendor inventory
+      // Since we can't easily join, we check inventory for these products
+      final products = await _enrichProducts(productsSnap.docs, vendorId, isMasterDocs: true);
+      
+      return products.take(limit).toList();
+    } catch (e) {
+      print('❌ Error fetching category products: $e');
+      return [];
+    }
+  }
+
+  /// Enrich inventory documents OR master product documents with inventory data
   Future<List<Map<String, dynamic>>> _enrichProducts(
-    List<QueryDocumentSnapshot> inventoryDocs,
-    String vendorId,
-  ) async {
+    List<QueryDocumentSnapshot> docs,
+    String vendorId, {
+    bool isMasterDocs = false,
+  }) async {
+    if (docs.isEmpty) return [];
+
+    // If docs are from master_products, we need to check vendor_inventory for these IDs
+    if (isMasterDocs) {
+      final productIds = docs.map((doc) => doc.id).toList();
+      final products = <Map<String, dynamic>>[];
+
+      // Fetch inventory in batches
+      for (int i = 0; i < productIds.length; i += 10) {
+        final batch = productIds.skip(i).take(10).toList();
+        
+        try {
+          final inventorySnap = await _firestore
+              .collection('vendor_inventory')
+              .where('vendor_id', isEqualTo: vendorId)
+              .where('product_id', whereIn: batch)
+              .where('isAvailable', isEqualTo: true)
+              .get();
+
+          final inventoryMap = {
+            for (var doc in inventorySnap.docs)
+              (doc.data()['product_id'] as String): doc.data()
+          };
+
+          // Only return products that exist in inventory
+          for (var masterDoc in docs) {
+            if (masterDoc.id != batch.firstWhere((id) => id == masterDoc.id, orElse: () => '')) continue;
+            
+            if (inventoryMap.containsKey(masterDoc.id)) {
+              final inventory = inventoryMap[masterDoc.id]!;
+              final productData = masterDoc.data() as Map<String, dynamic>;
+              
+              products.add({
+                ...productData,
+                'id': masterDoc.id,
+                'price': inventory['selling_price'] ?? productData['price'],
+                'stock_quantity': inventory['stock_quantity'] ?? 0,
+                'vendor_id': vendorId,
+                'isAvailable': true,
+              });
+            }
+          }
+        } catch (e) {
+          print('Error enriching batch: $e');
+        }
+      }
+      return products;
+    }
+
+    // Original logic: docs are inventory documents
     // Extract product IDs
-    final productIds = inventoryDocs
+    final productIds = docs
         .map((doc) {
           final data = doc.data() as Map<String, dynamic>;
           return data['product_id'] as String?;
@@ -136,7 +254,7 @@ class ProductService {
     final inventoryMap = <String, Map<String, dynamic>>{};
 
     // Create inventory map for quick lookup
-    for (var doc in inventoryDocs) {
+    for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
       final productId = data['product_id'];
       if (productId != null) {

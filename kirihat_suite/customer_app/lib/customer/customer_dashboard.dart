@@ -68,7 +68,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   Widget build(BuildContext context) {
     // Screens with vendor context
     final List<Widget> screens = [
-      const NewCustomerHomeScreen(), // New hero category home
+      const EnhancedCustomerHomeScreen(), // Enhanced home screen
       const CategoryProductsScreen(categoryName: "All Products"),
       const CustomerOrdersScreen(),
       const CustomerProfileScreen(),

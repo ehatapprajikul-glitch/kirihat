@@ -64,13 +64,30 @@ class _GlobalSearchBarState extends State<GlobalSearchBar> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         height: 50,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.grey[50]!,
+            ],
+          ),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            const Icon(Icons.search, color: Colors.grey),
+            Icon(Icons.search, color: Colors.grey[600], size: 22),
             const SizedBox(width: 12),
             Expanded(
               child: widget.readOnly
@@ -91,7 +108,10 @@ class _GlobalSearchBarState extends State<GlobalSearchBar> {
                       child: Text(
                         _placeholders[_currentIndex],
                         key: ValueKey<int>(_currentIndex),
-                        style: const TextStyle(color: Colors.grey, fontSize: 16),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                        ),
                       ),
                     )
                   : const TextField(
@@ -109,12 +129,23 @@ class _GlobalSearchBarState extends State<GlobalSearchBar> {
             GestureDetector(
               onTap: widget.onMicTap,
               child: Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF0FBB6C).withOpacity(0.1),
+                      const Color(0xFF0D9759).withOpacity(0.1),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.mic, color: Colors.grey, size: 20),
+                child: const Icon(
+                  Icons.mic,
+                  color: Color(0xFF0D9759),
+                  size: 20,
+                ),
               ),
             ),
           ],

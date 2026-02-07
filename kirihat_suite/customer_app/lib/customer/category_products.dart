@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'widgets/draggable_cart_wrapper.dart';
 import 'widgets/customer_header.dart';
-import 'widgets/global_search_bar.dart';
 import '../widgets/product_card.dart';
 import 'package:kirihat_core/models/collection_model.dart';
 import 'package:kirihat_core/services/session_service.dart';
@@ -15,7 +14,6 @@ import 'onboarding/change_location_screen.dart';
 import 'cart_screen.dart';
 import 'product/enhanced_product_detail.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
-import 'widgets/product_search_delegate.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
   final String categoryName; // "All Products" by default usually
@@ -495,19 +493,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   _loadData(); // Full reload
                 },
                 onCartTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
-              ),
-
-              // Search
-              GlobalSearchBar(
-                onTap: () {
-                  showSearch(
-                    context: context,
-                    delegate: ProductSearchDelegate(
-                      products: _displayProducts, // Search within currently filtered/loaded products
-                      categoryName: _selectedType == 'Category' ? _selectedId : null, 
-                    ),
-                  );
-                },
+                products: _displayProducts,
+                categoryName: _selectedType == 'Category' ? _selectedId : null,
               ),
 
               // Body
@@ -539,9 +526,9 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                         child: Text('COLLECTIONS', 
                                           style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                       ),
-                                      ..._collections.map((c) {
+                                      ..._collections.where((c) => c.id != 'smart_wishlist').map((c) {
                                         IconData icon = Icons.star_outline;
-                                        if (c.id == 'smart_wishlist') icon = Icons.favorite_rounded;
+                                        // if (c.id == 'smart_wishlist') icon = Icons.favorite_rounded; // Handled in header now
                                         if (c.id == 'smart_buy_again') icon = Icons.history_rounded;
                                         if (c.id == 'smart_new_arrivals') icon = Icons.new_releases_rounded;
                                         
@@ -554,7 +541,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                       const Padding(
                                         padding: EdgeInsets.fromLTRB(8, 16, 8, 4),
                                         child: Text('CATEGORIES', 
-                                          style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                          style: TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                       ),
                                       ..._rootCategories.map((c) {
                                         return _buildSidebarItem(

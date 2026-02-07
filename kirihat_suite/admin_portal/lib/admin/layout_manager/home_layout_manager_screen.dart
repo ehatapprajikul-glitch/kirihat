@@ -540,9 +540,79 @@ class _LayoutEditorDialogState extends State<LayoutEditorDialog> {
             DropdownMenuItem(value: 'trending', child: Text('Trending')),
             DropdownMenuItem(value: 'new', child: Text('New Arrivals')),
             DropdownMenuItem(value: 'deals', child: Text('Best Deals')),
+            DropdownMenuItem(value: 'collection', child: Text('Specific Collection')),
+            DropdownMenuItem(value: 'products', child: Text('Specific Products')),
           ],
           onChanged: (value) => setState(() => _data['filter'] = value),
         ),
+        
+        // Conditional Collection Dropdown
+        if (_data['filter'] == 'collection') ...[
+          const SizedBox(height: 12),
+          FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance.collection('product_collections').orderBy('name').get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const LinearProgressIndicator();
+              }
+              
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Text('No collections found', style: TextStyle(color: Colors.red));
+              }
+
+              final collections = snapshot.data!.docs.map((doc) {
+                 final data = doc.data() as Map<String, dynamic>;
+                 return {
+                   'id': doc.id,
+                   'name': data['name'] ?? 'Unnamed',
+                 };
+              }).toList();
+  
+              return DropdownButtonFormField<String>(
+                value: _data['collection_id'],
+                hint: const Text('Select Collection'),
+                decoration: const InputDecoration(
+                  labelText: 'Collection',
+                  border: OutlineInputBorder(),
+                ),
+                items: collections.map((Map<String, dynamic> col) {
+                  return DropdownMenuItem<String>(
+                    value: col['id'],
+                    child: Text(col['name']),
+                  );
+                }).toList(),
+                onChanged: (value) => setState(() => _data['collection_id'] = value),
+              );
+            },
+          ),
+        ],
+
+        if (_data['filter'] == 'products') ...[
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: _showProductSelectionDialog,
+            icon: const Icon(Icons.playlist_add),
+            label: Text('Select Products (${(_data['product_ids'] as List?)?.length ?? 0})'),
+          ),
+          if ((_data['product_ids'] as List?)?.isNotEmpty ?? false)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Wrap(
+                spacing: 8,
+                children: ((_data['product_ids'] as List).cast<String>()).map((id) {
+                  return Chip(
+                    label: Text(id.length > 6 ? '${id.substring(0, 6)}...' : id),
+                    onDeleted: () {
+                      setState(() {
+                         (_data['product_ids'] as List).remove(id);
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+
         const SizedBox(height: 12),
         TextFormField(
           initialValue: (_data['limit'] ?? 10).toString(),
@@ -688,5 +758,131 @@ class _LayoutEditorDialogState extends State<LayoutEditorDialog> {
     
     if (snapshot.docs.isEmpty) return 0;
     return snapshot.docs.first.data()['position'] ?? 0;
+  }
+
+  void _showProductSelectionDialog() async {
+    final selectedIds = (_data['product_ids'] as List?)?.cast<String>() ?? [];
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => ProductSelectionDialog(initialSelection: selectedIds),
+    );
+
+    if (result != null) {
+      setState(() {
+        _data['product_ids'] = result;
+      });
+    }
+  }
+}
+
+class ProductSelectionDialog extends StatefulWidget {
+  final List<String> initialSelection;
+
+  const ProductSelectionDialog({super.key, required this.initialSelection});
+
+  @override
+  State<ProductSelectionDialog> createState() => _ProductSelectionDialogState();
+}
+
+class _ProductSelectionDialogState extends State<ProductSelectionDialog> {
+  final TextEditingController _searchController = TextEditingController();
+  List<DocumentSnapshot> _products = [];
+  Set<String> _selectedIds = {};
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = widget.initialSelection.toSet();
+    _searchProducts();
+  }
+
+  void _searchProducts() async {
+    setState(() => _isLoading = true);
+    try {
+      Query query = FirebaseFirestore.instance.collection('master_products').limit(20);
+      
+      if (_searchController.text.trim().isNotEmpty) {
+        final term = _searchController.text.trim();
+        query = query.where('name', isGreaterThanOrEqualTo: term)
+            .where('name', isLessThan: term + 'z');
+      }
+
+      final snapshot = await query.get();
+      setState(() {
+        _products = snapshot.docs;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Search error: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select Products'),
+      content: SizedBox(
+        width: 500,
+        height: 400,
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search products (case sensitive)...',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _searchProducts,
+                ),
+              ),
+              onSubmitted: (_) => _searchProducts(),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _products.isEmpty
+                    ? const Center(child: Text('No products found'))
+                    : ListView.builder(
+                      itemCount: _products.length,
+                      itemBuilder: (context, index) {
+                        final doc = _products[index];
+                        final data = doc.data() as Map<String, dynamic>;
+                        final id = doc.id;
+                        final isSelected = _selectedIds.contains(id);
+
+                        return CheckboxListTile(
+                          title: Text(data['name'] ?? 'Unnamed'),
+                          subtitle: Text(data['category'] ?? ''),
+                          value: isSelected,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value == true) {
+                                _selectedIds.add(id);
+                              } else {
+                                _selectedIds.remove(id);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _selectedIds.toList()),
+          child: Text('Select (${_selectedIds.length})'),
+        ),
+      ],
+    );
   }
 }

@@ -96,8 +96,61 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 'cancelled_by': 'Customer',
               });
 
-              // --- NOTIFY VENDOR ---
+              // --- RESTORE STOCK FOR BOTH VENDOR AND SELLER ---
               Map<String, dynamic>? data = widget.orderDoc.data() as Map<String, dynamic>?;
+              var items = data?['items'] as List<dynamic>? ?? [];
+              String? vendorId = data?['vendor_id'];
+              
+              final batch = FirebaseFirestore.instance.batch();
+              bool stockRestoreNeeded = false;
+
+              for (var item in items) {
+                String? productId = item['product_id'] ?? item['id'];
+                int quantity = item['quantity'] ?? 0;
+                
+                if (productId != null && quantity > 0) {
+                  // 1. Restore seller's master_products stock
+                  var productRef = FirebaseFirestore.instance.collection('master_products').doc(productId);
+                  batch.update(productRef, {
+                    'stock_quantity': FieldValue.increment(quantity)
+                  });
+                  
+                  // 2. Restore vendor's inventory stock
+                  if (vendorId != null) {
+                    try {
+                      var vendorInventoryQuery = await FirebaseFirestore.instance
+                          .collection('vendor_inventory')
+                          .where('vendor_id', isEqualTo: vendorId)
+                          .where('product_id', isEqualTo: productId)
+                          .limit(1)
+                          .get();
+                      
+                      if (vendorInventoryQuery.docs.isNotEmpty) {
+                        var vendorInvRef = vendorInventoryQuery.docs.first.reference;
+                        batch.update(vendorInvRef, {
+                          'stock_quantity': FieldValue.increment(quantity)
+                        });
+                      }
+                    } catch (e) {
+                      debugPrint("Error restoring vendor stock for $productId: $e");
+                    }
+                  }
+                  
+                  stockRestoreNeeded = true;
+                }
+              }
+
+              if (stockRestoreNeeded) {
+                try {
+                  await batch.commit();
+                  debugPrint("✅ Stocks restored successfully");
+                } catch (e) {
+                  debugPrint("❌ Stock restoration failed: $e");
+                }
+              }
+              // --------------------------------------------------
+
+              // --- NOTIFY VENDOR ---
               String? vId = data?['vendor_id'];
               if (vId != null) {
                 await NotificationService.sendNotification(

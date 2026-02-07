@@ -130,6 +130,14 @@ class _EnhancedSellerAnalyticsScreenState extends State<EnhancedSellerAnalyticsS
           final myItems = items.where((i) => i['seller_id'] == widget.seller.id).toList();
           
           if (myItems.isNotEmpty) {
+            // Extract fee snapshot from order (for historical accuracy)
+            // If snapshot exists, use it; otherwise fall back to current fees
+            final feeSnapshot = data['fees_snapshot'] as Map<String, dynamic>?;
+            final orderPlatformFeePercent = feeSnapshot != null 
+                ? (feeSnapshot['platform_fee_percentage'] as num?)?.toDouble() ?? platformFeePercentage
+                : platformFeePercentage;
+            final orderPlatformFeeDecimal = orderPlatformFeePercent / 100;
+            
             double orderRevenue = 0;
             double orderCost = 0;
             double orderDiscount = 0;
@@ -137,11 +145,12 @@ class _EnhancedSellerAnalyticsScreenState extends State<EnhancedSellerAnalyticsS
             for (var item in myItems) {
               final quantity = (item['quantity'] ?? 1) as int;
               
-              // 1. Selling Price (Revenue) - Try multiple keys and fallback to product map
-              double sellingPrice = ((item['selling_price'] ?? item['price'] ?? 0) as num).toDouble();
+              // 1. Seller Base Price (Revenue) - CRITICAL: Use seller's price, not vendor's!
+              // Priority: seller_base_price > selling_price (old orders) > master_products fallback
+              double sellingPrice = ((item['seller_base_price'] ?? item['selling_price'] ?? item['price'] ?? 0) as num).toDouble();
               
               // If still missing, recover from master_products (for old orders)
-              if (sellingPrice == 0) {
+              if (sellingPrice == 0 || item['seller_base_price'] == null) {
                 String? productId = item['product_id'] ?? item['id'];
                 if (productId != null && productPriceMap.containsKey(productId)) {
                   sellingPrice = productPriceMap[productId]!['selling_price'] ?? 0;
@@ -180,7 +189,7 @@ class _EnhancedSellerAnalyticsScreenState extends State<EnhancedSellerAnalyticsS
                 costPrice: safeCostPrice,
                 mrp: mrp,
                 quantity: quantity,
-                platformFeePercentage: platformFeeDecimal, // Use dynamic fee
+                platformFeePercentage: orderPlatformFeeDecimal, // Use order's snapshot fee
               );
               
               orderRevenue += financials.revenue;
@@ -206,7 +215,7 @@ class _EnhancedSellerAnalyticsScreenState extends State<EnhancedSellerAnalyticsS
             // Calculate profit for display - zero out for cancelled/rejected orders
             final displayProfit = (status == 'Cancelled' || status == 'Rejected') 
                 ? 0.0 
-                : (orderRevenue - orderCost - (orderRevenue * platformFeeDecimal)); // Use dynamic fee
+                : (orderRevenue - orderCost - (orderRevenue * orderPlatformFeeDecimal)); // Use order's snapshot fee
             
             filteredOrders.add({
               'order_id': data['order_id'] ?? doc.id,
@@ -217,6 +226,8 @@ class _EnhancedSellerAnalyticsScreenState extends State<EnhancedSellerAnalyticsS
               'discount': orderDiscount,
               'profit': displayProfit,
               'items': myItems,
+              'has_fee_snapshot': feeSnapshot != null, // Track if using historical fees
+              'platform_fee_used': orderPlatformFeePercent, // Show which fee was used
             });
           }
         }

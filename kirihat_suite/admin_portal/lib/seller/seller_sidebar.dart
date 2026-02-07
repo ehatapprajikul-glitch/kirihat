@@ -134,6 +134,12 @@ class SellerSidebar extends StatelessWidget {
                   page: 'sells',
                   isActive: currentPage == 'sells',
                 ),
+                _buildNavItem(
+                  icon: Icons.receipt_long,
+                  label: 'Product Transactions',
+                  page: 'product_transactions',
+                  isActive: currentPage == 'product_transactions',
+                ),
                 const Divider(height: 1),
                 _buildSectionHeader('FINANCE'),
                 _buildNavItem(

@@ -6,6 +6,7 @@ import '../../widgets/product_card.dart';
 import '../product/enhanced_product_detail.dart';
 import '../services/search_service.dart';
 import 'dart:async';
+import 'voice_search_screen.dart';
 
 class ProductSearchDelegate extends SearchDelegate<String> {
   final List<Map<String, dynamic>> products; // Local products (if category specific)
@@ -85,12 +86,38 @@ class ProductSearchDelegate extends SearchDelegate<String> {
       IconButton(
         icon: Icon(_isListening ? Icons.mic : Icons.mic_none, 
           color: _isListening ? Colors.red : null),
-        onPressed: () {
+        onPressed: () async {
           // Trigger listener and rebuild to show active state
+          /*
           _listen(context, (val) {
             // Force rebuild to show query update? 
             // SearchDelegate handles query updates automatically usually
           });
+          */
+          
+          // Use the unified VoiceSearchScreen
+          final result = await Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => 
+                  const VoiceSearchScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(0.0, 1.0);
+                const end = Offset.zero;
+                const curve = Curves.easeOut;
+                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            ),
+          );
+
+          if (result != null && result is String && result.isNotEmpty) {
+             query = result;
+             showResults(context);
+          }
         },
       ),
     ];

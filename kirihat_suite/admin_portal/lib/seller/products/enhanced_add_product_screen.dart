@@ -37,6 +37,7 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
   bool _isLoading = false;
   bool _isDraftLoaded = false;
   bool _isEditing = false;
+  bool _isGeneratingBarcode = false;
   String? _currentDraftId; // Track which draft is being edited
 
   // Current step
@@ -985,14 +986,42 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
           const SizedBox(height: 32),
 
           // 5. Barcode
-          TextFormField(
-            controller: _barcodeController,
-            decoration: const InputDecoration(
-              labelText: 'Barcode *',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.qr_code),
-            ),
-            validator: (v) => v?.trim().isEmpty == true ? 'Required' : null,
+          // 5. Barcode
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _barcodeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Barcode *',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.qr_code),
+                    hintText: 'Scan or enter barcode',
+                  ),
+                  validator: (v) => v?.trim().isEmpty == true ? 'Required' : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 56, // Match text field height
+                child: ElevatedButton.icon(
+                  onPressed: _isGeneratingBarcode ? null : _generateUniqueBarcode,
+                  icon: _isGeneratingBarcode 
+                      ? const SizedBox(
+                          width: 20, 
+                          height: 20, 
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                        )
+                      : const Icon(Icons.autorenew),
+                  label: const Text('Auto Generate'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9759),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1910,6 +1939,61 @@ class _EnhancedAddProductScreenState extends State<EnhancedAddProductScreen> {
     }
 
     setState(() => _isLoading = false);
+  }
+
+  Future<void> _generateUniqueBarcode() async {
+    setState(() => _isGeneratingBarcode = true);
+    
+    try {
+      int attempts = 0;
+      bool isUnique = false;
+      String barcode = '';
+
+      while (!isUnique && attempts < 5) {
+        // Generate random 10-digit number
+        final random = DateTime.now().millisecondsSinceEpoch.toString().substring(3);
+        barcode = 'KI$random'; // Prefix KI
+        
+        // Check uniqueness in master_products
+        final query = await FirebaseFirestore.instance
+            .collection('master_products')
+            .where('barcode', isEqualTo: barcode)
+            .limit(1)
+            .get();
+            
+        if (query.docs.isEmpty) {
+          isUnique = true;
+        }
+        attempts++;
+      }
+
+      if (isUnique && mounted) {
+        setState(() {
+          _barcodeController.text = barcode;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(
+             content: Text('Unique barcode generated!'),
+             backgroundColor: Colors.green,
+             duration: Duration(seconds: 1),
+           ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to generate unique barcode. Please try again.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingBarcode = false);
+      }
+    }
   }
 
   Future<void> _submitRequest() async {

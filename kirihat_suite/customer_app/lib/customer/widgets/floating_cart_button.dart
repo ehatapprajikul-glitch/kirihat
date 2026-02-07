@@ -24,16 +24,36 @@ class FloatingCartButton extends StatelessWidget {
             return const SizedBox.shrink();
           }
 
-          return FloatingActionButton.extended(
-            heroTag: null,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CartScreen()),
-              );
-            },
-            backgroundColor: const Color(0xFF0D9759),
-            icon: const Icon(Icons.shopping_cart, color: Colors.white),
+          return Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0FBB6C),
+                  Color(0xFF0D9759),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0D9759).withOpacity(0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: FloatingActionButton.extended(
+              heroTag: null,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                );
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              icon: const Icon(Icons.shopping_cart, color: Colors.white),
             label: Row(
               children: [
                 const Text(
@@ -61,6 +81,7 @@ class FloatingCartButton extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
             ),
           );
         },
@@ -90,16 +111,36 @@ class FloatingCartButton extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return FloatingActionButton.extended(
-          heroTag: null, // Disable hero tag to prevent "multiple heroes" error
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CartScreen()),
-            );
-          },
-          backgroundColor: const Color(0xFF0D9759),
-          icon: const Icon(Icons.shopping_cart, color: Colors.white),
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF0FBB6C),
+                Color(0xFF0D9759),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0D9759).withOpacity(0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: FloatingActionButton.extended(
+            heroTag: null, // Disable hero tag to prevent "multiple heroes" error
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            icon: const Icon(Icons.shopping_cart, color: Colors.white),
           label: Row(
             children: [
               const Text(
@@ -127,6 +168,7 @@ class FloatingCartButton extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
         );
       },

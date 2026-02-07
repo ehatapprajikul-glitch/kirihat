@@ -90,7 +90,7 @@ class _VendorQRScreenState extends State<VendorQRScreen> {
                   version: QrVersions.auto,
                   size: 280.0,
                   gapless: false,
-                  embeddedImage: const AssetImage('assets/logo.png'),
+                  embeddedImage: const AssetImage('assets/favicon.png'),
                   embeddedImageStyle: const QrEmbeddedImageStyle(
                     size: Size(40, 40),
                   ),

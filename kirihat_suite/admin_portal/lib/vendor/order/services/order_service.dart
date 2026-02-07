@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:math';
 
 class OrderService {
@@ -117,16 +118,83 @@ class OrderService {
       });
     }
     await batch.commit();
+    
+    // Restore stock for all cancelled orders
+    for (String id in orderIds) {
+      await _restoreStockForOrder(id);
+    }
+  }
+  
+  // Helper method to restore stock for a cancelled order
+  Future<void> _restoreStockForOrder(String orderId) async {
+    try {
+      final orderDoc = await _firestore.collection('orders').doc(orderId).get();
+      if (!orderDoc.exists) return;
+      
+      final orderData = orderDoc.data();
+      final items = orderData?['items'] as List<dynamic>? ?? [];
+      final vendorId = orderData?['vendor_id'];
+      
+      final batch = _firestore.batch();
+      bool stockRestoreNeeded = false;
+
+      for (var item in items) {
+        String? productId = item['product_id'] ?? item['id'];
+        int quantity = item['quantity'] ?? 0;
+        
+        if (productId != null && quantity > 0) {
+          // 1. Restore seller's master_products stock
+          var productRef = _firestore.collection('master_products').doc(productId);
+          batch.update(productRef, {
+            'stock_quantity': FieldValue.increment(quantity)
+          });
+          
+          // 2. Restore vendor's inventory stock
+          if (vendorId != null) {
+            try {
+              var vendorInventoryQuery = await _firestore
+                  .collection('vendor_inventory')
+                  .where('vendor_id', isEqualTo: vendorId)
+                  .where('product_id', isEqualTo: productId)
+                  .limit(1)
+                  .get();
+              
+              if (vendorInventoryQuery.docs.isNotEmpty) {
+                var vendorInvRef = vendorInventoryQuery.docs.first.reference;
+                batch.update(vendorInvRef, {
+                  'stock_quantity': FieldValue.increment(quantity)
+                });
+              }
+            } catch (e) {
+              debugPrint("Error restoring vendor stock for $productId: $e");
+            }
+          }
+          
+          stockRestoreNeeded = true;
+        }
+      }
+
+      if (stockRestoreNeeded) {
+        await batch.commit();
+        debugPrint("✅ Stocks restored for cancelled order $orderId");
+      }
+    } catch (e) {
+      debugPrint("❌ Stock restoration failed for order $orderId: $e");
+    }
   }
 
   // Cancel order
   Future<void> cancelOrder(String orderId, {required String reason}) async {
+    // Update order status
     await _firestore.collection('orders').doc(orderId).update({
       'status': 'Cancelled',
       'cancellation_reason': reason,
       'cancelled_at': FieldValue.serverTimestamp(),
       'cancelled_by': 'vendor',
     });
+    
+    // Restore stock
+    await _restoreStockForOrder(orderId);
   }
   
   // Update order status

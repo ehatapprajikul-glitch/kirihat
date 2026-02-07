@@ -9,6 +9,7 @@ import 'inventory/enhanced_seller_inventory_screen.dart';
 import 'shipments/seller_shipments_screen.dart';
 import 'analytics/enhanced_seller_analytics_screen.dart';
 import 'analytics/seller_analytics_screen.dart';
+import 'analytics/product_transactions_screen.dart';
 import 'billing/seller_billing_screen.dart';
 import 'profile/seller_profile_screen.dart';
 import '../auth/seller_registration_screen.dart';
@@ -63,6 +64,8 @@ class _SellerDashboardState extends State<SellerDashboard> {
         return SellerShipmentsScreen(seller: _seller!);
       case 'sells':
         return EnhancedSellerAnalyticsScreen(seller: _seller!);
+      case 'product_transactions':
+        return EnhancedProductTransactionsScreen(seller: _seller!);
       case 'billing':
         return SellerBillingScreen(seller: _seller!);
       case 'profile':

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SearchService {
@@ -7,25 +8,38 @@ class SearchService {
   static const String _vendorKey = 'assigned_vendor_id';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Saves a search query to local history (no duplicates, max 10 items)
+  /// Saves a search query to local history and cloud analytics
   Future<void> saveSearch(String query) async {
     if (query.trim().isEmpty) return;
     
     final prefs = await SharedPreferences.getInstance();
+    
+    // 1. Save to Local History
     List<String> history = prefs.getStringList(_historyKey) ?? [];
-    
-    // Remove if exists to move to top
     history.removeWhere((item) => item.toLowerCase() == query.toLowerCase());
-    
-    // Add to top
     history.insert(0, query.trim());
-    
-    // Keep max 10
     if (history.length > 10) {
       history = history.sublist(0, 10);
     }
-    
     await prefs.setStringList(_historyKey, history);
+
+    // 2. Log to Analytics (Fire & Forget)
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final vendorId = prefs.getString(_vendorKey);
+      
+      _firestore.collection('search_analytics').add({
+        'query': query.trim(),
+        'normalized_query': query.trim().toLowerCase(),
+        'timestamp': FieldValue.serverTimestamp(),
+        'user_id': user?.uid, // Nullable if guest
+        'vendor_id': vendorId, // Nullable
+        'platform': 'customer_app',
+      });
+    } catch (e) {
+      // Analytics failure should not disrupt user experience
+      print('⚠️ Failed to log search analytics: $e');
+    }
   }
 
   /// Retrieves recent searches from local storage

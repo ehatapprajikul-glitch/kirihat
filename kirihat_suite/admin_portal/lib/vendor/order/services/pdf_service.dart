@@ -132,7 +132,7 @@ class PDFService {
 
   // Load logo from assets
   Future<pw.MemoryImage> _loadLogo() async {
-    final ByteData data = await rootBundle.load('assets/logo.png');
+    final ByteData data = await rootBundle.load('assets/favicon.png');
     final Uint8List bytes = data.buffer.asUint8List();
     return pw.MemoryImage(bytes);
   }

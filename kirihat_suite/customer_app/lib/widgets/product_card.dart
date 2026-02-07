@@ -104,11 +104,12 @@ class _ProductCardState extends State<ProductCard> {
                    ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                     child: Container(
-                      color: Colors.grey[50],
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(8), // Add padding to prevent touching edges
                       child: imageUrl.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: imageUrl,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                               placeholder: (context, url) => Shimmer.fromColors(
                                 baseColor: Colors.grey[300]!,
                                 highlightColor: Colors.grey[100]!,

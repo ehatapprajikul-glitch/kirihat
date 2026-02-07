@@ -178,6 +178,11 @@ class AdminSidebar extends StatelessWidget {
                   label: 'Commission Settings',
                   page: 'commission',
                 ),
+                _buildNavItem(
+                  icon: Icons.monetization_on,
+                  label: 'Fee Configuration',
+                  page: 'fee_configuration',
+                ),
                 
                 _buildSectionHeader('Communication'),
                 _buildNavItem(
@@ -231,6 +236,11 @@ class AdminSidebar extends StatelessWidget {
                   icon: Icons.bar_chart,
                   label: 'Analytics & Reports',
                   page: 'analytics',
+                ),
+                _buildNavItem(
+                  icon: Icons.manage_search,
+                  label: 'Search Analytics',
+                  page: 'search_analytics',
                 ),
                 
                 _buildSectionHeader('Configuration'),

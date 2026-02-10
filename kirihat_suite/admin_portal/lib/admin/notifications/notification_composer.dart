@@ -14,9 +14,12 @@ class _NotificationComposerState extends State<NotificationComposer> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
-
+  final _userIdController = TextEditingController(); 
+  final _imageController = TextEditingController(); // Added
+  
   String _targetType = 'all';
   String _roleFilter = 'customer';
+  String _notificationType = 'general'; // Added
   bool _hasCart = false;
   bool _hasWishlist = false;
   String? _categoryFilter;
@@ -34,6 +37,8 @@ class _NotificationComposerState extends State<NotificationComposer> {
   void dispose() {
     _titleController.dispose();
     _bodyController.dispose();
+    _userIdController.dispose();
+    _imageController.dispose(); // Added
     super.dispose();
   }
 
@@ -132,6 +137,36 @@ class _NotificationComposerState extends State<NotificationComposer> {
                             },
                           ),
 
+                          const SizedBox(height: 16),
+                          
+                          // Image URL
+                          TextFormField(
+                            controller: _imageController, // Need to define
+                            decoration: const InputDecoration(
+                              labelText: 'Image URL (Optional)',
+                              hintText: 'https://example.com/image.jpg',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.image),
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Notification Type
+                          DropdownButtonFormField<String>(
+                             value: _notificationType, // Need to define
+                             decoration: const InputDecoration(
+                                labelText: 'Notification Type',
+                                border: OutlineInputBorder(),
+                             ),
+                             items: const [
+                                DropdownMenuItem(value: 'general', child: Text('General Message')),
+                                DropdownMenuItem(value: 'arrival', child: Text('New Arrival')),
+                                DropdownMenuItem(value: 'offer', child: Text('Special Offer')),
+                             ],
+                             onChanged: (val) => setState(() => _notificationType = val!),
+                          ),
+
                           const SizedBox(height: 24),
 
                           // Target Selection
@@ -151,6 +186,7 @@ class _NotificationComposerState extends State<NotificationComposer> {
                               DropdownMenuItem(value: 'all', child: Text('All Users')),
                               DropdownMenuItem(value: 'role', child: Text('By Role')),
                               DropdownMenuItem(value: 'activity', child: Text('By Activity')),
+                              DropdownMenuItem(value: 'specific', child: Text('Specific User')), // Added option
                             ],
                             onChanged: (value) {
                               setState(() {
@@ -159,6 +195,28 @@ class _NotificationComposerState extends State<NotificationComposer> {
                               });
                             },
                           ),
+
+                          const SizedBox(height: 16),
+
+                          // Specific User Input
+                          if (_targetType == 'specific') ...[
+                             TextFormField(
+                               controller: _userIdController, // Need to define this controller
+                               decoration: const InputDecoration(
+                                 labelText: 'User ID (UID)',
+                                 hintText: 'Paste user UID here',
+                                 border: OutlineInputBorder(),
+                               ),
+                               validator: (value) {
+                                  if (_targetType == 'specific' && (value == null || value.trim().isEmpty)) {
+                                     return 'User UID is required';
+                                  }
+                                  return null;
+                               },
+                               onChanged: (_) => _calculateReach(),
+                             ),
+                             const SizedBox(height: 16),
+                          ],
 
                           const SizedBox(height: 16),
 
@@ -390,6 +448,13 @@ class _NotificationComposerState extends State<NotificationComposer> {
 
   Future<void> _calculateReach() async {
     try {
+      if (_targetType == 'specific') {
+         setState(() {
+           _estimatedReach = _userIdController.text.trim().isNotEmpty ? 1 : 0;
+         });
+         return;
+      }
+
       Query query = FirebaseFirestore.instance.collection('users');
 
       if (_targetType == 'role') {
@@ -412,13 +477,18 @@ class _NotificationComposerState extends State<NotificationComposer> {
 
     try {
       User? admin = FirebaseAuth.instance.currentUser;
-
-      // Save to notification history
-      await FirebaseFirestore.instance.collection('push_notifications').add({
+      final WriteBatch batch = FirebaseFirestore.instance.batch();
+      
+      // Save to notification history (Master Record)
+      final DocumentReference historyRef = FirebaseFirestore.instance.collection('push_notifications').doc();
+      
+      final notificationData = {
+        'id': historyRef.id,
         'title': _titleController.text.trim(),
         'body': _bodyController.text.trim(),
         'target_type': _targetType,
         'target_role': _targetType == 'role' ? _roleFilter : null,
+        'target_user_id': _targetType == 'specific' ? _userIdController.text.trim() : null,
         'filters': {
           'has_cart': _targetType == 'activity' ? _hasCart : null,
           'has_wishlist': _targetType == 'activity' ? _hasWishlist : null,
@@ -428,7 +498,77 @@ class _NotificationComposerState extends State<NotificationComposer> {
         'created_by_email': admin?.email,
         'sent_at': FieldValue.serverTimestamp(),
         'status': 'sent',
-      });
+        // Updated payload
+        'type': _notificationType, 
+        'image': _imageController.text.trim().isEmpty ? null : _imageController.text.trim(),
+      };
+
+      batch.set(historyRef, notificationData);
+
+      // --- DISTRIBUTE TO USERS ---
+      
+      if (_targetType == 'specific') {
+         // Specific User
+         final targetUid = _userIdController.text.trim();
+         if (targetUid.isNotEmpty) {
+            final userNotifRef = FirebaseFirestore.instance
+               .collection('users')
+               .doc(targetUid)
+               .collection('notifications')
+               .doc();
+               
+            batch.set(userNotifRef, {
+               ...notificationData,
+               'is_read': false,
+               'timestamp': FieldValue.serverTimestamp(),
+            });
+         }
+         await batch.commit();
+         
+      } else {
+         // ... (rest of batch logic remains same) ...
+         // Broadcast (All / Role)
+         Query userQuery = FirebaseFirestore.instance.collection('users');
+         
+         if (_targetType == 'role') {
+            userQuery = userQuery.where('role', isEqualTo: _roleFilter);
+         }
+         
+         final userSnapshot = await userQuery.get();
+         
+         // Commit the history record first
+         await historyRef.set(notificationData); 
+         
+         // Now process users in batches of 400
+         List<WriteBatch> batches = [];
+         WriteBatch currentBatch = FirebaseFirestore.instance.batch();
+         int operationCount = 0;
+         
+         for (var userDoc in userSnapshot.docs) {
+             final userNotifRef = userDoc.reference.collection('notifications').doc();
+             currentBatch.set(userNotifRef, {
+                ...notificationData,
+                'is_read': false,
+                'timestamp': FieldValue.serverTimestamp(),
+             });
+             
+             operationCount++;
+             
+             if (operationCount >= 400) {
+                batches.add(currentBatch);
+                currentBatch = FirebaseFirestore.instance.batch();
+                operationCount = 0;
+             }
+         }
+         
+         if (operationCount > 0) {
+            batches.add(currentBatch);
+         }
+         
+         for (var b in batches) {
+            await b.commit();
+         }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -441,14 +581,17 @@ class _NotificationComposerState extends State<NotificationComposer> {
         // Clear form
         _titleController.clear();
         _bodyController.clear();
+        _imageController.clear(); // Clear image
         setState(() {
           _targetType = 'all';
+          _notificationType = 'general'; // Reset type
           _hasCart = false;
           _hasWishlist = false;
         });
         _calculateReach();
       }
     } catch (e) {
+      debugPrint('Error sending notification: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),

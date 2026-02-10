@@ -191,14 +191,19 @@ class ProductService {
     if (docs.isEmpty) return [];
 
     // If docs are from master_products, we need to check vendor_inventory for these IDs
+    // If docs are from master_products, we need to check vendor_inventory for these IDs
     if (isMasterDocs) {
       final productIds = docs.map((doc) => doc.id).toList();
       final products = <Map<String, dynamic>>[];
 
-      // Fetch inventory in batches
+      // Create batches of 10
+      final batches = <List<String>>[];
       for (int i = 0; i < productIds.length; i += 10) {
-        final batch = productIds.skip(i).take(10).toList();
-        
+        batches.add(productIds.skip(i).take(10).toList());
+      }
+      
+      // Process batches IN PARALLEL
+      await Future.wait(batches.map((batch) async {
         try {
           final inventorySnap = await _firestore
               .collection('vendor_inventory')
@@ -212,28 +217,35 @@ class ProductService {
               (doc.data()['product_id'] as String): doc.data()
           };
 
-          // Only return products that exist in inventory
+          // Thread-safe addition to results list
+          // Since we are inside async tasks, we should lock or just trust that list.add is atomic enough for this scope in Dart (single-threaded event loop)
+          // Actually Dart is single threaded, so this is safe as long as we don't await inside the critical section.
+          final batchProducts = <Map<String, dynamic>>[];
+          
           for (var masterDoc in docs) {
-            if (masterDoc.id != batch.firstWhere((id) => id == masterDoc.id, orElse: () => '')) continue;
-            
-            if (inventoryMap.containsKey(masterDoc.id)) {
-              final inventory = inventoryMap[masterDoc.id]!;
-              final productData = masterDoc.data() as Map<String, dynamic>;
-              
-              products.add({
-                ...productData,
-                'id': masterDoc.id,
-                'price': inventory['selling_price'] ?? productData['price'],
-                'stock_quantity': inventory['stock_quantity'] ?? 0,
-                'vendor_id': vendorId,
-                'isAvailable': true,
-              });
-            }
+             // Efficient lookup: check if this master doc ID is in the current batch
+             if (batch.contains(masterDoc.id)) {
+                 if (inventoryMap.containsKey(masterDoc.id)) {
+                    final inventory = inventoryMap[masterDoc.id]!;
+                    final productData = masterDoc.data() as Map<String, dynamic>;
+                    
+                    batchProducts.add({
+                      ...productData,
+                      'id': masterDoc.id,
+                      'price': inventory['selling_price'] ?? productData['price'],
+                      'stock_quantity': inventory['stock_quantity'] ?? 0,
+                      'vendor_id': vendorId,
+                      'isAvailable': true,
+                    });
+                 }
+             }
           }
+          products.addAll(batchProducts);
         } catch (e) {
           print('Error enriching batch: $e');
         }
-      }
+      }));
+
       return products;
     }
 

@@ -267,9 +267,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               },
               onAdd: () {
                 if (product['isAvailableInCurrentVendor'] == true) {
-                  // ScaffoldMessenger.of(context).showSnackBar(
-                  //   const SnackBar(content: Text('Added to cart')),
-                  // );
+                                    // Success message removed as per new UI request (floating cart)    }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

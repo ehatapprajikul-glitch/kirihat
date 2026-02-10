@@ -1,11 +1,15 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
 import 'package:kirihat_core/services/product_display_settings_service.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import 'fullscreen_image_viewer.dart';
 import 'widgets/collapsible_description.dart';
 import 'widgets/product_details_table.dart';
@@ -15,17 +19,23 @@ import 'package:kirihat_core/services/home_layout_service.dart';
 import 'package:kirihat_core/services/wishlist_service.dart';
 import '../widgets/draggable_cart_wrapper.dart';
 import '../../services/recently_viewed_service.dart';
-import '../widgets/floating_cart_button.dart';
-import 'package:kirihat_core/utils/currency_helper.dart';
+import '../widgets/product_search_delegate.dart'; // Import for search
+import '../widgets/voice_search_screen.dart'; // Import for voice search
+import '../wishlist_screen.dart'; 
+import 'package:kirihat_core/utils/currency_helper.dart'; 
+
+// Define colors locally as they are private in customer_header.dart
+const _kGreenDeep    = Color(0xFF064E3B);
+const _kGreenVibrant = Color(0xFF059669);
 
 class EnhancedProductDetailScreen extends StatefulWidget {
   final String productId;
-  final Map<String, dynamic> productData;
+  final Map<String, dynamic>? productData; // Made nullable
 
   const EnhancedProductDetailScreen({
     super.key,
     required this.productId,
-    required this.productData,
+    this.productData,
   });
 
   @override
@@ -36,6 +46,11 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
   final HomeLayoutService _layoutService = HomeLayoutService();
   final WishlistService _wishlistService = WishlistService();
   final ProductDisplaySettingsService _settingsService = ProductDisplaySettingsService();
+  
+  // Scroll controller for collapsible header logic
+  late ScrollController _scrollController;
+  bool _showStickyHeader = false;
+
   int _currentImageIndex = 0;
   int _quantity = 1;
   bool _isInWishlist = false;
@@ -50,20 +65,55 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
   @override
   void initState() {
     super.initState();
-    _fullProductData = Map<String, dynamic>.from(widget.productData);
+    // Initialize ScrollController
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+
+    // Initialize with provided data or empty
+    if (widget.productData != null) {
+      _fullProductData = Map<String, dynamic>.from(widget.productData!);
+    } else {
+      _fullProductData = {};
+      _fullProductData['id'] = widget.productId; // Ensure ID is present
+    }
+
     _settingsService.initialize();
     _checkWishlistStatus();
     _initializeData();
     
     // Track this product view
-    RecentlyViewedService.addProduct(widget.productData);
+    if (_fullProductData.isNotEmpty) {
+      RecentlyViewedService.addProduct(_fullProductData);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Show sticky header when scrolled past a certain threshold (e.g., 280)
+    // The customized header height is 350. We want the search bar to appear 
+    // when the image is mostly collapsed.
+    if (_scrollController.hasClients) {
+      final offset = _scrollController.offset;
+      final show = offset > 250; 
+      if (show != _showStickyHeader) {
+        setState(() {
+          _showStickyHeader = show;
+        });
+      }
+    }
   }
 
   Future<void> _initializeData() async {
     try {
       debugPrint('🔍 === INITIALIZATION START ===');
       debugPrint('🔍 Product ID: ${widget.productId}');
-      debugPrint('🔍 Initial productData keys: ${widget.productData.keys.toList()}');
+      debugPrint('🔍 Initial productData keys: ${widget.productData?.keys.toList() ?? "[]"}');
       
       // Always fetch from master_products to get complete data
       try {
@@ -76,24 +126,25 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
         if (doc.exists && doc.data() != null) {
           final masterData = doc.data()!;
           debugPrint('✅ Master product data fetched');
-          debugPrint('🔍 Master data keys: ${masterData.keys.toList()}');
-          debugPrint('🔍 Has specifications: ${masterData.containsKey('specifications')}');
           
-          if (masterData.containsKey('specifications')) {
-            debugPrint('🔍 Specifications data: ${masterData['specifications']}');
-          }
-          
-          // Merge master data with widget data
-          _fullProductData = Map<String, dynamic>.from(widget.productData);
+          // Merge master data with widget data (if any)
+          // Keep existing _fullProductData as base (so we don't lose the id set in initState)
           _fullProductData.addAll(masterData);
+          
+          // Re-ensure id is set (masterData might not have 'id' key)
+          _fullProductData['id'] ??= widget.productId;
           
           debugPrint('🔍 Merged data keys: ${_fullProductData.keys.toList()}');
         } else {
           debugPrint('⚠️ Master product document not found!');
+          // Keep whatever we had, ensure id is still present
+          _fullProductData['id'] ??= widget.productId;
         }
       } catch (e, stack) {
         debugPrint('❌ Error fetching master product: $e');
         debugPrintStack(stackTrace: stack);
+        // Ensure id is still present on error
+        _fullProductData['id'] ??= widget.productId;
       }
 
       // Load dependent data
@@ -182,6 +233,9 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
           }
            if (data.containsKey('stock_quantity')) {
              _fullProductData['stock_quantity'] = data['stock_quantity'];
+          }
+          if (data.containsKey('is_available')) {
+             _fullProductData['is_available'] = data['is_available'];
           }
         });
       } else {
@@ -390,7 +444,7 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
       final wasAdded = await _wishlistService.toggleWishlist(
         userId,
         widget.productId,
-        sourceVendorId: widget.productData['vendor_id'],
+        sourceVendorId: _fullProductData['vendor_id'],
       );
 
       if (mounted) {
@@ -412,7 +466,12 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
       final brand = _fullProductData['brand'];
       final currentPrice = _fullProductData['price'] ?? 0;
 
-      if (category == null || vendorId == null) return;
+      debugPrint('🔍 _loadRelatedProducts: category=$category, vendorId=$vendorId, brand=$brand');
+
+      if (category == null || vendorId == null) {
+        debugPrint('⚠️ _loadRelatedProducts: SKIPPED - category or vendorId is null');
+        return;
+      }
 
       final priceRange = _settingsService.getPriceRange(currentPrice.toDouble());
       final minPrice = priceRange['min']!;
@@ -465,22 +524,29 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
   }
 
   List<String> _getAllImages() {
-    if (widget.productData['images'] != null && 
-        (widget.productData['images'] as List).isNotEmpty) {
-      return List<String>.from(widget.productData['images']);
+    if (_fullProductData['images'] != null && 
+        (_fullProductData['images'] as List).isNotEmpty) {
+      return List<String>.from(_fullProductData['images']);
     }
-    if (widget.productData['imageUrl'] != null && 
-        widget.productData['imageUrl'].toString().isNotEmpty) {
-      return [widget.productData['imageUrl']];
+    if (_fullProductData['imageUrl'] != null && 
+        _fullProductData['imageUrl'].toString().isNotEmpty) {
+      return [_fullProductData['imageUrl']];
     }
     return [];
   }
 
   @override
   Widget build(BuildContext context) {
-    final name = widget.productData['name'] ?? 'Product';
-    final category = widget.productData['category'] ?? '';
-    final subcategory = widget.productData['subcategory'];
+    // Show loader if we rely on fetching and don't have data yet
+    if (_isLoading && (_fullProductData.isEmpty || _fullProductData.length <= 1)) {
+       return const Scaffold(
+         body: Center(child: CircularProgressIndicator()),
+       );
+    }
+
+    final name = _fullProductData['name'] ?? 'Product';
+    final category = _fullProductData['category'] ?? '';
+    final subcategory = _fullProductData['subcategory'];
     final images = _getAllImages();
 
     final disclaimerText = _settingsService.getDisclaimerForCategory(
@@ -506,72 +572,229 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isInWishlist ? Icons.favorite : Icons.favorite_border,
-              color: _isInWishlist ? Colors.red : Colors.black,
-            ),
-            onPressed: _toggleWishlist,
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () async {
-              final name = widget.productData['name'] ?? 'Product';
-              final price = widget.productData['price'] ?? 0;
-              final category = widget.productData['category'] ?? '';
-              
-              await Share.share(
-                'Check out this amazing product on Kirihat!\n\n'
-                '$name\n'
-                'Price: ${CurrencyHelper.format(price)}\n\n'
-                'Download Kirihat app to order now!',
-                subject: 'Product Recommendation from Kirihat',
-              );
-            },
-          ),
-        ],
-      ),
       bottomNavigationBar: _buildStickyBottomBar(),
       body: DraggableCartWrapper(
-        child: Column(
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 350.0,
+              pinned: true,
+              backgroundColor: Colors.white,
+              elevation: _showStickyHeader ? 1 : 0,
+              leading: _buildCircleButton(
+                icon: Icons.arrow_back,
+                onTap: () => Navigator.pop(context),
+                isSticky: _showStickyHeader,
+              ),
+              // Search Bar in Title - transitions with opacity
+              titleSpacing: 0,
+              title: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: _showStickyHeader ? 1.0 : 0.0,
+                child: _showStickyHeader
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _buildStickySearchBar(),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              actions: [
+                 // Wishlist Button - shows in both states but styling changes?
+                 // We'll keep it simple: circle button always, but background might change if needed.
+                 // For now, same style works.
+                 if (!_showStickyHeader) ...[
+                   _buildCircleButton(
+                     icon: _isInWishlist ? Icons.favorite : Icons.favorite_border,
+                     color: _isInWishlist ? Colors.red : null,
+                     onTap: _toggleWishlist,
+                     isSticky: false,
+                   ),
+                   const SizedBox(width: 8),
+                   _buildCircleButton(
+                     icon: Icons.share,
+                     onTap: _shareProduct,
+                     isSticky: false,
+                   ),
+                   const SizedBox(width: 16),
+                 ] else ...[
+                   // When sticky, we might want fewer actions or different style.
+                   // User asked for "icon and search bar". 
+                   // Let's hide actions in sticky mode to make room for search bar, 
+                   // OR keep them if space permits. 
+                   // If broad search bar is needed, maybe Actions are too much?
+                   // User said "shows only icon and search bar". 
+                   // I assume "icon" means back icon. 
+                   // So I can hide actions in sticky mode.
+                 ]
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: _buildImageCarousel(images),
+                collapseMode: CollapseMode.parallax,
+              ),
+            ),
+            
+            // Product Info
+            SliverToBoxAdapter(
+              child: _buildProductInfo(),
+            ),
+            
+            // Details Table
+            SliverToBoxAdapter(
+              child: _buildDetailsTableSection(disclaimerText),
+            ),
+            
+            // Related Products
+            SliverToBoxAdapter(
+              child: _buildRelatedProducts(),
+            ),
+            
+            // Bottom Padding
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 100), // Space for bottom bar
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStickySearchBar() {
+    return GestureDetector(
+      onTap: () {
+         showSearch(
+          context: context,
+          delegate: ProductSearchDelegate(
+            categoryName: _fullProductData['category'],
+            // Pass related products as a hint of local products, or empty
+            products: _relatedProducts, 
+          ),
+        );
+      },
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Row(
           children: [
+            const SizedBox(width: 12),
+            const Icon(Icons.search, color: _kGreenVibrant, size: 20),
+            const SizedBox(width: 8),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ..._settingsService.sectionOrder.map((section) {
-                      switch (section) {
-                        case 'images':
-                          return _buildImageCarousel(images);
-                        case 'overview':
-                          return _buildProductInfo();
-                        case 'details':
-                          return _buildDetailsTableSection(disclaimerText);
-                        case 'related':
-                          return _buildRelatedProducts();
-                        default:
-                          return const SizedBox.shrink();
-                      }
-                    }).toList(),
-                    const SizedBox(height: 24),
-                  ],
+              child: Text(
+                'Search products...',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 14,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Mic icon
+            GestureDetector(
+               onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VoiceSearchScreen(),
+                    ),
+                  );
+                  if (result != null && result is String && mounted) {
+                     showSearch(
+                        context: context,
+                        delegate: ProductSearchDelegate(
+                          initialQuery: result,
+                        ),
+                     );
+                  }
+               },
+               child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Icon(Icons.mic, color: _kGreenVibrant, size: 20),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: const FloatingCartButton(),
+    );
+  }
+
+  Widget _buildCircleButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    Color? color,
+    required bool isSticky,
+  }) {
+    // Determine background: 
+    // If sticky (white background), maybe transparent or light grey?
+    // If not sticky (image background), semi-transparent white.
+    // However, if sticky, the AppBar is white, so button should probably have no bg or light bg.
+    // The "leading" widget in SliverAppBar has constrained width, so we wrap in Center/Container.
+    
+    return Center(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: isSticky ? Colors.transparent : Colors.white.withOpacity(0.7),
+            shape: BoxShape.circle,
+            // Add custom visual if needed
+          ),
+          child: Icon(
+            icon,
+            color: color ?? (isSticky ? Colors.black : Colors.black),
+            size: 22,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _shareProduct() async {
+    final name = _fullProductData['name'] ?? 'Product';
+    final price = _fullProductData['price'] ?? 0;
+    
+    // Get product image URL
+    final images = _getAllImages();
+    final imageUrl = images.isNotEmpty ? images.first : null;
+    
+    final shareText = 'Check out $name on Kirihat!\n\n'
+        'Price: ₹$price\n\n'
+        'View Product: https://kirihat.com/product?id=${widget.productId}\n\n'
+        'Get the app: https://play.google.com/store/apps/details?id=com.kirihat.live_app';
+    
+    // Try to share with image, fallback to text-only
+    if (imageUrl != null) {
+      try {
+        // Download image to temp file
+        final response = await http.get(Uri.parse(imageUrl));
+        if (response.statusCode == 200) {
+          final tempDir = await getTemporaryDirectory();
+          final file = File('${tempDir.path}/share_product.jpg');
+          await file.writeAsBytes(response.bodyBytes);
+          
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            text: shareText,
+            subject: 'Product Recommendation from Kirihat',
+          );
+          return;
+        }
+      } catch (e) {
+        debugPrint('Error sharing with image: $e');
+      }
+    }
+    
+    // Fallback to text-only share
+    await Share.share(
+      shareText,
+      subject: 'Product Recommendation from Kirihat',
     );
   }
 
@@ -586,81 +809,80 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
       );
     }
 
-    return Column(
-      children: [
-        CarouselSlider(
-          options: CarouselOptions(
-            height: 350,
-            viewportFraction: 1.0,
-            enableInfiniteScroll: images.length > 1,
-            onPageChanged: (index, reason) {
-              setState(() => _currentImageIndex = index);
-            },
-          ),
-          items: images.map((imageUrl) {
-            return GestureDetector(
-              onTap: () {
-                if (_settingsService.enableImageZoom && _settingsService.enableFullscreenMode) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => FullscreenImageViewer(
-                        imageUrls: images,
-                        initialIndex: _currentImageIndex,
-                        showCounter: _settingsService.showImageCounter,
+    // Wrap in stack to show dots if needed, but FlexibleSpaceBar handles clipping.
+    return Container(
+      color: Colors.white,
+      height: 350,
+      child: Stack(
+        children: [
+          CarouselSlider(
+            options: CarouselOptions(
+              height: 350,
+              viewportFraction: 1.0,
+              enableInfiniteScroll: images.length > 1,
+              onPageChanged: (index, reason) {
+                setState(() => _currentImageIndex = index);
+              },
+            ),
+            items: images.map((imageUrl) {
+              return GestureDetector(
+                onTap: () {
+                  if (_settingsService.enableImageZoom && _settingsService.enableFullscreenMode) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => FullscreenImageViewer(
+                          imageUrls: images,
+                          initialIndex: _currentImageIndex,
+                          showCounter: _settingsService.showImageCounter,
+                        ),
                       ),
+                    );
+                  }
+                },
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain, // Maintain aspect ratio
+                  memCacheWidth: 1080,
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      color: Colors.white,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image)),
+                ),
+              );
+            }).toList(),
+          ),
+          
+          if (images.length > 1 && _settingsService.showImageDots)
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: images.asMap().entries.map((entry) {
+                  final isActive = _currentImageIndex == entry.key;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    width: isActive ? 32 : 8,
+                    height: 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      color: isActive
+                          ? const Color(0xFF0D9759)
+                          : Colors.grey[300],
                     ),
                   );
-                }
-              },
-              child: CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.contain,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.error, size: 50),
-                ),
+                }).toList(),
               ),
-            );
-          }).toList(),
-        ),
-        
-        if (images.length > 1 && _settingsService.showImageDots)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: images.asMap().entries.map((entry) {
-                final isActive = _currentImageIndex == entry.key;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  width: isActive ? 32 : 8,
-                  height: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: isActive
-                        ? const Color(0xFF0D9759)
-                        : Colors.grey[300],
-                    boxShadow: isActive
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF0D9759).withOpacity(0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
-                  ),
-                );
-              }).toList(),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -715,6 +937,20 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
   }
 
   Widget _buildStickyBottomBar() {
+    final productId = _fullProductData['id'];
+    
+    // Safety: If no ID, show disabled Add button
+    if (productId == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Check stock availability
+    final int stockQuantity = (_fullProductData['stock_quantity'] ?? 0) is int 
+        ? _fullProductData['stock_quantity'] ?? 0
+        : ((_fullProductData['stock_quantity'] ?? 0) as num).toInt();
+    final bool isAvailable = _fullProductData['is_available'] ?? true;
+    final bool isOutOfStock = stockQuantity <= 0 || !isAvailable;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -727,123 +963,164 @@ class _EnhancedProductDetailScreenState extends State<EnhancedProductDetailScree
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: StreamBuilder<int>(
-              stream: CartHelper.watchCartItemQuantity(widget.productData['id']),
-              builder: (context, snapshot) {
-                final int quantity = snapshot.data ?? 0;
-                
-                if (quantity > 0) {
-                  return Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9759),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove, color: Colors.white),
-                          onPressed: () {
-                            CartHelper.updateCartItemQuantity(
-                              context, 
-                              widget.productData['id'], 
-                              quantity - 1
-                            );
-                          },
-                        ),
-                        Text(
-                          '$quantity',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+      child: isOutOfStock
+          // Out of Stock UI
+          ? Container(
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text(
+                  'Out of Stock',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            )
+          // Normal Add to Cart / Buy Now UI
+          : Row(
+              children: [
+                Expanded(
+                  child: StreamBuilder<int>(
+                    stream: CartHelper.watchCartItemQuantity(productId),
+                    builder: (context, snapshot) {
+                      final int quantity = snapshot.data ?? 0;
+                      
+                      if (quantity > 0) {
+                        return Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D9759),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove, color: Colors.white),
+                                onPressed: () {
+                                  CartHelper.updateCartItemQuantity(
+                                    context, 
+                                    _fullProductData['id'], 
+                                    quantity - 1
+                                  );
+                                },
+                              ),
+                              Text(
+                                '$quantity',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, color: Colors.white),
+                                onPressed: () {
+                                  if (_settingsService.showStockCount) {
+                                    if (quantity < stockQuantity) {
+                                      CartHelper.updateCartItemQuantity(
+                                        context, 
+                                        _fullProductData['id'], 
+                                        quantity + 1
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Max stock reached"), 
+                                          duration: Duration(milliseconds: 500)
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                     CartHelper.updateCartItemQuantity(
+                                        context, 
+                                        _fullProductData['id'], 
+                                        quantity + 1
+                                      );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ElevatedButton(
+                        onPressed: () async {
+                          if (_settingsService.showAddToCart) {
+                            final success = await CartHelper.addToCart(context, _fullProductData);
+                            if (success && mounted) {
+                              // Success handled by helper
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF0D9759),
+                          side: const BorderSide(color: Color(0xFF0D9759), width: 2),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.add, color: Colors.white),
-                          onPressed: () {
-                            CartHelper.updateCartItemQuantity(
-                              context, 
-                              widget.productData['id'], 
-                              quantity + 1
-                            );
-                          },
+                        child: const Text(
+                          'Add to Cart',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (_settingsService.showAddToCart) {
+                        final success = await CartHelper.addToCart(context, _fullProductData);
+                        if (success && mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const CartScreen()),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D9759),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                  );
-                }
-
-                return ElevatedButton(
-                  onPressed: () async {
-                    final success = await CartHelper.addToCart(context, widget.productData);
-                    if (success && mounted) {
-                      // Success handled by helper
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF0D9759),
-                    side: const BorderSide(color: Color(0xFF0D9759), width: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    child: const Text(
+                      'Buy Now',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'Add to Cart',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () async {
-                final success = await CartHelper.addToCart(context, widget.productData);
-                if (success && mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CartScreen()),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D9759),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              child: const Text(
-                'Buy Now',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildProductInfo() {
-    final name = widget.productData['name'] ?? 'Product';
-    final price = widget.productData['price'] ?? 0;
-    final mrp = widget.productData['mrp'] ?? price;
-    final unit = widget.productData['unit'] ?? '';
+    final name = _fullProductData['name'] ?? 'Product';
+    final price = _fullProductData['price'] ?? 0;
+    final mrp = _fullProductData['mrp'] ?? price;
+    final unit = _fullProductData['unit'] ?? '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

@@ -5,6 +5,64 @@ import 'dart:math';
 class OrderService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // --- NOTIFICATION HELPER ---
+  Future<void> _sendNotification({
+    required String orderId,
+    required String title,
+    required String body,
+    required String type,
+    String? customerId, // Optional: if already known
+  }) async {
+    try {
+      debugPrint("🔔 Attempting to send notification for Order: $orderId");
+      String? targetUserId = customerId;
+      String? imageUrl; // To store product image
+
+      // Fetch Order Doc if needed (for customerId OR image)
+      final orderDoc = await _firestore.collection('orders').doc(orderId).get();
+      
+      if (targetUserId == null || targetUserId.isEmpty) {
+        if (!orderDoc.exists) {
+          debugPrint("❌ Order $orderId does not exist");
+          return;
+        }
+        targetUserId = orderDoc.data()?['customer_id'];
+        debugPrint("📋 Fetched customer_id from order: '$targetUserId'");
+      }
+
+      // Extract image from first item if available
+      if (orderDoc.exists) {
+        final data = orderDoc.data();
+        if (data != null && data['items'] is List && (data['items'] as List).isNotEmpty) {
+           final firstItem = (data['items'] as List).first;
+           imageUrl = firstItem['imageUrl'] ?? firstItem['image_url']; // Try both keys
+        }
+      }
+
+      if (targetUserId == null || targetUserId.isEmpty) {
+        debugPrint("⚠️ No customer_id found for order $orderId. Cannot send notification.");
+        return; 
+      }
+
+      await _firestore
+          .collection('users')
+          .doc(targetUserId)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'type': type,
+        'order_id': orderId,
+        'image': imageUrl, // Add image URL
+        'is_read': false,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      debugPrint("✅ Notification SUCCESS sent to $targetUserId: $title (Image: ${imageUrl != null})");
+    } catch (e) {
+      debugPrint("❌ Error sending notification: $e");
+    }
+  }
+
   // Get vendor orders stream
   Stream<QuerySnapshot> getVendorOrdersStream(String vendorId) {
     return _firestore
@@ -48,6 +106,14 @@ class OrderService {
         'shipped_at': FieldValue.serverTimestamp(),
       });
     });
+
+    // Send Notification
+    await _sendNotification(
+      orderId: orderId,
+      title: 'Order Shipped! 🚚',
+      body: 'Your order is on the way. Delivery PIN: $deliveryPin',
+      type: 'order_status',
+    );
   }
 
   // Bulk Assign rider to multiple orders
@@ -74,6 +140,14 @@ class OrderService {
         'delivery_pin': deliveryPin,
         'shipped_at': FieldValue.serverTimestamp(),
       });
+
+      // Fire and forget notification (don't await in loop)
+      _sendNotification(
+        orderId: orderId,
+        title: 'Order Shipped! 🚚',
+        body: 'Your order is on the way. Delivery PIN: $deliveryPin',
+        type: 'order_status',
+      );
     }
 
     await batch.commit();
@@ -88,6 +162,13 @@ class OrderService {
         'status': 'Processing',
         'accepted_at': FieldValue.serverTimestamp(),
       });
+      
+      _sendNotification(
+        orderId: id,
+        title: 'Order Accepted! ✅',
+        body: 'Your order is being processed.',
+        type: 'order_status',
+      );
     }
     await batch.commit();
   }
@@ -101,6 +182,13 @@ class OrderService {
         'status': 'Packed',
         'packed_at': FieldValue.serverTimestamp(),
       });
+      
+      _sendNotification(
+        orderId: id,
+        title: 'Order Packed! 📦',
+        body: 'Your order is packed and ready for shipping.',
+        type: 'order_status',
+      );
     }
     await batch.commit();
   }
@@ -116,6 +204,13 @@ class OrderService {
         'cancelled_at': FieldValue.serverTimestamp(),
         'cancelled_by': 'vendor',
       });
+      
+      _sendNotification(
+        orderId: id,
+        title: 'Order Cancelled ❌',
+        body: 'Your order has been cancelled. Reason: $reason',
+        type: 'order_status',
+      );
     }
     await batch.commit();
     
@@ -195,6 +290,14 @@ class OrderService {
     
     // Restore stock
     await _restoreStockForOrder(orderId);
+    
+    // Send Notification
+    await _sendNotification(
+      orderId: orderId,
+      title: 'Order Cancelled ❌',
+      body: 'Your order has been cancelled. Reason: $reason',
+      type: 'order_status',
+    );
   }
   
   // Update order status
@@ -208,6 +311,37 @@ class OrderService {
       if (status == 'Delivered') 'delivered_at': FieldValue.serverTimestamp(),
       if (status == 'Cancelled') 'cancelled_at': FieldValue.serverTimestamp(),
     });
+
+    // Send Notification based on status
+    String title = 'Order Update';
+    String body = 'Your order status has been updated to $status.';
+
+    if (status == 'Processing') {
+      title = 'Order Accepted! ✅';
+      body = 'Your order is being processed.';
+    } else if (status == 'Packed') {
+      title = 'Order Packed! 📦';
+      body = 'Your order is packed and ready for shipping.';
+    } else if (status == 'Shipped') {
+      title = 'Order Shipped! 🚚';
+      body = 'Your order is on the way.';
+    } else if (status == 'Out for Delivery') {
+      title = 'Out for Delivery 🛵';
+      body = 'Your order will reach you soon!';
+    } else if (status == 'Delivered') {
+      title = 'Order Delivered! 🎉';
+      body = 'Enjoy your order! Thank you for shopping with us.';
+    } else if (status == 'Cancelled') {
+      title = 'Order Cancelled ❌';
+      body = 'Your order has been cancelled.';
+    }
+
+    await _sendNotification(
+      orderId: orderId,
+      title: title,
+      body: body,
+      type: 'order_status',
+    );
   }
 
 

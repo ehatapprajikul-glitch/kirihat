@@ -169,49 +169,66 @@ class RecommendationCard extends StatelessWidget {
                   builder: (context, snapshot) {
                     final quantity = snapshot.data ?? 0;
 
-                    if (quantity > 0) {
-                      // Show quantity controls
-                      return Container(
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0D9759),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                CartHelper.updateCartItemQuantity(
-                                  context,
-                                  product['id'],
-                                  quantity - 1,
-                                );
-                              },
-                              child: const Icon(Icons.remove, color: Colors.white, size: 16),
-                            ),
-                            Text(
-                              '$quantity',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                      if (quantity > 0) {
+                        final int stock = (product['stock_quantity'] ?? 0) is int 
+                            ? product['stock_quantity'] 
+                            : (product['stock_quantity'] ?? 0).toInt();
+
+                        // Show quantity controls
+                        return Container(
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D9759),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  CartHelper.updateCartItemQuantity(
+                                    context,
+                                    product['id'],
+                                    quantity - 1,
+                                  );
+                                },
+                                child: const Icon(Icons.remove, color: Colors.white, size: 16),
                               ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                CartHelper.updateCartItemQuantity(
-                                  context,
-                                  product['id'],
-                                  quantity + 1,
-                                );
-                              },
-                              child: const Icon(Icons.add, color: Colors.white, size: 16),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
+                              Text(
+                                '$quantity',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  if (quantity < stock) {
+                                    CartHelper.updateCartItemQuantity(
+                                      context,
+                                      product['id'],
+                                      quantity + 1,
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Max stock reached"),
+                                        duration: Duration(milliseconds: 500),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Icon(
+                                  Icons.add, 
+                                  color: quantity >= stock ? Colors.white.withOpacity(0.5) : Colors.white, 
+                                  size: 16
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
                     // Show Add button
                     return SizedBox(

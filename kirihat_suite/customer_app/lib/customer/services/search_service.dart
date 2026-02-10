@@ -54,82 +54,77 @@ class SearchService {
     await prefs.remove(_historyKey);
   }
 
-  /// Comprehensive search across multiple fields:
-  /// - Product name
-  /// - Keywords (SEO keywords array)
-  /// - SEO title
-  /// - Tags
-  /// - Category
-  /// - Subcategory
-  /// Optimized parallel search with minimal reads
+  /// Comprehensive case-insensitive search across multiple fields.
+  /// Strategy: Query by keywords (which are lowercase) + client-side filter.
+  /// This minimizes Firestore reads while ensuring case-insensitive results.
   Future<List<Map<String, dynamic>>> searchProducts(String query) async {
     if (query.trim().length < 2) return [];
 
     final searchLower = query.toLowerCase().trim();
-    // Capitalize for Name prefix search (assuming standard Title Case in DB)
-    final searchCapitalized = searchLower.isNotEmpty 
-        ? searchLower[0].toUpperCase() + searchLower.substring(1) 
-        : searchLower;
-        
+    
     // Get vendor for inventory/pricing
     final prefs = await SharedPreferences.getInstance();
     final vendorId = prefs.getString(_vendorKey);
     
     try {
-      // 1. Execute Parallel Queries
-      final results = await Future.wait([
-        // A. Name Prefix Search (Case sensitive fallback)
-        _firestore.collection('master_products')
-            .where('name', isGreaterThanOrEqualTo: searchCapitalized)
-            .where('name', isLessThan: '$searchCapitalized\uf8ff')
-            .limit(10)
-            .get(),
-            
-        // B. Keywords Search (Exact match on tags/keywords)
-        _firestore.collection('master_products')
-            .where('keywords', arrayContains: searchLower)
-            .limit(10)
-            .get(),
-            
-        // C. Category Search (Exact match)
-        _firestore.collection('master_products')
-            .where('category', isEqualTo: searchCapitalized)
-            .limit(5)
-            .get(),
-      ]);
-
-      // 2. Merge & Deduplicate
+      // 1. Single optimized query: Keywords array (lowercase)
+      // This is case-insensitive since keywords should be stored lowercase
+      final keywordsSnapshot = await _firestore.collection('master_products')
+          .where('keywords', arrayContains: searchLower)
+          .limit(30) // Fetch more for client-side filtering
+          .get();
+      
+      // 2. Build initial results from keywords query
       final Map<String, Map<String, dynamic>> distinctProducts = {};
+      
+      for (var doc in keywordsSnapshot.docs) {
+        if (!distinctProducts.containsKey(doc.id)) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          distinctProducts[doc.id] = data;
+        }
+      }
 
-      for (var snapshot in results) {
-         for (var doc in snapshot.docs) {
-           if (!distinctProducts.containsKey(doc.id)) {
-             final data = doc.data();
-             data['id'] = doc.id;
-             distinctProducts[doc.id] = data;
-           }
-         }
+      // 3. If we have few results from keywords, do a broader fetch for client-side search
+      if (distinctProducts.length < 10) {
+        // Fetch a batch of products for client-side text matching
+        // This is a fallback for products that may not have proper keywords set
+        final additionalSnapshot = await _firestore.collection('master_products')
+            .limit(100) // Reasonable limit to control costs
+            .get();
+        
+        for (var doc in additionalSnapshot.docs) {
+          if (!distinctProducts.containsKey(doc.id)) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            // Client-side case-insensitive matching
+            if (_matchesSearch(data, searchLower)) {
+              distinctProducts[doc.id] = data;
+            }
+          }
+        }
       }
 
       var mergedList = distinctProducts.values.toList();
 
-      // 3. Client-side ranking (Re-sort by relevance)
+      // 4. Client-side ranking (Re-sort by relevance)
       mergedList.sort((a, b) {
         final aScore = _calculateRelevanceScore(a, searchLower);
         final bScore = _calculateRelevanceScore(b, searchLower);
         return bScore.compareTo(aScore);
       });
       
-      // 4. Enrich with Inventory (Only for the top 20 results to save reads)
+      // 5. Limit results
       if (mergedList.length > 20) {
         mergedList = mergedList.sublist(0, 20);
       }
 
+      // 6. Enrich with Inventory
       final enrichedProducts = vendorId != null 
           ? await _enrichWithVendorInventory(mergedList, vendorId)
           : mergedList;
 
-      print('🔍 Smart Search for "$query": found ${enrichedProducts.length} items');
+      print('🔍 Case-insensitive search for "$query": found ${enrichedProducts.length} items');
       return enrichedProducts;
       
     } catch (e) {

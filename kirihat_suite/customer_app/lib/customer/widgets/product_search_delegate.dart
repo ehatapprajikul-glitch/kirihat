@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'draggable_cart_wrapper.dart';
@@ -307,8 +308,12 @@ class ProductSearchDelegate extends SearchDelegate<String> {
             leading: ClipRRect(
                borderRadius: BorderRadius.circular(4),
                child: product['imageUrl'] != null
-                   ? Image.network(product['imageUrl'], width: 40, height: 40, fit: BoxFit.cover,
-                       errorBuilder: (_,__,___) => const Icon(Icons.image))
+                   ? CachedNetworkImage(
+                       imageUrl: product['imageUrl'],
+                       width: 40, height: 40, fit: BoxFit.cover,
+                       placeholder: (context, url) => const SizedBox(width: 40, height: 40, child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))),
+                       errorWidget: (context, url, error) => const Icon(Icons.image),
+                     )
                    : const Icon(Icons.image),
             ),
             title: Text(product['name'] ?? 'Unknown'),
@@ -448,8 +453,12 @@ class _DebouncedSearchResultsState extends State<_DebouncedSearchResults> {
           leading: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: product['imageUrl'] != null
-                  ? Image.network(product['imageUrl'], width: 40, height: 40, fit: BoxFit.cover,
-                      errorBuilder: (_,__,___) => const Icon(Icons.image))
+                  ? CachedNetworkImage(
+                      imageUrl: product['imageUrl'],
+                      width: 40, height: 40, fit: BoxFit.cover,
+                      placeholder: (context, url) => const SizedBox(width: 40, height: 40, child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))),
+                      errorWidget: (context, url, error) => const Icon(Icons.image),
+                    )
                   : const Icon(Icons.search, color: Colors.grey),
           ),
           title: Text(product['name'] ?? ''),

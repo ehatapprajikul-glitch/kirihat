@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -247,7 +248,7 @@ class CustomerOrdersScreen extends StatelessWidget {
                                   image: (item['imageUrl'] != null &&
                                           item['imageUrl'] != "")
                                       ? DecorationImage(
-                                          image: NetworkImage(item['imageUrl']),
+                                          image: CachedNetworkImageProvider(item['imageUrl']),
                                           fit: BoxFit.cover)
                                       : null,
                                 ),

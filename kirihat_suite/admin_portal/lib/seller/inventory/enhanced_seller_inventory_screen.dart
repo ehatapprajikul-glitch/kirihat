@@ -606,16 +606,25 @@ class _EnhancedSellerInventoryScreenState extends State<EnhancedSellerInventoryS
               // Calculate stats
               final stats = _calculateStats(inventory);
 
-              return Column(
-                children: [
-                  _buildTopBar(stats, inventory, constraints),
-                  if (_selectedItems.isNotEmpty) _buildBulkActionBar(),
-                  Expanded(
-                    child: _isGridView 
-                        ? _buildGridView(filteredList, constraints)
-                        : _buildTableView(filteredList, constraints),
-                  ),
-                ],
+              return ValueListenableBuilder<Set<String>>(
+                valueListenable: _selectedItemsNotifier,
+                builder: (context, selectedItems, child) {
+                  return CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _buildTopBar(stats, inventory, constraints),
+                      ),
+                      if (selectedItems.isNotEmpty)
+                        SliverToBoxAdapter(child: _buildBulkActionBar()),
+                      SliverFillRemaining(
+                        hasScrollBody: true,
+                        child: _isGridView 
+                            ? _buildGridView(filteredList, constraints)
+                            : _buildTableView(filteredList, constraints),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           );
@@ -1023,52 +1032,59 @@ class _EnhancedSellerInventoryScreenState extends State<EnhancedSellerInventoryS
         if (selectedItems.isEmpty) return const SizedBox.shrink();
         
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.blue[50],
             border: Border(
               bottom: BorderSide(color: Colors.blue[200]!),
             ),
           ),
-          child: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.blue[700]),
-              const SizedBox(width: 12),
-              Text(
-                '${selectedItems.length} items selected',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue[900],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: Colors.blue[700], size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  '${selectedItems.length} items selected',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[900],
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: _showBulkUpdateDialog,
-                icon: const Icon(Icons.edit, size: 16),
-                label: const Text('Bulk Update'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue[700],
+                const SizedBox(width: 16),
+                OutlinedButton.icon(
+                  onPressed: _showBulkUpdateDialog,
+                  icon: const Icon(Icons.edit, size: 14),
+                  label: const Text('Bulk Update', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue[700],
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: _printBarcodes,
-                icon: const Icon(Icons.qr_code, size: 16),
-                label: const Text('Print Barcodes'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue[700],
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: _printBarcodes,
+                  icon: const Icon(Icons.qr_code, size: 14),
+                  label: const Text('Print', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue[700],
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: () => _selectedItemsNotifier.value = {},
-                icon: const Icon(Icons.close, size: 16),
-                label: const Text('Clear'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[700],
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _selectedItemsNotifier.value = {},
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: 'Clear selection',
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.grey[700],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1240,7 +1256,7 @@ class _EnhancedSellerInventoryScreenState extends State<EnhancedSellerInventoryS
       padding: const EdgeInsets.all(16),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.55,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -1320,73 +1336,54 @@ class _EnhancedSellerInventoryScreenState extends State<EnhancedSellerInventoryS
                 ),
               ),
             ),
-            // Details
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
+            // Details - simplified to prevent overflow
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        statusText,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Stock: ${stockNum.toInt()}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              '₹${price.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
-                          onPressed: () => _showUpdateStockDialog(item),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          color: Colors.blue[700],
-                        ),
-                      ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Stock: ${stockNum.toInt()}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
                     ),
-                  ],
-                ),
+                  ),
+                  Text(
+                    '₹${price.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

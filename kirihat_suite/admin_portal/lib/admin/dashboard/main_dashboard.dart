@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../users/create_user_dialog.dart';
 import '../coupons/create_coupon.dart';
 import 'package:kirihat_core/utils/currency_helper.dart';
+import 'dart:html' as html;
 
 class MainDashboard extends StatelessWidget {
   final Function(String) onNavigate;
@@ -380,7 +381,7 @@ class MainDashboard extends StatelessWidget {
                               backgroundColor: const Color(0xFF0D9759),
                               child: Text('#${index + 1}', style: const TextStyle(color: Colors.white)),
                             ),
-                            title: Text('Order #${doc.id.substring(0, 8).toUpperCase()}'),
+                            title: Text('Order #${(data['order_id'] ?? doc.id.substring(0, 8)).toString().toUpperCase()}'),
                             subtitle: Text(data['customer_name'] ?? 'Unknown Customer'),
                             trailing: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -552,6 +553,17 @@ class MainDashboard extends StatelessWidget {
   }
 
   void _showOrderDetails(BuildContext context, String orderId, Map<String, dynamic> orderData) {
+    // Smart Name Extraction
+    String customerName = orderData['customer_name'] ?? 'N/A';
+    // If name is missing or generic default, check address
+    if ((customerName == 'N/A' || customerName == 'Unknown Customer') && 
+        orderData['delivery_address'] is Map) {
+       var addrMap = orderData['delivery_address'] as Map;
+       if (addrMap['name'] != null && addrMap['name'].toString().isNotEmpty) {
+         customerName = addrMap['name'];
+       }
+    }
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -575,7 +587,7 @@ class MainDashboard extends StatelessWidget {
                     const Icon(Icons.receipt_long, color: Colors.white),
                     const SizedBox(width: 12),
                     Text(
-                      'Order #${orderId.substring(0, 8).toUpperCase()}',
+                      'Order #${(orderData['order_id'] ?? orderId.substring(0, 8)).toString().toUpperCase()}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -629,20 +641,20 @@ class MainDashboard extends StatelessWidget {
 
                       // Customer Info
                       _buildInfoSection('Customer Information', [
-                        _buildInfoRow('Name', orderData['customer_name'] ?? 'N/A'),
-                        _buildInfoRow('Phone', orderData['customer_phone'] ?? 'N/A'),
-                        _buildInfoRow('Address', orderData['delivery_address'] ?? 'N/A'),
+                        _buildInfoRow('Name', customerName, context: context),
+                        _buildInfoRow('Phone', orderData['customer_phone'] ?? 'N/A', context: context),
+                        _buildInfoRow('Address', _formatAddress(orderData['delivery_address']), context: context),
                       ]),
 
                       const SizedBox(height: 20),
 
                       // Order Details
                       _buildInfoSection('Order Details', [
-                        _buildInfoRow('Order ID', orderId),
-                        _buildInfoRow('Payment Method', orderData['payment_method'] ?? 'N/A'),
-                        _buildInfoRow('Subtotal', CurrencyHelper.format(orderData['subtotal'] ?? 0)),
-                        _buildInfoRow('Delivery Fee', CurrencyHelper.format(orderData['delivery_fee'] ?? 0)),
-                        _buildInfoRow('Total Amount', CurrencyHelper.format(orderData['total_amount'] ?? 0), isBold: true),
+                        _buildInfoRow('Order ID', orderData['order_id'] ?? orderId, canCopy: true, context: context),
+                        _buildInfoRow('Payment Method', orderData['payment_method'] ?? 'N/A', context: context),
+                        _buildInfoRow('Subtotal', CurrencyHelper.format(orderData['subtotal'] ?? 0), context: context),
+                        _buildInfoRow('Delivery Fee', CurrencyHelper.format(orderData['delivery_fee'] ?? 0), context: context),
+                        _buildInfoRow('Total Amount', CurrencyHelper.format(orderData['total_amount'] ?? 0), isBold: true, context: context),
                       ]),
 
                       const SizedBox(height: 20),
@@ -721,7 +733,7 @@ class MainDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
+  Widget _buildInfoRow(String label, String value, {bool isBold = false, bool canCopy = false, required BuildContext context}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -732,14 +744,44 @@ class MainDashboard extends StatelessWidget {
             style: const TextStyle(color: Colors.grey, fontSize: 14),
           ),
           Flexible(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                fontSize: isBold ? 16 : 14,
-              ),
-              textAlign: TextAlign.right,
-            ),
+            child: canCopy 
+              ? InkWell(
+                  onTap: () {
+                    html.window.navigator.clipboard?.writeText(value);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 1)),
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                            fontSize: isBold ? 16 : 14,
+                            color: Colors.blue, // Indicate interactive
+                            decoration: TextDecoration.underline,
+                          ),
+                          textAlign: TextAlign.right,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.copy, size: 14, color: Colors.blue),
+                    ],
+                  ),
+                )
+              : Text(
+                  value,
+                  style: TextStyle(
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                    fontSize: isBold ? 16 : 14,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
           ),
         ],
       ),
@@ -759,5 +801,21 @@ class MainDashboard extends StatelessWidget {
       default:
         return Icons.info;
     }
+  }
+
+  String _formatAddress(dynamic addr) {
+    if (addr == null) return 'N/A';
+    if (addr is String) return addr;
+    if (addr is Map) {
+      List<String> parts = [];
+      if (addr['street'] != null) parts.add(addr['street']);
+      if (addr['city'] != null) parts.add(addr['city']);
+      if (addr['state'] != null) parts.add(addr['state']);
+      if (addr['zip'] != null) parts.add(addr['zip']);
+      
+      if (parts.isNotEmpty) return parts.join(', ');
+      return addr.toString();
+    }
+    return addr.toString();
   }
 }

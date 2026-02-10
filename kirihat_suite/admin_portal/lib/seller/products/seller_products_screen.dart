@@ -39,114 +39,194 @@ class _SellerProductsScreenState extends State<SellerProductsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Column(
-        children: [
-          // Header
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSmall = constraints.maxWidth < 600;
+          
+          return Column(
+            children: [
+              // Header
+              Container(
+                color: Colors.white,
+                padding: EdgeInsets.all(isSmall ? 16 : 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Products',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_isSelectionMode) ...[
+                    // Title and Actions Row
+                    if (isSmall) ...[
+                      // Mobile: Stack layout
                       Text(
-                        '${_selectedProductIds.length} selected',
+                        'Products',
                         style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+                          fontSize: isSmall ? 22 : 28,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          setState(() => _isSelectionMode = false);
-                          _selectedProductIds.clear();
-                        },
-                        icon: const Icon(Icons.close),
-                        label: const Text('Cancel'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey[700],
+                      const SizedBox(height: 12),
+                      if (_isSelectionMode) ...[
+                        Row(
+                          children: [
+                            Text(
+                              '${_selectedProductIds.length} selected',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () {
+                                setState(() => _isSelectionMode = false);
+                                _selectedProductIds.clear();
+                              },
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Cancel',
+                              style: IconButton.styleFrom(
+                                foregroundColor: Colors.grey[700],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: _selectedProductIds.isEmpty
+                                  ? null
+                                  : _showBarcodeDialog,
+                              icon: const Icon(Icons.print),
+                              tooltip: 'Print Barcodes',
+                              style: IconButton.styleFrom(
+                                foregroundColor: const Color(0xFF0D9759),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: _selectedProductIds.isEmpty
-                            ? null
-                            : _showBarcodeDialog,
-                        icon: const Icon(Icons.print),
-                        label: const Text('Print Barcodes'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D9759),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+                      ] else ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EnhancedAddProductScreen(seller: widget.seller),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Product'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9759),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
                           ),
                         ),
+                      ],
+                    ] else ...[
+                      // Desktop: Row layout
+                      Row(
+                        children: [
+                          const Text(
+                            'Products',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_isSelectionMode) ...[
+                            Text(
+                              '${_selectedProductIds.length} selected',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() => _isSelectionMode = false);
+                                _selectedProductIds.clear();
+                              },
+                              icon: const Icon(Icons.close),
+                              label: const Text('Cancel'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: _selectedProductIds.isEmpty
+                                  ? null
+                                  : _showBarcodeDialog,
+                              icon: const Icon(Icons.print),
+                              label: const Text('Print Barcodes'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0D9759),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EnhancedAddProductScreen(seller: widget.seller),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Product'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9759),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
                     ],
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EnhancedAddProductScreen(seller: widget.seller),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Product'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0D9759),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                      ),
+                    const SizedBox(height: 16),
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: const Color(0xFF0D9759),
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: const Color(0xFF0D9759),
+                      tabs: const [
+                        Tab(text: 'My Products'),
+                        Tab(text: 'Requests'),
+                        Tab(text: 'Drafts'),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                TabBar(
+              ),
+
+              // Tab Views
+              Expanded(
+                child: TabBarView(
                   controller: _tabController,
-                  labelColor: const Color(0xFF0D9759),
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF0D9759),
-                  tabs: const [
-                    Tab(text: 'My Products'),
-                    Tab(text: 'Requests'),
-                    Tab(text: 'Drafts'),
+                  children: [
+                    _buildMyProductsTab(),
+                    _buildRequestsTab(),
+                    DraftManagerWidget(seller: widget.seller),
                   ],
                 ),
-              ],
-            ),
-          ),
-
-          // Tab Views
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildMyProductsTab(),
-                _buildRequestsTab(),
-                DraftManagerWidget(seller: widget.seller),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

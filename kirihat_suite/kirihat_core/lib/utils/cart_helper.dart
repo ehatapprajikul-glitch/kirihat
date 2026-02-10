@@ -33,6 +33,24 @@ class CartHelper {
         return false;
       }
 
+      // Check if product is out of stock
+      final int stockQuantity = (productData['stock_quantity'] ?? 0) is int 
+          ? productData['stock_quantity'] ?? 0
+          : ((productData['stock_quantity'] ?? 0) as num).toInt();
+      final bool isAvailable = productData['is_available'] ?? true;
+      
+      if (stockQuantity <= 0 || !isAvailable) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This product is out of stock'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+
       bool success;
       if (user == null) {
         // GUEST MODE - use SharedPreferences
@@ -45,16 +63,7 @@ class CartHelper {
       if (success) {
         await _updateNotifier();
         
-        // Show success message if requested
-        if (showSuccessMessage && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Added to cart!'),
-              backgroundColor: Color(0xFF0D9759),
-              duration: Duration(seconds: 1),
-            ),
-          );
-        }
+        // Success message removed as per user request (replaced by floating cart animation)
       }
       return success;
     } catch (e) {

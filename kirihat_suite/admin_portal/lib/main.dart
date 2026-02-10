@@ -10,7 +10,7 @@ import 'auth/phone_auth_screen.dart';
 import 'auth/login_screen.dart';
 import 'vendor/vendor_dashboard.dart';
 import 'admin/admin_web_layout.dart';
-import 'seller/seller_dashboard.dart';
+
 import 'landing/portal_landing_screen.dart';
 
 void main() async {
@@ -75,7 +75,33 @@ class _AuthWrapperState extends State<AuthWrapper> {
               // Allowed roles for the Portal
               if (role == 'admin') return const AdminWebLayout();
               if (role == 'vendor') return const VendorDashboard();
-              if (role == 'seller') return const SellerDashboard();
+              
+              if (role == 'seller') {
+                 return const Scaffold(
+                   body: Center(
+                     child: Padding(
+                       padding: EdgeInsets.all(32.0),
+                       child: Column(
+                         mainAxisAlignment: MainAxisAlignment.center,
+                         children: [
+                           Icon(Icons.storefront, size: 64, color: Colors.green),
+                           SizedBox(height: 24),
+                           Text(
+                             "Seller Portal Moved",
+                             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                           ),
+                           SizedBox(height: 16),
+                           Text(
+                             "The Seller Panel has been moved to a separate application.\nPlease use the 'Kirihat Seller' app to manage your store.",
+                             textAlign: TextAlign.center,
+                             style: TextStyle(color: Colors.grey, fontSize: 16),
+                           ),
+                         ],
+                       ),
+                     ),
+                   ),
+                 );
+              }
 
               // Unauthorized roles
               return Scaffold(

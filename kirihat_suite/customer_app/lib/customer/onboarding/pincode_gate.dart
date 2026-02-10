@@ -6,6 +6,7 @@ import 'area_selection_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kirihat_core/services/user_service.dart';
 import 'account_setup_screen.dart';
+import 'intro_slider_screen.dart';
 
 class PincodeGateScreen extends StatefulWidget {
   const PincodeGateScreen({super.key});
@@ -25,6 +26,32 @@ class _PincodeGateScreenState extends State<PincodeGateScreen> {
   }
 
   Future<void> _checkSession() async {
+    // Safety check: Don't run logic if we are not the top route (e.g., behind CheckoutScreen)
+    // This prevents background navigation when AuthWrapper rebuilds
+    if (!mounted) return;
+    try {
+      if (ModalRoute.of(context)?.isCurrent != true) {
+        debugPrint('🛑 PincodeGate is not top route. Skipping background navigation.');
+        return;
+      }
+    } catch (e) {
+      // Ignore error if ModalRoute unavailable
+    }
+    final hasSeenIntro = await IntroSliderScreen.hasSeenIntro();
+    debugPrint('🔍 Intro slider check: hasSeenIntro = $hasSeenIntro');
+    
+    // Show intro slider only if user hasn't seen it
+    if (!hasSeenIntro && mounted) {
+      debugPrint('➡️ Navigating to IntroSliderScreen');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const IntroSliderScreen()),
+      );
+      return;
+    }
+    
+    debugPrint('⏭️ Skipping intro slider, proceeding to onboarding check');
+    
     // Check if user has already completed onboarding (guest or logged in)
     final hasCompleted = await _sessionService.hasCompletedOnboarding();
     
@@ -57,6 +84,7 @@ class _PincodeGateScreenState extends State<PincodeGateScreen> {
       setState(() => _isChecking = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

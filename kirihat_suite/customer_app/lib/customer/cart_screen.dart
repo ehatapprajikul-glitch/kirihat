@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:kirihat_core/utils/cart_helper.dart';
 import 'package:kirihat_core/utils/currency_helper.dart';
+import 'package:kirihat_core/services/product_service.dart';
 import 'checkout_screen.dart';
 import '../auth/phone_auth_screen.dart';
 import 'customer_profile.dart';
@@ -30,22 +32,20 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _isLoading = true);
     
     final user = FirebaseAuth.instance.currentUser;
+    List<Map<String, dynamic>> rawItems = [];
+
     if (user == null) {
-      // Guest mode - load from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? cartJson = prefs.getString('guest_cart');
-      
       if (cartJson != null) {
         try {
           List<dynamic> decoded = json.decode(cartJson);
-          _cartItems = decoded.cast<Map<String, dynamic>>();
+          rawItems = decoded.cast<Map<String, dynamic>>();
         } catch (e) {
-          debugPrint('Error loading guest cart: $e');
-          _cartItems = [];
+          rawItems = [];
         }
       }
     } else {
-      // Logged-in mode - load from Firestore
       try {
         var snapshot = await FirebaseFirestore.instance
             .collection('users')
@@ -53,9 +53,8 @@ class _CartScreenState extends State<CartScreen> {
             .collection('cart')
             .get();
 
-        _cartItems = snapshot.docs.map((doc) {
+        rawItems = snapshot.docs.map((doc) {
           var data = doc.data();
-          // Ensure all required fields are present
           return {
             'product_id': doc.id,
             'name': data['name'] ?? '',
@@ -67,14 +66,53 @@ class _CartScreenState extends State<CartScreen> {
         }).toList();
       } catch (e) {
         debugPrint('Error loading Firestore cart: $e');
-        _cartItems = [];
+        rawItems = [];
       }
     }
+
+    // Fetch fresh stock data
+    if (rawItems.isNotEmpty) {
+      try {
+        final vendorId = rawItems.first['vendor_id'] as String;
+        final productIds = rawItems.map((e) => e['product_id'] as String).toList();
+        
+        final freshProducts = await ProductService().getFeaturedProducts(
+          vendorId: vendorId,
+          productIds: productIds,
+        );
+
+        final freshMap = {for (var p in freshProducts) p['id']: p};
+
+        _cartItems = rawItems.map((item) {
+          final fresh = freshMap[item['product_id']];
+          return {
+            ...item,
+            'stock_quantity': fresh?['stock_quantity'] ?? 999, 
+            'isAvailable': fresh?['isAvailable'] ?? true,
+          };
+        }).toList();
+      } catch (e) {
+        debugPrint('Error fetching fresh cart data: $e');
+        _cartItems = rawItems;
+      }
+    } else {
+      _cartItems = [];
+    }
     
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
-  Future<void> _updateQuantity(String productId, int newQty) async {
+  Future<void> _updateQuantity(String productId, int newQty, int stock) async {
+    if (newQty > stock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Max stock reached"),
+          duration: Duration(milliseconds: 500),
+        ),
+      );
+      return;
+    }
+
     if (newQty < 1) {
       await CartHelper.removeCartItem(context, productId);
     } else {
@@ -224,36 +262,24 @@ class _CartScreenState extends State<CartScreen> {
                 child: isGuest
                     ? ElevatedButton.icon(
                         onPressed: () async {
-                          // Navigate to login and wait for success (true)
-                          final result = await Navigator.of(context).push<Map<String, dynamic>>(
+                          // Await the entire login flow (Phone -> OTP -> [Setup] -> [Address])
+                          await Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const PhoneAuthScreen(),
+                              builder: (_) => const PhoneAuthScreen(isNestedFlow: true),
                             ),
                           );
                           
-                          // If login successful
-                          if (result != null && result['success'] == true && mounted) {
+                          // Check if user is now logged in
+                          final currentUser = FirebaseAuth.instance.currentUser;
+                          
+                          if (currentUser != null && mounted) {
                              setState(() => _isLoading = true);
                              
-                             // 1. Reload cart to get migrated items
+                             // Refresh cart from server to merge guest items if needed
                              await _loadCart();
-
-                             // 2. Handle redirection based on User Status
-                             final bool isNewUser = result['isNewUser'] == true;
-
+                             
+                             // Proceed to checkout if cart has items
                              if (mounted && _cartItems.isNotEmpty) {
-                                if (isNewUser) {
-                                  // Redirect to Profile for Setup
-                                  // We should pushReplacement so they can't go back to login? 
-                                  // Actually just push is fine, they can go back to Cart.
-                                  // But user wanted "setup account follow".
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const CustomerProfileScreen(openEditProfile: true)),
-                                  );
-                                } else {
-                                  // Existing User: Proceed to Checkout
-                                  // Extract vendorId from first item (all items should be from same vendor)
                                   final vendorId = _cartItems.first['vendor_id'] ?? '';
                                   final total = _calculateTotal();
                                   
@@ -267,9 +293,7 @@ class _CartScreenState extends State<CartScreen> {
                                       )
                                     )
                                   );
-                                }
                              }
-                             
                              setState(() => _isLoading = false);
                           }
                         },
@@ -332,6 +356,10 @@ class _CartScreenState extends State<CartScreen> {
     final int quantity = (item['quantity'] ?? 1);
     final String imageUrl = item['imageUrl'] ?? '';
     final String productId = item['product_id'] ?? '';
+    
+    final int stock = (item['stock_quantity'] ?? 999) is int 
+        ? item['stock_quantity'] 
+        : (item['stock_quantity'] ?? 999).toInt();
 
     return Card(
       elevation: 2,
@@ -345,12 +373,18 @@ class _CartScreenState extends State<CartScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      placeholder: (context, url) => Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[200],
+                        child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                      ),
+                      errorWidget: (context, url, error) => Container(
                         width: 60,
                         height: 60,
                         color: Colors.grey[300],
@@ -389,6 +423,8 @@ class _CartScreenState extends State<CartScreen> {
                       color: Color(0xFF0D9759),
                     ),
                   ),
+                  if (stock < 5 && stock > 0)
+                     Text('Only $stock left!', style: const TextStyle(color: Colors.red, fontSize: 12)),
                 ],
               ),
             ),
@@ -399,7 +435,7 @@ class _CartScreenState extends State<CartScreen> {
                 Row(
                   children: [
                     IconButton(
-                      onPressed: () => _updateQuantity(productId, quantity - 1),
+                      onPressed: () => _updateQuantity(productId, quantity - 1, stock),
                       icon: const Icon(Icons.remove_circle_outline),
                       color: const Color(0xFF0D9759),
                       iconSize: 24,
@@ -412,8 +448,10 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                     IconButton(
-                      onPressed: () => _updateQuantity(productId, quantity + 1),
-                      icon: const Icon(Icons.add_circle_outline),
+                       onPressed: quantity >= stock 
+                          ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Max stock reached"), duration: Duration(milliseconds: 500))) 
+                          : () => _updateQuantity(productId, quantity + 1, stock),
+                      icon: Icon(Icons.add_circle_outline, color: quantity >= stock ? Colors.grey : const Color(0xFF0D9759)),
                       color: const Color(0xFF0D9759),
                       iconSize: 24,
                     ),

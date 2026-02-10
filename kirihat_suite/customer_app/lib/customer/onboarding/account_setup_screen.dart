@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kirihat_core/services/user_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../manage_addresses.dart'; // Or address_screen.dart directly if we want to force add
 import '../address_screen.dart';
 import '../customer_dashboard.dart';
 
 class AccountSetupScreen extends StatefulWidget {
-  const AccountSetupScreen({super.key});
+  final bool isNestedFlow;
+
+  const AccountSetupScreen({
+    super.key, 
+    this.isNestedFlow = false,
+  });
 
   @override
   State<AccountSetupScreen> createState() => _AccountSetupScreenState();
@@ -15,14 +21,43 @@ class AccountSetupScreen extends StatefulWidget {
 class _AccountSetupScreenState extends State<AccountSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _pincodeController = TextEditingController();
   String? _selectedGender;
   bool _isLoading = false;
   final _userService = UserService();
   final _user = FirebaseAuth.instance.currentUser;
 
   @override
+  void initState() {
+    super.initState();
+    _loadAutoFillData();
+  }
+
+  Future<void> _loadAutoFillData() async {
+    if (_user != null) {
+      _phoneController.text = _user?.phoneNumber ?? '';
+      _nameController.text = _user?.displayName ?? '';
+    }
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pincode = prefs.getString('current_pincode');
+      if (pincode != null) {
+        _pincodeController.text = pincode;
+      }
+    } catch (e) {
+      debugPrint('Error loading auto-fill data: $e');
+    }
+    
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
+    _pincodeController.dispose();
     super.dispose();
   }
 
@@ -54,14 +89,29 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
       
       if (mounted) {
          // Proceed to Add Address
-         Navigator.pushReplacement(
-          context,
-           MaterialPageRoute(
-             builder: (_) => const AddressScreen(
-               isOnboarding: true, // Flag to indicate we should go to Dashboard after adding
+         if (widget.isNestedFlow) {
+           await Navigator.push(
+            context,
+             MaterialPageRoute(
+               builder: (_) => AddressScreen(
+                 isOnboarding: true, // Still onboarding
+                 isNestedFlow: widget.isNestedFlow, // Pass flow type
+               ),
              ),
-           ),
-         );
+           );
+           // After returning from Address Screen (which means address is saved), we pop this screen too
+           if (mounted) Navigator.pop(context);
+         } else {
+           Navigator.pushReplacement(
+            context,
+             MaterialPageRoute(
+               builder: (_) => AddressScreen(
+                 isOnboarding: true, // Still onboarding
+                 isNestedFlow: widget.isNestedFlow, // Pass flow type
+               ),
+             ),
+           );
+         }
       }
     } catch (e) {
       if (mounted) {
@@ -120,15 +170,22 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
+                  // Read-only if name is already set (e.g. from Google/Truecaller)
+                  // BUT editable if empty, otherwise user can't proceed!
+                  readOnly: _nameController.text.isNotEmpty,
                   decoration: InputDecoration(
                     hintText: 'Enter your name',
                     filled: true,
-                    fillColor: const Color(0xFFF5F5F5),
+                    // If read-only, show grey background
+                    fillColor: _nameController.text.isNotEmpty ? Colors.grey[200] : const Color(0xFFF5F5F5),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.all(20),
+                    suffixIcon: _nameController.text.isNotEmpty 
+                        ? const Icon(Icons.lock_outline, size: 18, color: Colors.grey)
+                        : null,
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -136,6 +193,62 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                     }
                     return null;
                   },
+                ),
+
+                const SizedBox(height: 24),
+
+                // Phone Input (Read-only)
+                Text(
+                  'Mobile Number',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _phoneController,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: 'Mobile Number',
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.all(20),
+                    suffixIcon: const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Pincode Input (Read-only)
+                Text(
+                  'Pincode',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _pincodeController,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: 'Pincode',
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.all(20),
+                    suffixIcon: const Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+                  ),
                 ),
 
                 const SizedBox(height: 32),

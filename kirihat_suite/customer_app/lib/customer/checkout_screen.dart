@@ -12,6 +12,7 @@ import 'package:kirihat_core/utils/currency_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kirihat_core/services/coupon_service.dart';
 import 'package:kirihat_core/services/fee_configuration_service.dart';
+import '../auth/phone_auth_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -30,7 +31,8 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  final User? user = FirebaseAuth.instance.currentUser;
+  // Use a getter to ensure we always get the generated user state
+  User? get user => FirebaseAuth.instance.currentUser;
   final _formKey = GlobalKey<FormState>();
 
   // Address Controllers
@@ -691,6 +693,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _validateAndProceed() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Check if user is logged in
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please login to place order")));
+          
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PhoneAuthScreen(
+            onLoginSuccess: () {
+              // Refresh user profile and UI
+              _loadUserProfile();
+              if (mounted) setState(() {});
+            },
+            isNestedFlow: true, // Explicitly tell Auth screens this is nested
+          ),
+        ),
+      );
+      
+      // FIX: Robustly check login status upon return, in case callback failed or user navigated back manually
+      if (user != null) {
+          _loadUserProfile();
+          if (mounted) {
+             setState(() {});
+             ScaffoldMessenger.of(context).showSnackBar(
+               const SnackBar(content: Text("Login Successful! Check details and place order."), backgroundColor: Colors.green)
+             );
+          }
+      }
+
+      // Stop here. User will click "Place Order" again after login.
+      return;
+    }
     
     // FIX: Trust pincode gate validation - if PIN is from session, it's valid
     // Only block if:

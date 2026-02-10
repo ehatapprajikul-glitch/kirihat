@@ -202,10 +202,7 @@ class _SearchDataSource extends DataTableSource {
             Text(DateFormat('h:mm a').format(dateTime), style: TextStyle(fontSize: 11, color: Colors.grey[600])),
           ],
         )),
-        DataCell(Text(
-          _truncateId(data['user_id']),
-          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-        )),
+        DataCell(_UserDetailCell(uid: data['user_id'])),
         DataCell(Text(
           _truncateId(data['vendor_id']),
           style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
@@ -213,6 +210,8 @@ class _SearchDataSource extends DataTableSource {
       ],
     );
   }
+
+
 
   String _truncateId(String? id) {
     if (id == null) return '-';
@@ -226,4 +225,85 @@ class _SearchDataSource extends DataTableSource {
   int get rowCount => _docs.length;
   @override
   int get selectedRowCount => 0;
+}
+
+class _UserDetailCell extends StatelessWidget {
+  final String? uid;
+
+  const _UserDetailCell({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    if (uid == null || uid!.isEmpty) return const Text('-');
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            width: 12, 
+            height: 12, 
+            child: CircularProgressIndicator(strokeWidth: 2)
+          );
+        }
+
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return Text(
+            _truncateId(uid),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.grey),
+          );
+        }
+
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final name = data['name'] ?? data['displayName'] ?? 'Unknown';
+        
+        // Smart phone extraction with fallback
+        var phone = data['phone'] ?? data['phone_number'] ?? data['phoneNumber'];
+        if (phone == null && data['current_address'] != null && data['current_address'] is Map) {
+            phone = data['current_address']['phone'];
+        }
+        final displayPhone = (phone ?? '').toString();
+        
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                if (displayPhone.isNotEmpty && displayPhone != 'null')
+                  Text(displayPhone, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                Text(
+                  _truncateId(uid),
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.grey[400]),
+                ),
+              ],
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.copy, size: 14, color: Colors.blueGrey),
+              tooltip: 'Copy Details',
+              onPressed: () {
+                final text = 'Name: $name\nPhone: $displayPhone\nUID: $uid';
+                html.window.navigator.clipboard?.writeText(text);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('User details copied to clipboard'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _truncateId(String? id) {
+    if (id == null) return '-';
+    if (id.length <= 8) return id;
+    return '${id.substring(0, 4)}...${id.substring(id.length - 4)}';
+  }
 }

@@ -35,7 +35,10 @@ class AnalyticsReports extends StatelessWidget {
               int totalOrders = orders.length;
               double totalRevenue = orders.fold(0.0, (sum, doc) {
                 var data = doc.data() as Map<String, dynamic>;
-                return sum + ((data['total_amount'] ?? 0) as num).toDouble();
+                if (data['status'] == 'Delivered') {
+                  return sum + ((data['total_amount'] ?? 0) as num).toDouble();
+                }
+                return sum;
               });
 
               // Calculate today's stats
@@ -54,7 +57,10 @@ class AnalyticsReports extends StatelessWidget {
 
               double todayRevenue = todayOrders.fold(0.0, (sum, doc) {
                 var data = doc.data() as Map<String, dynamic>;
-                return sum + ((data['total_amount'] ?? 0) as num).toDouble();
+                if (data['status'] == 'Delivered') {
+                  return sum + ((data['total_amount'] ?? 0) as num).toDouble();
+                }
+                return sum;
               });
 
               return Row(

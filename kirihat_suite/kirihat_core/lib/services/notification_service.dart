@@ -56,4 +56,32 @@ class NotificationService {
       print('Error marking all as read: $e');
     }
   }
+  /// Send notification to Customer (Sub-collection)
+  static Future<void> sendCustomerNotification({
+    required String customerId,
+    required String title,
+    required String body,
+    required String type,
+    required String orderId,
+    String? imageUrl,
+  }) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(customerId)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'type': type,
+        'order_id': orderId,
+        'image': imageUrl,
+        'is_read': false,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print("✅ Notification sent to customer: $customerId");
+    } catch (e) {
+      print('Error sending customer notification: $e');
+    }
+  }
 }

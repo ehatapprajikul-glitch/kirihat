@@ -207,11 +207,12 @@ class ProductDisplaySettingsService {
       'product_details_settings': {
         'show_product_details_table': true,
         'show_seller_info': true,
+        'show_stock_count': true, // Added
+        'show_add_to_cart': true, // Added
         'default_disclaimer': 'Images are for illustration purposes only. Actual product may vary.',
         'category_disclaimers': {
           'Electronics': 'Warranty valid only with original invoice.',
         },
-        'excluded_fields': _defaultExcludedFields,
         'excluded_fields': _defaultExcludedFields,
       },
       'section_order': [
@@ -259,6 +260,8 @@ class ProductDisplaySettingsService {
   // Product Details Settings
   bool get showProductDetailsTable => getSetting('product_details_settings.show_product_details_table', true);
   bool get showSellerInfo => getSetting('product_details_settings.show_seller_info', true);
+  bool get showStockCount => getSetting('product_details_settings.show_stock_count', true); // Added
+  bool get showAddToCart => getSetting('product_details_settings.show_add_to_cart', true); // Added
   String get defaultDisclaimer => getSetting('product_details_settings.default_disclaimer', 'Images are for illustration purposes only. Actual product may vary.');
   Map<String, dynamic> get categoryDisclaimers {
     final val = getSetting('product_details_settings.category_disclaimers', {});

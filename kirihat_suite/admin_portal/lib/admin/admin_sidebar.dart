@@ -254,6 +254,11 @@ class AdminSidebar extends StatelessWidget {
                   label: 'Product Display Settings',
                   page: 'product_display_settings',
                 ),
+                _buildNavItem(
+                  icon: Icons.slideshow,
+                  label: 'Onboarding Slides',
+                  page: 'onboarding_slides',
+                ),
               ],
             ),
           ),

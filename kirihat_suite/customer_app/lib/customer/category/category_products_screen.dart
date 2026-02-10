@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kirihat_core/services/hero_category_service.dart';
 import 'package:kirihat_core/services/home_layout_service.dart';
@@ -283,122 +284,132 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
     // Use LayoutBuilder for responsiveness
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(widget.categoryName),
-        backgroundColor: const Color(0xFF0D9759),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            onPressed: () {
-              showSearch(
-                context: context,
-                delegate: ProductSearchDelegate(
-                  products: _allProducts,
-                  categoryName: widget.categoryName,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              title: Text(widget.categoryName),
+              centerTitle: true,
+              backgroundColor: const Color(0xFF0D9759),
+              foregroundColor: Colors.white,
+              pinned: true,
+              floating: true,
+              forceElevated: innerBoxIsScrolled,
+              actions: [
+                IconButton(
+                  onPressed: () {
+                    showSearch(
+                      context: context,
+                      delegate: ProductSearchDelegate(
+                        products: _allProducts,
+                        categoryName: widget.categoryName,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.search),
                 ),
-              );
-            },
-            icon: const Icon(Icons.search),
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : DraggableCartWrapper(
-              child: Column(
-                children: [
-                  // Sorting & Filtering Bar
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    color: Colors.grey[50],
-                    child: Row(
-                      children: [
-                        // Sort Dropdown
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey[300]!),
-                            ),
-                            child: DropdownButton<SortOption>(
-                              value: _currentSort,
-                              isExpanded: true,
-                              underline: const SizedBox(),
-                              icon: const Icon(Icons.arrow_drop_down, size: 20),
-                              style: const TextStyle(fontSize: 13, color: Colors.black87),
-                              items: const [
-                                DropdownMenuItem(value: SortOption.priceAsc, 
-                                  child: Text('Price: Low to High')),
-                                DropdownMenuItem(value: SortOption.priceDesc, 
-                                  child: Text('Price: High to Low')),
-                                DropdownMenuItem(value: SortOption.discount, 
-                                  child: Text('Discount %')),
-                                DropdownMenuItem(value: SortOption.name, 
-                                  child: Text('Name: A-Z')),
-                              ],
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _currentSort = value;
-                                    _filterProducts();
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // In-Stock Filter
-                        FilterChip(
-                          label: const Text('In Stock', style: TextStyle(fontSize: 12)),
-                          selected: _showInStockOnly,
-                          onSelected: (selected) {
-                            setState(() {
-                              _showInStockOnly = selected;
-                              _filterProducts();
-                            });
-                          },
-                          selectedColor: const Color(0xFF0D9759).withOpacity(0.2),
-                          checkmarkColor: const Color(0xFF0D9759),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Product Grid with Sidebar
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isSmallMobile = constraints.maxWidth < 380;
-                        final sidebarWidth = isSmallMobile ? 100.0 : 120.0;
-                        
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Left Sidebar - Subcategories
-                            SizedBox(
-                              width: sidebarWidth,
-                              child: _buildSubcategorySidebar(isSmallMobile),
-                            ),
-                            
-                            // Right - Products Grid
-                            Expanded(
-                              child: Container(
+              ],
+            ),
+          ];
+        },
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : DraggableCartWrapper(
+                child: Column(
+                  children: [
+                    // Sorting & Filtering Bar
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      color: Colors.grey[50],
+                      child: Row(
+                        children: [
+                          // Sort Dropdown
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
                                 color: Colors.white,
-                                child: _filteredProducts.isEmpty
-                                    ? _buildEmptyState()
-                                    : _buildProductsGrid(constraints.maxWidth - sidebarWidth),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey[300]!),
+                              ),
+                              child: DropdownButton<SortOption>(
+                                value: _currentSort,
+                                isExpanded: true,
+                                underline: const SizedBox(),
+                                icon: const Icon(Icons.arrow_drop_down, size: 20),
+                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                items: const [
+                                  DropdownMenuItem(value: SortOption.priceAsc, 
+                                    child: Text('Price: Low to High')),
+                                  DropdownMenuItem(value: SortOption.priceDesc, 
+                                    child: Text('Price: High to Low')),
+                                  DropdownMenuItem(value: SortOption.discount, 
+                                    child: Text('Discount %')),
+                                  DropdownMenuItem(value: SortOption.name, 
+                                    child: Text('Name: A-Z')),
+                                ],
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _currentSort = value;
+                                      _filterProducts();
+                                    });
+                                  }
+                                },
                               ),
                             ),
-                          ],
-                        );
-                      },
+                          ),
+                          const SizedBox(width: 8),
+                          // In-Stock Filter
+                          FilterChip(
+                            label: const Text('In Stock', style: TextStyle(fontSize: 12)),
+                            selected: _showInStockOnly,
+                            onSelected: (selected) {
+                              setState(() {
+                                _showInStockOnly = selected;
+                                _filterProducts();
+                              });
+                            },
+                            selectedColor: const Color(0xFF0D9759).withOpacity(0.2),
+                            checkmarkColor: const Color(0xFF0D9759),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    // Product Grid with Sidebar
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isSmallMobile = constraints.maxWidth < 380;
+                          final sidebarWidth = isSmallMobile ? 100.0 : 120.0;
+                          
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left Sidebar - Subcategories
+                              SizedBox(
+                                width: sidebarWidth,
+                                child: _buildSubcategorySidebar(isSmallMobile),
+                              ),
+                              
+                              // Right - Products Grid
+                              Expanded(
+                                child: Container(
+                                  color: Colors.white,
+                                  child: _filteredProducts.isEmpty
+                                      ? _buildEmptyState()
+                                      : _buildProductsGrid(constraints.maxWidth - sidebarWidth),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -455,7 +466,7 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(6),
                                     image: DecorationImage(
-                                      image: NetworkImage(_categoryIcon!),
+                                      image: CachedNetworkImageProvider(_categoryIcon!),
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -471,7 +482,7 @@ class _NewCategoryProductsScreenState extends State<NewCategoryProductsScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(6),
                                     image: DecorationImage(
-                                      image: NetworkImage(_subcategoryIcons[name]!),
+                                      image: CachedNetworkImageProvider(_subcategoryIcons[name]!),
                                       fit: BoxFit.contain, // Show full icon
                                     ),
                                   ),

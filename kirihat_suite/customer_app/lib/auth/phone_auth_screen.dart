@@ -3,8 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../customer/onboarding/pincode_gate.dart';
+import '../customer/onboarding/account_setup_screen.dart';
+import '../customer/customer_dashboard.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
 import 'package:kirihat_core/services/session_service.dart';
+import 'package:kirihat_core/services/user_service.dart';
 import 'otp_verification_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,8 +15,13 @@ import 'package:kirihat_core/utils/policy_links.dart';
 
 class PhoneAuthScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess; // Optional callback after successful login
+  final bool isNestedFlow; // New Flag: Explicitly handle nested navigation
   
-  const PhoneAuthScreen({super.key, this.onLoginSuccess});
+  const PhoneAuthScreen({
+    super.key, 
+    this.onLoginSuccess,
+    this.isNestedFlow = false,
+  });
 
   @override
   State<PhoneAuthScreen> createState() => _PhoneAuthScreenState();
@@ -35,117 +43,72 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
     setState(() => _isLoading = true);
 
-    try {
-      final phoneNumber = '+91${_phoneController.text.trim()}';
-      
-      debugPrint('📱 Sending OTP to: $phoneNumber');
-      
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        timeout: const Duration(seconds: 60),
-        
-        // Auto-verification (Android only)
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          debugPrint('✅ Auto-verification completed');
-          await _signInWithCredential(credential);
-        },
-        
-        // Verification failed
-        verificationFailed: (FirebaseAuthException e) {
-          debugPrint('❌ Verification failed: ${e.code} - ${e.message}');
-          
-          String userMessage = e.message ?? 'Verification failed';
-          
-          if (kIsWeb && e.code == 'unauthorized-domain') {
-            userMessage = 'Hostname mismatch: This domain is not authorized in Firebase Console. Please add ${Uri.base.host} to Authorized Domains.';
-          } else if (e.code == 'too-many-requests') {
-            userMessage = 'SMS limit reached (approx 5/hr). For testing, please use a Test Number in Firebase Console.';
-          } else if (e.code == 'invalid-phone-number') {
-            userMessage = 'The phone number is invalid.';
-          } else if (e.code == 'quota-exceeded') {
-             userMessage = 'SMS quota exceeded for this project.';
-          }
+    final phoneNumber = '+91${_phoneController.text.trim()}';
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(userMessage),
-                backgroundColor: Colors.redAccent,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            );
-          }
-          setState(() => _isLoading = false);
-        },
-        
-        // OTP sent successfully
-        codeSent: (String verificationId, int? resendToken) async {
-          debugPrint('✅ OTP sent to $phoneNumber');
-          
-          if (mounted) {
-            setState(() => _isLoading = false);
-            
-            // Navigate to OTP entry screen and wait for result
-            final result = await Navigator.push<Map<String, dynamic>>(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) => OTPVerificationScreen(
-                  phoneNumber: phoneNumber,
-                  verificationId: verificationId,
-                  resendToken: resendToken,
-                ),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  const begin = Offset(1.0, 0.0);
-                  const end = Offset.zero;
-                  const curve = Curves.easeInOutQuart;
-                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                  return SlideTransition(position: animation.drive(tween), child: child);
-                },
-              ),
-            );
-
-            // If login successful, pop this screen too with the result
-            if (result != null && result['success'] == true && mounted) {
-              Navigator.pop(context, result);
-            }
-          }
-        },
-        
-        // Auto-retrieval timeout
-        codeAutoRetrievalTimeout: (String verificationId) {
-          debugPrint('⏱️ Auto-retrieval timeout');
-        },
-      );
-      
-    } catch (e) {
-      debugPrint('❌ Error sending OTP: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
+    // Navigate immediately to OTP Verification Screen
+    // The screen itself will handle sending the OTP
+    if (mounted) {
+       setState(() => _isLoading = false);
+       
+       final result = await Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => OTPVerificationScreen(
+            phoneNumber: phoneNumber,
+            verificationId: null, // Let screen handle it
+            onLoginSuccess: widget.onLoginSuccess,
+            isNestedFlow: widget.isNestedFlow,
           ),
-        );
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOutQuart;
+            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
+      );
+
+      // Handle success returns from OTP screen
+      if (result == true && mounted) {
+        if (widget.onLoginSuccess != null) {
+          widget.onLoginSuccess!();
+        }
+        // Always pop to return to previous screen (Checkout/Profile)
+        // Since we are in a nested flow or handling a result, we must close this screen.
+        Navigator.pop(context);
       }
-      setState(() => _isLoading = false);
     }
   }
   
+  bool _isSigningIn = false;
+
   Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
+    if (_isSigningIn) return;
+    
+    // Check if user is already signed in to avoid double-processing
+    if (FirebaseAuth.instance.currentUser != null) {
+       debugPrint('✅ Already signed in, skipping credential sign-in');
+       await _handlePostLoginNavigation(false);
+       return;
+    }
+
+    setState(() => _isSigningIn = true);
+
     try {
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user!;
       
       debugPrint('✅ Signed in: ${user.uid}');
       
+      // Check if user document exists in Firestore to determine true 'isNewUser' status
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final bool isNewUser = !userDoc.exists;
+
       // Prepare parallel tasks for lightning speed
       final List<Future> setupTasks = [];
 
-      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
-
-      // Task 1: Create/Update User (Optimized)
+      // Task 1: Create/Update User (Only if new)
       if (isNewUser) {
          setupTasks.add(FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'phone': user.phoneNumber,          // Standard field
@@ -156,17 +119,13 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       }
 
       // We should also run Cart Migration here because this is the auto-verification path!
-      // The original code didn't have Cart Migration here, which was a bug/omission.
       setupTasks.add(CartHelper.migrateGuestCartToFirestore(user.uid));
       setupTasks.add(SessionService().setCustomerMode(true));
 
       await Future.wait(setupTasks);
       
       if (mounted) {
-        Navigator.pop(context, {
-          'success': true, 
-          'isNewUser': isNewUser
-        });
+        await _handlePostLoginNavigation(isNewUser);
       }
     } catch (e) {
       debugPrint('❌ Sign-in error: $e');
@@ -176,6 +135,52 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
             content: Text('Sign-in error: ${e.toString()}'),
             backgroundColor: Colors.redAccent,
           ),
+        );
+      }
+    }
+  }
+
+  /// Handles navigation after successful login based on profile completion
+  Future<void> _handlePostLoginNavigation(bool isNewUser) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !mounted) return;
+    
+    // Check if profile is complete (has name, gender, and address)
+    final isProfileComplete = await UserService().checkProfileCompletionWithCache(user.uid);
+    
+    debugPrint('📋 Profile complete: $isProfileComplete, isNewUser: $isNewUser');
+    
+    if (!mounted) return;
+    
+    if (!isProfileComplete) {
+      // Go to account setup
+      if (widget.onLoginSuccess != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const AccountSetupScreen(isNestedFlow: true),
+          ),
+        );
+         if (mounted && widget.onLoginSuccess != null) {
+           widget.onLoginSuccess!();
+        }
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountSetupScreen()),
+          (route) => false,
+        );
+      }
+    } else {
+      // Profile is complete
+      if (widget.onLoginSuccess != null) {
+        widget.onLoginSuccess!();
+      } else {
+        // Go to main dashboard
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const CustomerDashboard()),
+          (route) => false,
         );
       }
     }
@@ -287,7 +292,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Login to your Kiri Hat account using your mobile number',
+                    'Login to your Kirihat account using your mobile number',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],

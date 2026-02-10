@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +14,9 @@ import 'dart:async';
 import 'onboarding/change_location_screen.dart';
 import 'cart_screen.dart';
 import 'product/enhanced_product_detail.dart';
+import 'home/customer_home_screen.dart'; // Import for search delegate access if needed
+import 'widgets/product_search_delegate.dart'; // Ensure this is imported
+import 'widgets/voice_search_screen.dart'; // Ensure this is imported
 import 'package:kirihat_core/utils/cart_helper.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
@@ -46,19 +50,43 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   
   List<Map<String, dynamic>> _displayProducts = []; // Final merged products to show
 
+  // Master product cache — fetched once, reused for all category/collection switches
+  Map<String, Map<String, dynamic>> _masterProductCache = {};
+
   // Selection
   String _selectedType = 'All'; // 'All', 'Collection', 'Category'
   String _selectedId = 'all'; // 'all', collectionId, or categoryName (Root ID)
   String _selectedSubId = 'all_sub'; // 'all_sub' or subcategoryName/ID
 
+  // Scroll logic for sticky header
+  late ScrollController _scrollController;
+  bool _showStickyHeader = false;
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     _loadData();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final offset = _scrollController.offset;
+      // Header height is approx 200. Show sticky when collapsed significantly.
+      final show = offset > 160; 
+      if (show != _showStickyHeader) {
+        setState(() {
+          _showStickyHeader = show;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _wishlistSub?.cancel();
     super.dispose();
   }
@@ -292,9 +320,39 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         }
       }
       print('DEBUG: Inventory map has ${_inventoryMap.length} products after filtering');
+      
+      // Pre-fetch and cache ALL master products for this vendor's inventory
+      await _prefetchMasterProducts(_inventoryMap.keys.toList());
     } catch (e) {
       print('DEBUG: ERROR fetching vendor inventory: $e');
     }
+  }
+
+  /// Pre-fetch all master products into local cache for instant category switching
+  Future<void> _prefetchMasterProducts(List<String> productIds) async {
+    // Only fetch products we don't already have cached
+    final uncachedIds = productIds.where((id) => !_masterProductCache.containsKey(id)).toList();
+    if (uncachedIds.isEmpty) return;
+    
+    const int batchSize = 10;
+    for (int i = 0; i < uncachedIds.length; i += batchSize) {
+      final batchIds = uncachedIds.skip(i).take(batchSize).toList();
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('master_products')
+            .where(FieldPath.documentId, whereIn: batchIds)
+            .get();
+        
+        for (var doc in snap.docs) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          _masterProductCache[doc.id] = data;
+        }
+      } catch (e) {
+        print('DEBUG: Error prefetching master products batch $i: $e');
+      }
+    }
+    print('DEBUG: Master product cache now has ${_masterProductCache.length} products');
   }
 
   // Core merging logic
@@ -345,94 +403,93 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         return;
      }
 
-     // B. Batch-fetch master products
-     const int batchSize = 10;
-     for (int i = 0; i < targetProductIds.length; i += batchSize) {
-        final batchIds = targetProductIds.skip(i).take(batchSize).toList();
-        try {
-           final snap = await FirebaseFirestore.instance
+     // B. Resolve products from local cache (no Firestore calls!)
+     for (var productId in targetProductIds) {
+       Map<String, dynamic>? productData = _masterProductCache[productId];
+       
+       // If not in cache (e.g. smart collection product), fetch individually
+       if (productData == null) {
+         try {
+           final doc = await FirebaseFirestore.instance
                .collection('master_products')
-               .where(FieldPath.documentId, whereIn: batchIds)
+               .doc(productId)
                .get();
-
-           for (var doc in snap.docs) {
-              Map<String, dynamic> productData = doc.data();
-              productData['id'] = doc.id;
-
-              // C. Merge with vendor inventory (if applicable)
-              final isInInventory = _inventoryMap.containsKey(doc.id);
-              if (isInInventory) {
-                final inv = _inventoryMap[doc.id]!;
-                productData['price'] = inv['price'] ?? productData['price'];
-                productData['stock_quantity'] = inv['stock_quantity'] ?? 0;
-                productData['isAvailable'] = inv['isAvailable'] ?? true;
-                productData['vendor_id'] = _vendorId;
-                productData['isAvailableInCurrentVendor'] = true;
-              } else {
-                productData['stock_quantity'] = 0;
-                productData['isAvailable'] = false;
-                productData['isAvailableInCurrentVendor'] = false;
-                productData['vendor_id'] = _vendorId;
-              }
-
-              // D. Category filtering
-              if (_selectedType == 'Category') {
-                 String productCategory = productData['category'] ?? '';
-                 String productSub = productData['subcategory'] ?? '';
-                 
-                 // 1. Resolve Root Category
-                 String selectedRootName = '';
-                 final rootCat = _rootCategories.firstWhere((r) => r['id'] == _selectedId || r['name'] == _selectedId, orElse: () => {});
-                 
-                 Set<String> validNames = {};
-                 
-                 if (rootCat.isNotEmpty) {
-                    selectedRootName = rootCat['name'];
-                    validNames.add(selectedRootName.toLowerCase());
-                    
-                    // Add all subcategories of this root to valid matches
-                    // Logic: If product has 'category': 'Saag' (which is a sub of 'Vegetables'), it should show up under 'Vegetables'
-                    final subs = _subCategoriesMap[rootCat['id']] ?? [];
-                    for (var s in subs) {
-                      if (s['name'] != null) validNames.add(s['name'].toString().toLowerCase());
-                    }
-                 } else {
-                    selectedRootName = _selectedId;
-                    validNames.add(selectedRootName.toLowerCase());
-                 }
-
-                 // Debug
-                 if (i == 0 && merged.length < 3) {
-                    print('DEBUG FILTER: SelectedID=$_selectedId, Root=$selectedRootName, ValidNamesCount=${validNames.length}, ProdCat=$productCategory');
-                 }
-
-                 // 2. Initial Match (Is this product relevant to the Root Tree?)
-                 // defined as: product.category IN [Root, Sub1, Sub2...] OR product.subcategory IN [Root, Sub1, Sub2...]
-                 bool isMatch = validNames.contains(productCategory.toLowerCase()) || 
-                                validNames.contains(productSub.toLowerCase());
-
-                 if (isMatch) {
-                    // 3. Subcategory Filter (Drill down)
-                    if (_selectedSubId != 'all_sub') {
-                        // Strict check: One of the product's fields must match the selected subcategory explicitly
-                        bool subMatch = productCategory.toLowerCase() == _selectedSubId.toLowerCase() ||
-                                        productSub.toLowerCase() == _selectedSubId.toLowerCase();
-                        
-                        if (subMatch) {
-                             merged.add(productData);
-                        }
-                    } else {
-                        // All subcategories selected -> Show everything in this Root Tree
-                        merged.add(productData);
-                    }
-                 }
-              } else {
-                 merged.add(productData);
-              }
+           if (doc.exists) {
+             productData = doc.data()!;
+             productData['id'] = doc.id;
+             _masterProductCache[doc.id] = productData;
            }
-        } catch (e) {
-           print('DEBUG: Error fetching batch $i: $e');
-        }
+         } catch (e) {
+           print('DEBUG: Error fetching product $productId: $e');
+           continue;
+         }
+       }
+       
+       if (productData == null) continue;
+       
+       // Make a copy so we don't mutate the cache
+       final merged_item = Map<String, dynamic>.from(productData);
+
+               // C. Merge with vendor inventory (if applicable)
+               final isInInventory = _inventoryMap.containsKey(productId);
+               if (isInInventory) {
+                 final inv = _inventoryMap[productId]!;
+                 merged_item['price'] = inv['price'] ?? merged_item['price'];
+                 merged_item['stock_quantity'] = inv['stock_quantity'] ?? 0;
+                 merged_item['isAvailable'] = inv['isAvailable'] ?? true;
+                 merged_item['vendor_id'] = _vendorId;
+                 merged_item['isAvailableInCurrentVendor'] = true;
+               } else {
+                 merged_item['stock_quantity'] = 0;
+                 merged_item['isAvailable'] = false;
+                 merged_item['isAvailableInCurrentVendor'] = false;
+                 merged_item['vendor_id'] = _vendorId;
+               }
+
+               // D. Category filtering
+               if (_selectedType == 'Category') {
+                  String productCategory = merged_item['category'] ?? '';
+                  String productSub = merged_item['subcategory'] ?? '';
+                  
+                  // 1. Resolve Root Category
+                  String selectedRootName = '';
+                  final rootCat = _rootCategories.firstWhere((r) => r['id'] == _selectedId || r['name'] == _selectedId, orElse: () => {});
+                  
+                  Set<String> validNames = {};
+                  
+                  if (rootCat.isNotEmpty) {
+                     selectedRootName = rootCat['name'];
+                     validNames.add(selectedRootName.toLowerCase());
+                     
+                     final subs = _subCategoriesMap[rootCat['id']] ?? [];
+                     for (var s in subs) {
+                       if (s['name'] != null) validNames.add(s['name'].toString().toLowerCase());
+                     }
+                  } else {
+                     selectedRootName = _selectedId;
+                     validNames.add(selectedRootName.toLowerCase());
+                  }
+
+                  // 2. Initial Match
+                  bool isMatch = validNames.contains(productCategory.toLowerCase()) || 
+                                 validNames.contains(productSub.toLowerCase());
+
+                  if (isMatch) {
+                     // 3. Subcategory Filter
+                     if (_selectedSubId != 'all_sub') {
+                         bool subMatch = productCategory.toLowerCase() == _selectedSubId.toLowerCase() ||
+                                         productSub.toLowerCase() == _selectedSubId.toLowerCase();
+                         
+                         if (subMatch) {
+                              merged.add(merged_item);
+                         }
+                     } else {
+                         merged.add(merged_item);
+                     }
+                  }
+               } else {
+                  merged.add(merged_item);
+               }
      }
      
      // Sorting
@@ -481,22 +538,60 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: DraggableCartWrapper(
-        child: SafeArea(
+      body: NestedScrollView(
+        controller: _scrollController,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              expandedHeight: 230.0,
+              pinned: true,
+              floating: false,
+              backgroundColor: const Color(0xFF064E3B),
+              elevation: _showStickyHeader ? 2 : 0,
+              titleSpacing: 0,
+              centerTitle: true,
+              title: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: _showStickyHeader ? 1.0 : 0.0,
+                child: _showStickyHeader 
+                    ? _buildStickySearchBar() 
+                    : const SizedBox.shrink(),
+              ),
+              leading: AnimatedOpacity(
+                   duration: const Duration(milliseconds: 200),
+                   opacity: _showStickyHeader ? 1.0 : 0.0,
+                   child: _showStickyHeader
+                    ? Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.white24,
+                            shape: BoxShape.circle
+                          ),
+                          child: const Icon(Icons.location_on, color: Colors.white, size: 18)
+                        ),
+                      )
+                    : const SizedBox.shrink()
+                ),
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.parallax,
+                background: CustomerHeader(
+                  selectedArea: _selectedArea ?? 'Location',
+                  onLocationTap: () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangeLocationScreen()));
+                    _loadData(); // Full reload
+                  },
+                  onCartTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
+                  products: _displayProducts,
+                  categoryName: _selectedType == 'Category' ? _selectedId : null,
+                ),
+              ),
+            ),
+          ];
+        },
+        body: DraggableCartWrapper(
           child: Column(
             children: [
-              // Header
-              CustomerHeader(
-                selectedArea: _selectedArea ?? 'Location',
-                onLocationTap: () async {
-                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangeLocationScreen()));
-                  _loadData(); // Full reload
-                },
-                onCartTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
-                products: _displayProducts,
-                categoryName: _selectedType == 'Category' ? _selectedId : null,
-              ),
-
               // Body
               Expanded(
                 child: _isLoading 
@@ -664,12 +759,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                           onAdd: () async {
                                             bool success = await CartHelper.addToCart(context, product);
                                             if (success && context.mounted) {
-                                               // ScaffoldMessenger.of(context).showSnackBar(
-                                               //  const SnackBar(
-                                               //    content: Text('Added to cart'),
-                                               //    duration: Duration(seconds: 1),
-                                               //  ),
-                                              // );
+                                               // Success message removed as per new UI request (floating cart)
                                             }
                                           },
                                         );
@@ -689,6 +779,59 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStickySearchBar() {
+    return Container(
+      height: 40,
+      margin: const EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: GestureDetector(
+        onTap: () {
+           showSearch(
+             context: context, 
+             delegate: ProductSearchDelegate(products: []) // Pass empty or cached
+           );
+        },
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            const Icon(Icons.search, color: Color(0xFF059669), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Search...',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 14,
+                ),
+              ),
+            ),
+             GestureDetector(
+               onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VoiceSearchScreen()),
+                  );
+                  if (result != null && result is String && mounted) {
+                     showSearch(
+                        context: context,
+                        delegate: ProductSearchDelegate(initialQuery: result),
+                     );
+                  }
+               },
+               child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Icon(Icons.mic, color: Color(0xFF059669), size: 20),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -796,7 +939,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                  color: isSelected ? const Color(0xFF0D9759) : Colors.grey[100],
                  border: Border.all(color: isSelected ? const Color(0xFF0D9759) : Colors.grey[300]!),
                  image: (imageUrl != null && imageUrl.isNotEmpty)
-                     ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                     ? DecorationImage(image: CachedNetworkImageProvider(imageUrl), fit: BoxFit.cover)
                      : null
                ),
                child: (imageUrl == null || imageUrl.isEmpty)
@@ -860,7 +1003,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                 border: Border.all(color: Colors.grey.shade200),
                 image: (imageUrl != null && imageUrl.isNotEmpty)
                     ? DecorationImage(
-                        image: NetworkImage(imageUrl),
+                        image: CachedNetworkImageProvider(imageUrl),
                         fit: BoxFit.contain,
                       )
                     : null,

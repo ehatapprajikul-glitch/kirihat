@@ -157,24 +157,62 @@ class _RiderOrdersScreenState extends State<RiderOrdersScreen> {
       // --- SEND NOTIFICATION TO VENDOR ---
       Map<String, dynamic>? currentData = orderDoc.data() as Map<String, dynamic>?;
       String? vId = currentData?['vendor_id'];
+      String? cId = currentData?['customer_id'];
+      String? orderIdStr = currentData?['order_id'] ?? orderDoc.id;
+      
+      // Extract Image URL
+      String? imgUrl;
+      if (currentData != null && currentData['items'] is List && (currentData['items'] as List).isNotEmpty) {
+         final firstItem = (currentData['items'] as List).first;
+         imgUrl = firstItem['imageUrl'] ?? firstItem['image_url'];
+      }
 
+      // 1. Notify Vendor
       if (vId != null) {
         if (newStatus == 'Delivered') {
           await NotificationService.sendNotification(
             vendorId: vId,
             title: 'Order Delivered',
-            message: 'Order #${currentData?['order_id'] ?? orderDoc.id} has been delivered.',
+            message: 'Order #$orderIdStr has been delivered.',
             type: 'order_delivered',
-            orderId: currentData?['order_id'] ?? orderDoc.id,
+            orderId: orderIdStr!,
           );
         } else if (newStatus == 'Cancelled') {
           await NotificationService.sendNotification(
             vendorId: vId,
             title: 'Order Cancelled by Rider',
-            message: 'Order #${currentData?['order_id'] ?? orderDoc.id} cancelled. Reason: $cancelReason',
+            message: 'Order #$orderIdStr cancelled. Reason: $cancelReason',
             type: 'rider_cancelled',
-            orderId: currentData?['order_id'] ?? orderDoc.id,
+            orderId: orderIdStr!,
           );
+        }
+      }
+
+      // 2. Notify Customer
+      if (cId != null) {
+        String title = 'Order Update';
+        String body = 'Your order status has been updated to $newStatus.';
+
+        if (newStatus == 'Out for Delivery') {
+          title = 'Out for Delivery 🛵';
+          body = 'Your order is out for delivery! Get ready.';
+        } else if (newStatus == 'Delivered') {
+          title = 'Order Delivered! 🎉';
+          body = 'Your order has been delivered using secure pin. Thank you!';
+        } else if (newStatus == 'Cancelled') {
+          title = 'Delivery Failed ❌';
+          body = 'Delivery attempt failed. Reason: $cancelReason';
+        }
+
+        if (newStatus == 'Out for Delivery' || newStatus == 'Delivered' || newStatus == 'Cancelled') {
+           await NotificationService.sendCustomerNotification(
+             customerId: cId,
+             title: title,
+             body: body,
+             type: 'order_status',
+             orderId: orderDoc.id, // Use Doc ID for navigation matching
+             imageUrl: imgUrl,
+           );
         }
       }
       // -----------------------------------

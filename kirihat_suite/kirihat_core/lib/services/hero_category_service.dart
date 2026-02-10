@@ -85,9 +85,55 @@ class HeroCategoryService {
     try {
       if (categoryIds.isEmpty) return [];
 
-      List<Map<String, dynamic>> availableCategories = [];
+      // 1. Get all available product IDs from vendor inventory
+      final inventorySnapshot = await _firestore
+          .collection('vendor_inventory')
+          .where('vendor_id', isEqualTo: vendorId)
+          .where('isAvailable', isEqualTo: true)
+          .limit(500) // Reasonable limit for a single vendor
+          .get();
 
-      // Fetch category details (in batches)
+      if (inventorySnapshot.docs.isEmpty) {
+        print('⚠️ No inventory found for vendor: $vendorId');
+        return [];
+      }
+
+      final productIds = inventorySnapshot.docs
+          .map((doc) => doc.data()['product_id'] as String?)
+          .where((id) => id != null)
+          .cast<String>()
+          .toList();
+
+      if (productIds.isEmpty) return [];
+
+      // 2. Get categories present in these products
+      final Set<String> availableCategoryNames = {};
+      
+      // Batch fetch master products to check their categories
+      for (int i = 0; i < productIds.length; i += 10) {
+        final batch = productIds.skip(i).take(10).toList();
+        try {
+          final productsSnapshot = await _firestore
+              .collection('master_products')
+              .where(FieldPath.documentId, whereIn: batch)
+              // .select() not supported in Flutter client SDK, fetching full docs
+              .get();
+
+          for (var doc in productsSnapshot.docs) {
+            final data = doc.data();
+            if (data['category'] != null) availableCategoryNames.add(data['category'].toString());
+            // Optionally check subcategories too if needed, but usually we filter by root category content
+          }
+        } catch (e) {
+          print('Error fetching product batch: $e');
+        }
+      }
+
+      print('✅ Vendor has products in ${availableCategoryNames.length} categories');
+
+      // 3. Fetch requested categories and filter
+      List<Map<String, dynamic>> availableCategories = [];
+      
       for (int i = 0; i < categoryIds.length; i += 10) {
         final batch = categoryIds.skip(i).take(10).toList();
         final snapshot = await _firestore
@@ -96,68 +142,22 @@ class HeroCategoryService {
             .get();
 
         for (var doc in snapshot.docs) {
-          final categoryId = doc.id;
           final categoryData = doc.data();
-
-          // Check if vendor has inventory in this category
-          final hasInventory = await _checkCategoryInventory(vendorId, categoryData['name']);
-
-          if (hasInventory) {
-            categoryData['id'] = categoryId;
-            availableCategories.add(categoryData);
+          final categoryName = categoryData['name'] as String?;
+          
+          // Check if this category name exists in our available set
+          if (categoryName != null && availableCategoryNames.contains(categoryName)) {
+             categoryData['id'] = doc.id;
+             availableCategories.add(categoryData);
           }
         }
       }
 
-      print('✅ Found ${availableCategories.length} categories with inventory');
+      print('✅ Found ${availableCategories.length} available hero categories for display');
       return availableCategories;
     } catch (e) {
-      print('❌ Error fetching categories: $e');
-      return [];
-    }
-  }
-
-  /// Check if vendor has any products in a category
-  Future<bool> _checkCategoryInventory(String vendorId, String categoryName) async {
-    try {
-      // Get product IDs from vendor inventory
-      final inventorySnapshot = await _firestore
-          .collection('vendor_inventory')
-          .where('vendor_id', isEqualTo: vendorId)
-          .where('isAvailable', isEqualTo: true)
-          .limit(100)
-          .get();
-
-      if (inventorySnapshot.docs.isEmpty) return false;
-
-      // Extract product IDs
-      final productIds = inventorySnapshot.docs
-          .map((doc) => doc.data()['product_id'] as String?)
-          .where((id) => id != null)
-          .cast<String>()
-          .toList();
-
-      if (productIds.isEmpty) return false;
-
-      // Check if any products are in this category (batched)
-      for (int i = 0; i < productIds.length; i += 10) {
-        final batch = productIds.skip(i).take(10).toList();
-        final productsSnapshot = await _firestore
-            .collection('master_products')
-            .where(FieldPath.documentId, whereIn: batch)
-            .where('category', isEqualTo: categoryName)
-            .limit(1)
-            .get();
-
-        if (productsSnapshot.docs.isNotEmpty) {
-          return true;
-        }
-      }
-
-      return false;
-    } catch (e) {
-      print('Error checking inventory: $e');
-      return false;
+      print('❌ Error fetching categories with inventory: $e');
+      return []; // Return empty list on error instead of throwing
     }
   }
 

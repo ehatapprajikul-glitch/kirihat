@@ -30,6 +30,21 @@
           "destination": "/index.html"
         }
       ]
+    },
+    {
+      "target": "seller",
+      "public": "seller_app/build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
     }
   ]
 }

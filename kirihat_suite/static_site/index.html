@@ -8,7 +8,7 @@
     <meta name="description"
         content="Kirihat delivers fresh groceries and essentials in minutes. Shop from local sellers, enjoy instant delivery, and experience seamless online shopping in Dhubri.">
     <meta name="keywords"
-        content="Kirihat, grocery delivery, quick commerce, online shopping, Dhubri, instant delivery, fresh groceries">
+        content="Kirihat, kirihat, kiri hat, kirihat app, kirihat grocery, kirihat online shopping, grocery delivery, quick commerce, online shopping, Dhubri, Dhubri grocery, Assam delivery, instant delivery, fresh groceries, vegetables delivery, local shopping app, order groceries online">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -73,7 +73,9 @@
                 <a href="about-us">About Us</a>
                 <a href="seller-registration">Become a Seller</a>
                 <a href="contact-us">Contact</a>
-                <a href="/app/" class="btn-primary">Launch App</a>
+                <a href="https://play.google.com/store/apps/details?id=com.kirihat.live_app" class="btn-secondary"
+                    target="_blank">📲 Download App</a>
+                <a href="/app/" class="btn-primary">🚀 Launch App</a>
             </nav>
         </div>
     </header>
@@ -236,6 +238,147 @@
 
     <!-- JavaScript -->
     <script src="js/main.js"></script>
+
+    <!-- Deep Link & Mobile Popup Script -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+            const path = window.location.pathname;
+            const playStoreUrl = "https://play.google.com/store/apps/details?id=com.kirihat.live_app";
+
+            // === PRODUCT LINK REDIRECT ===
+            // Redirect product links directly to web app product page
+            if (productId) {
+                window.location.href = '/app/#/product/' + productId;
+                return;
+            }
+
+            if (path.includes('/product/')) {
+                const pathParts = path.split('/');
+                const productIndex = pathParts.indexOf('product');
+                if (productIndex >= 0 && pathParts[productIndex + 1]) {
+                    window.location.href = '/app/#/product/' + pathParts[productIndex + 1];
+                    return;
+                }
+            }
+
+            // === MOBILE APP DOWNLOAD POPUP ===
+            // Show popup on mobile devices (only once per session)
+            const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const popupShown = sessionStorage.getItem('appPopupShown');
+
+            if (isMobile && !popupShown) {
+                // Create popup
+                const popup = document.createElement('div');
+                popup.id = 'app-download-popup';
+                popup.innerHTML = `
+                    <div class="popup-overlay">
+                        <div class="popup-content">
+                            <button class="popup-close" onclick="closeAppPopup()">×</button>
+                            <div class="popup-icon">📲</div>
+                            <h3>Get the Kirihat App!</h3>
+                            <p>Enjoy faster checkout, exclusive deals, and real-time order tracking.</p>
+                            <a href="${playStoreUrl}" class="popup-btn-primary" target="_blank">Download Now</a>
+                            <button class="popup-btn-secondary" onclick="closeAppPopup()">Continue to Website</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(popup);
+
+                // Add popup styles
+                const style = document.createElement('style');
+                style.textContent = `
+                    .popup-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0,0,0,0.6);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                        padding: 20px;
+                        animation: fadeIn 0.3s;
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    .popup-content {
+                        background: white;
+                        border-radius: 20px;
+                        padding: 32px 24px;
+                        max-width: 320px;
+                        width: 100%;
+                        text-align: center;
+                        position: relative;
+                        animation: slideUp 0.3s;
+                    }
+                    @keyframes slideUp {
+                        from { transform: translateY(20px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                    .popup-close {
+                        position: absolute;
+                        top: 12px;
+                        right: 12px;
+                        background: none;
+                        border: none;
+                        font-size: 24px;
+                        cursor: pointer;
+                        color: #9ca3af;
+                    }
+                    .popup-icon {
+                        font-size: 48px;
+                        margin-bottom: 16px;
+                    }
+                    .popup-content h3 {
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: #1f2937;
+                        margin-bottom: 8px;
+                    }
+                    .popup-content p {
+                        color: #6b7280;
+                        font-size: 14px;
+                        margin-bottom: 24px;
+                        line-height: 1.5;
+                    }
+                    .popup-btn-primary {
+                        display: block;
+                        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+                        color: white;
+                        padding: 14px 24px;
+                        border-radius: 12px;
+                        text-decoration: none;
+                        font-weight: 600;
+                        font-size: 16px;
+                        margin-bottom: 12px;
+                    }
+                    .popup-btn-secondary {
+                        background: none;
+                        border: none;
+                        color: #6b7280;
+                        font-size: 14px;
+                        cursor: pointer;
+                        padding: 8px;
+                    }
+                `;
+                document.head.appendChild(style);
+
+                // Mark as shown for this session
+                sessionStorage.setItem('appPopupShown', 'true');
+            }
+        });
+
+        function closeAppPopup() {
+            const popup = document.getElementById('app-download-popup');
+            if (popup) popup.remove();
+        }
+    </script>
 </body>
 
 </html>

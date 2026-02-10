@@ -18,9 +18,11 @@ class SellerModel {
   // Business Info
   final String? gstNumber;
   final String? panNumber;
+  final String? aadharNumber;
+  final String? udhyamNumber;
   final String? fssaiLicense;
   final BankAccount? bankAccount;
-  final Map<String, String>? documents; // {'gst': 'url', 'pan': 'url'}
+  final Map<String, String>? documents; // {'aadhar': 'url', 'pan': 'url', 'udhyam': 'url'}
 
   // Status
   final String status; // pending, active, suspended, rejected
@@ -49,6 +51,8 @@ class SellerModel {
     this.serviceablePincodes = const [],
     this.gstNumber,
     this.panNumber,
+    this.aadharNumber,
+    this.udhyamNumber,
     this.fssaiLicense,
     this.bankAccount,
     this.documents,
@@ -78,6 +82,8 @@ class SellerModel {
       serviceablePincodes: List<String>.from(map['serviceable_pincodes'] ?? []),
       gstNumber: map['gst_number'],
       panNumber: map['pan_number'],
+      aadharNumber: map['aadhar_number'],
+      udhyamNumber: map['udhyam_number'],
       fssaiLicense: map['fssai_license'],
       bankAccount: map['bank_account'] != null
           ? BankAccount.fromMap(map['bank_account'])
@@ -111,6 +117,8 @@ class SellerModel {
       'serviceable_pincodes': serviceablePincodes,
       'gst_number': gstNumber,
       'pan_number': panNumber,
+      'aadhar_number': aadharNumber,
+      'udhyam_number': udhyamNumber,
       'fssai_license': fssaiLicense,
        'bank_account': bankAccount?.toMap(),
       'documents': documents,
@@ -138,6 +146,8 @@ class SellerModel {
     List<String>? serviceablePincodes,
     String? gstNumber,
     String? panNumber,
+    String? aadharNumber,
+    String? udhyamNumber,
     String? fssaiLicense,
     BankAccount? bankAccount,
     Map<String, String>? documents,
@@ -164,6 +174,8 @@ class SellerModel {
       serviceablePincodes: serviceablePincodes ?? this.serviceablePincodes,
       gstNumber: gstNumber ?? this.gstNumber,
       panNumber: panNumber ?? this.panNumber,
+      aadharNumber: aadharNumber ?? this.aadharNumber,
+      udhyamNumber: udhyamNumber ?? this.udhyamNumber,
       fssaiLicense: fssaiLicense ?? this.fssaiLicense,
       bankAccount: bankAccount ?? this.bankAccount,
       documents: documents ?? this.documents,

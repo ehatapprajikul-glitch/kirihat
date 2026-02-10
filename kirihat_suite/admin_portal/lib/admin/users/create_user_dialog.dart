@@ -110,10 +110,19 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  // In Edit Mode, allow empty email (for Phone Auth users)
+                  if (_isEditMode && (value == null || value.trim().isEmpty)) {
+                    return null;
+                  }
+                  
+                  // In Create Mode, email is required
+                  if (!_isEditMode && (value == null || value.trim().isEmpty)) {
                     return 'Email is required';
                   }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  
+                  // If email is provided, it must be valid
+                  if (value != null && value.trim().isNotEmpty && 
+                      !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                     return 'Enter a valid email';
                   }
                   return null;
@@ -235,6 +244,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
         await FirebaseFirestore.instance.collection('users').doc(widget.uid).update({
           'name': _nameController.text.trim(),
           'phone': _phoneController.text.trim(),
+          'phone_number': _phoneController.text.trim(), // Ensure consistency
           'role': _selectedRole,
           'updated_at': FieldValue.serverTimestamp(),
         });
@@ -268,6 +278,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
             'name': _nameController.text.trim(),
             'email': _emailController.text.trim(),
             'phone': _phoneController.text.trim(),
+            'phone_number': _phoneController.text.trim(), // Ensure consistency
             'role': _selectedRole,
             'disabled': false,
             'created_at': FieldValue.serverTimestamp(),
@@ -280,6 +291,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
              await FirebaseFirestore.instance.collection('vendors').doc(userCredential.user!.uid).set({
                 'business_name': _nameController.text.trim(),
                 'phone': _phoneController.text.trim(),
+                'phone_number': _phoneController.text.trim(),
                 'email': _emailController.text.trim(),
                 'is_verified': false,
                 'created_at': FieldValue.serverTimestamp(),
@@ -291,6 +303,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
              await FirebaseFirestore.instance.collection('riders').doc(userCredential.user!.uid).set({
                 'name': _nameController.text.trim(),
                 'phone': _phoneController.text.trim(),
+                'phone_number': _phoneController.text.trim(),
                 'email': _emailController.text.trim(),
                 'is_active': true,
                 'is_verified': false,
@@ -310,6 +323,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                 'owner_name': _nameController.text.trim(),
                 'email': _emailController.text.trim(),
                 'phone': _phoneController.text.trim(),
+                'phone_number': _phoneController.text.trim(),
                 'status': 'active', // Auto-approve admin created sellers
                 'verified': true,
                 'created_at': FieldValue.serverTimestamp(),

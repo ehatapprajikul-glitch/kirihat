@@ -4,18 +4,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:kirihat_core/services/service_area_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'customer_dashboard.dart';
 
 class AddressScreen extends StatefulWidget {
   final String? addressId;
   final Map<String, dynamic>? initialData;
   final bool isOnboarding;
+  final bool isNestedFlow;
 
   const AddressScreen({
     super.key,
     this.addressId,
     this.initialData,
     this.isOnboarding = false,
+    this.isNestedFlow = false,
   });
 
   @override
@@ -63,11 +66,28 @@ class _AddressScreenState extends State<AddressScreen> {
 
     if (widget.addressId == null) {
       _fetchUserDetails();
+      _loadAutoFillData(); // Load cached pincode
     }
     
     // If editing and has pincode, load areas
     if (_pinController.text.length == 6) {
       _fetchPinDetails(_pinController.text);
+    }
+  }
+
+  Future<void> _loadAutoFillData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedPin = prefs.getString('current_pincode');
+      
+      if (cachedPin != null && _pinController.text.isEmpty) {
+        setState(() {
+          _pinController.text = cachedPin;
+        });
+        _fetchPinDetails(cachedPin);
+      }
+    } catch (e) {
+      debugPrint("Error loading cached data: $e");
     }
   }
 
@@ -245,7 +265,12 @@ class _AddressScreenState extends State<AddressScreen> {
       }, SetOptions(merge: true));
 
       if (mounted) {
-        if (widget.isOnboarding) {
+        // If this is a nested flow (e.g. from Checkout -> Login -> Account Setup -> Address),
+        // we just pop back to the caller (Login Screen) which will then pop back to Checkout.
+        if (widget.isNestedFlow) {
+           Navigator.pop(context); 
+        } 
+        else if (widget.isOnboarding) {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const CustomerDashboard()),
@@ -303,10 +328,14 @@ class _AddressScreenState extends State<AddressScreen> {
               const SizedBox(height: 10),
               _buildTextField(
                   _nameController, "Receiver's Full Name *", Icons.person,
-                  isMandatory: true),
+                  isMandatory: true,
+                  // Read-only if populated (e.g. from Profile)
+                  isReadOnly: _nameController.text.isNotEmpty),
               const SizedBox(height: 15),
               _buildTextField(_phoneController, "Mobile Number *", Icons.phone,
-                  isMandatory: true, isNumber: true),
+                  isMandatory: true, isNumber: true,
+                  // Read-only if populated
+                  isReadOnly: _phoneController.text.isNotEmpty),
               const SizedBox(height: 15),
               _buildTextField(_altPhoneController,
                   "Alternative Mobile (Optional)", Icons.phone_android,
@@ -339,6 +368,8 @@ class _AddressScreenState extends State<AddressScreen> {
                 controller: _pinController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
+                // Read-only if populated (e.g. from Setup/Cache/Edit)
+                readOnly: _pinController.text.isNotEmpty,
                 onChanged: (val) {
                   if (val.length == 6) _fetchPinDetails(val);
                 },
@@ -350,11 +381,15 @@ class _AddressScreenState extends State<AddressScreen> {
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8)),
                   counterText: "",
+                  filled: _pinController.text.isNotEmpty,
+                  fillColor: _pinController.text.isNotEmpty ? Colors.grey[200] : Colors.white,
                   suffixIcon: _isFetchingPin
                       ? const Padding(
                           padding: EdgeInsets.all(10),
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : null,
+                      : (_pinController.text.isNotEmpty 
+                          ? const Icon(Icons.lock_outline, size: 18, color: Colors.grey) 
+                          : null),
                 ),
               ),
               const SizedBox(height: 15),

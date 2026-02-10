@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Product - Kirihat</title>
+    <meta name="description" content="View this product in the Kirihat App. Get fresh groceries delivered fast.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="images/favicon.png">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+            width: 100%;
+            padding: 48px 32px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            color: #16a34a;
+            margin-bottom: 24px;
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        p {
+            color: #6b7280;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(22, 163, 74, 0.3);
+        }
+
+        .btn-secondary {
+            display: inline-block;
+            color: #16a34a;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            border: 2px solid #e5e7eb;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: #16a34a;
+        }
+
+        .play-badge {
+            margin-top: 24px;
+        }
+
+        .play-badge img {
+            height: 50px;
+        }
+
+        .product-id {
+            background: #f3f4f6;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 24px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">Kirihat</div>
+        <div class="icon">🛒</div>
+        <h1>View this Product</h1>
+        <p>This product is available in the Kirihat App. Download now to view details, add to cart, and get it delivered
+            fast!</p>
+
+        <a href="https://play.google.com/store/apps/details?id=com.kirihat.live_app" class="btn-primary"
+            target="_blank">
+            📲 Get the Kirihat App
+        </a>
+
+        <a href="/app/" class="btn-secondary">
+            Continue to Web App
+        </a>
+
+        <div class="product-id" id="productIdDisplay">
+            Loading...
+        </div>
+    </div>
+
+    <script>
+        // Get product ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        if (productId) {
+            document.getElementById('productIdDisplay').textContent = 'Product ID: ' + productId;
+
+            // Update document title
+            document.title = 'View Product - Kirihat';
+        } else {
+            document.getElementById('productIdDisplay').textContent = 'No product specified';
+        }
+    </script>
+</body>
+
+</html>

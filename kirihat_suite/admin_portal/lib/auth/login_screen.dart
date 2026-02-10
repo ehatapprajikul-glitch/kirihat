@@ -6,10 +6,16 @@ import '../main.dart';
 // IMPORTS FOR PORTAL ROLES
 import '../vendor/vendor_dashboard.dart';
 import '../admin/admin_web_layout.dart';
-import '../seller/seller_dashboard.dart';
+import '../vendor/vendor_dashboard.dart';
+import '../admin/admin_web_layout.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String targetRole; // 'admin' or 'vendor'
+
+  const LoginScreen({
+    super.key, 
+    this.targetRole = 'admin', // Default fallback
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -18,51 +24,86 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // Brand Colors
-  final Color _brandColor = Colors.purple; // Portal Theme
-  final Color _buttonColor = Colors.purple.shade600;
+  // Theme Constants
+  late Color _brandColor;
+  late Color _buttonColor;
+  late String _portalTitle;
+  late IconData _portalIcon;
+
   final Color _textDark = const Color(0xFF212121);
   final Color _textGrey = const Color(0xFF878787);
-  final Color _borderGrey = const Color(0xFFE0E0E0);
   final Color _errorRed = const Color(0xFFFF0000);
 
   // Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeTheme();
+  }
+
+  void _initializeTheme() {
+    switch (widget.targetRole) {
+      case 'vendor':
+        _brandColor = Colors.blue;
+        _buttonColor = Colors.blue.shade700;
+        _portalTitle = 'Vendor Portal';
+        _portalIcon = Icons.store;
+        break;
+      case 'admin':
+      default:
+        _brandColor = Colors.purple;
+        _buttonColor = Colors.purple.shade700;
+        _portalTitle = 'Admin Console';
+        _portalIcon = Icons.admin_panel_settings;
+        break;
+    }
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _nameController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
   bool _isValidEmail(String email) =>
       RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
-  bool _isValidPhone(String phone) => RegExp(r'^[6-9]\d{9}$').hasMatch(phone);
 
-  // --- ROUTING LOGIC (Fixed) ---
-  void _navigateBasedOnRole(String roleRaw, BuildContext context) {
-    String role = roleRaw.toLowerCase().trim();
+  // --- ROUTING LOGIC (STRICT) ---
+  void _navigateBasedOnRole(String userRoleRaw, BuildContext context) {
+    String userRole = userRoleRaw.toLowerCase().trim();
+    String targetRole = widget.targetRole.toLowerCase().trim();
 
-    // Check if role is allowed in Portal
-    if (['admin', 'vendor', 'seller'].contains(role)) {
+    // STRICT VALIDATION: User role MUST match the Portal they are trying to access
+    if (userRole == targetRole) {
        Navigator.pushAndRemoveUntil(
          context,
          MaterialPageRoute(builder: (context) => const AuthWrapper()),
          (route) => false,
        );
     } else {
+       // Optional: Allow Admin to access anywhere
+       if (userRole == 'admin') {
+          Navigator.pushAndRemoveUntil(
+           context,
+           MaterialPageRoute(builder: (context) => const AuthWrapper()),
+           (route) => false,
+         );
+         return;
+       } 
+       
        ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(content: Text("Access Denied: Role '$role' cannot access the Portal."), backgroundColor: Colors.red),
+         SnackBar(
+           content: Text("Access Denied: You are a '$userRole', but this is the '$targetRole' portal."), 
+           backgroundColor: Colors.red,
+           duration: const Duration(seconds: 4),
+         ),
        );
        FirebaseAuth.instance.signOut();
     }
@@ -74,71 +115,34 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      if (_isLogin) {
-        // --- LOGIN ---
-        UserCredential userCredential =
-            await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
+      // --- LOGIN ---
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-        if (userCredential.user != null) {
-          String uid = userCredential.user!.uid;
-          print("DEBUG: Auth Successful. UID: $uid");
-
-          // FETCH USER DOC
-          DocumentSnapshot userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .get();
-
-          if (!mounted) return;
-
-          if (userDoc.exists) {
-            // FIX: Safely read the role
-            var data = userDoc.data() as Map<String, dynamic>;
-            String role = data['role'] ?? 'customer';
-
-            print("DEBUG: Firestore Document Found. Raw Role: '$role'");
-            _navigateBasedOnRole(role, context);
-          } else {
-            // CRITICAL FIX: User exists in Auth but NOT in Database.
-            // This happens if you manually created user in Auth tab but forgot Firestore tab.
-            print(
-                "DEBUG: User missing in Firestore! Creating default customer entry.");
-
-            await FirebaseFirestore.instance.collection('users').doc(uid).set({
-              'email': _emailController.text.trim(),
-              'role': 'customer', // Defaulting to customer for safety
-              'created_at': FieldValue.serverTimestamp(),
-              'hasAddress': false,
-            });
-
-            _navigateBasedOnRole('customer', context);
-          }
-        }
-      } else {
-        // --- SIGN UP (Always Customer) ---
-        UserCredential cred =
-            await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        await FirebaseFirestore.instance
+      if (userCredential.user != null) {
+        String uid = userCredential.user!.uid;
+        
+        // FETCH USER DOC
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
-            .doc(cred.user!.uid)
-            .set({
-          'name': _nameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'role': 'customer', // Always Customer on Sign Up
-          'created_at': FieldValue.serverTimestamp(),
-          'hasAddress': false,
-        });
+            .doc(uid)
+            .get();
 
-        if (mounted) {
-          _navigateBasedOnRole('customer', context);
+        if (!mounted) return;
+
+        if (userDoc.exists) {
+          var data = userDoc.data() as Map<String, dynamic>;
+          String role = data['role'] ?? 'customer';
+          _navigateBasedOnRole(role, context);
+        } else {
+          // User exists in Auth but NOT in Database.
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("User profile not found."), backgroundColor: Colors.red),
+          );
+          FirebaseAuth.instance.signOut();
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -146,20 +150,14 @@ class _LoginScreenState extends State<LoginScreen> {
       String errorMessage;
       switch (e.code) {
         case 'user-not-found':
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Account not found. Switching to Sign Up..."),
-              backgroundColor: Colors.orange));
-          setState(() => _isLogin = false);
-          return;
+          errorMessage = "Account not found.";
+          break;
         case 'wrong-password':
           errorMessage = "Incorrect password.";
           break;
         case 'invalid-credential':
         case 'INVALID_LOGIN_CREDENTIALS':
-          errorMessage = "Invalid email or password. If new, please Sign Up.";
-          break;
-        case 'email-already-in-use':
-          errorMessage = "Email already registered. Please login.";
+          errorMessage = "Invalid email or password.";
           break;
         default:
           errorMessage = e.message ?? "Authentication failed.";
@@ -232,22 +230,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_isLogin ? "Login" : "Welcome!",
+                      Text("Login",
                           style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
                       const SizedBox(height: 20),
                       Text(
-                          _isLogin
-                              ? "Access your dashboard."
-                              : "Sign up to start shopping.",
+                          "Access your $_portalTitle.",
                           style: TextStyle(
                               fontSize: 18,
                               color: Colors.white.withAlpha(230))),
                     ],
                   ),
-                  Icon(Icons.shopping_bag_outlined,
+                  Icon(_portalIcon,
                       size: 120, color: Colors.white.withAlpha(77)),
                 ],
               ),
@@ -276,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       body: SafeArea(
           child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // Reduced top padding
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: _buildFormContent())),
     );
   }
@@ -288,41 +284,23 @@ class _LoginScreenState extends State<LoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (MediaQuery.of(context).size.width < 768) ...[
-            Icon(Icons.shopping_bag_outlined, size: 60, color: _brandColor),
+            Icon(_portalIcon, size: 60, color: _brandColor),
             const SizedBox(height: 10),
             Center(
-                child: Text("Kiri Hat",
+                child: Text(_portalTitle,
                     style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: _brandColor))),
             const SizedBox(height: 30),
-            Text(_isLogin ? "Login" : "Sign Up",
+            Text("Login",
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: _textDark)),
             const SizedBox(height: 30),
           ],
-          if (!_isLogin) ...[
-            _buildInputField(
-                controller: _nameController,
-                label: "Full Name",
-                icon: Icons.person_outline,
-                validator: (val) =>
-                    (val == null || val.length < 3) ? "Name required" : null),
-            const SizedBox(height: 20),
-            _buildInputField(
-                controller: _phoneController,
-                label: "Mobile Number",
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
-                validator: (val) => (val == null || !_isValidPhone(val))
-                    ? "Valid phone required"
-                    : null),
-            const SizedBox(height: 20),
-          ],
+          
           _buildInputField(
               controller: _emailController,
               label: "Email",
@@ -340,15 +318,15 @@ class _LoginScreenState extends State<LoginScreen> {
               validator: (val) => (val == null || val.length < 6)
                   ? "Min 6 chars required"
                   : null),
-          if (_isLogin)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                  onPressed: _handleForgotPassword,
-                  child: Text("Forgot Password?",
-                      style: TextStyle(
-                          color: _brandColor, fontWeight: FontWeight.w600))),
-            ),
+          
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+                onPressed: _handleForgotPassword,
+                child: Text("Forgot Password?",
+                    style: TextStyle(
+                        color: _brandColor, fontWeight: FontWeight.w600))),
+          ),
           const SizedBox(height: 24),
           SizedBox(
             height: 50,
@@ -365,37 +343,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 22,
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2.5))
-                  : Text(_isLogin ? "Login" : "Sign Up",
-                      style: const TextStyle(
+                  : const Text("Login",
+                      style: TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
-          const SizedBox(height: 24),
-          Center(
-            child: TextButton(
-              onPressed: _isLoading
-                  ? null
-                  : () {
-                      setState(() => _isLogin = !_isLogin);
-                      _formKey.currentState?.reset();
-                    },
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(fontSize: 14, color: _textDark),
-                  children: [
-                    TextSpan(
-                        text: _isLogin
-                            ? "New to Kiri Hat? "
-                            : "Already have an account? "),
-                    TextSpan(
-                        text: _isLogin ? "Create an account" : "Login",
-                        style: TextStyle(
-                            color: _brandColor, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // REMOVED SIGN UP TOGGLE
           const SizedBox(height: 24),
         ],
       ),
@@ -430,6 +383,9 @@ class _LoginScreenState extends State<LoginScreen> {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         counterText: "",
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: _brandColor, width: 2),
+        ),
       ),
       validator: validator,
     );

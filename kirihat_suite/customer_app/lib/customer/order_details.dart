@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -10,9 +11,15 @@ import '../services/invoice_service.dart';
 import 'widgets/unique_order_status_tracker.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
-  final DocumentSnapshot orderDoc;
+  final DocumentSnapshot? orderDoc;
+  final String? orderId;
 
-  const OrderDetailsScreen({super.key, required this.orderDoc});
+  const OrderDetailsScreen({
+    super.key, 
+    this.orderDoc,
+    this.orderId,
+  }) : assert(orderDoc != null || orderId != null, 
+             'Either orderDoc or orderId must be provided');
 
   @override
   State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
@@ -21,6 +28,37 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   bool _isLoading = false;
   final User? user = FirebaseAuth.instance.currentUser;
+  
+  DocumentSnapshot? _fetchedDoc;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.orderDoc == null && widget.orderId != null) {
+      _fetchOrder();
+    }
+  }
+
+  Future<void> _fetchOrder() async {
+    setState(() => _isLoading = true);
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(widget.orderId)
+          .get();
+      if (mounted) {
+        setState(() {
+          _fetchedDoc = doc;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching order: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+  
+  DocumentSnapshot get _activeDoc => widget.orderDoc ?? _fetchedDoc!;
 
   // --- 1. CANCEL ORDER LOGIC ---
   void _showCancelDialog() {
@@ -87,7 +125,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               Navigator.pop(context);
               setState(() => _isLoading = true);
 
-              await widget.orderDoc.reference.update({
+              await _activeDoc.reference.update({
                 'status': 'Cancelled',
                 'cancellation_reason': selectedReason == "Other"
                     ? customReasonController.text
@@ -97,7 +135,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               });
 
               // --- RESTORE STOCK FOR BOTH VENDOR AND SELLER ---
-              Map<String, dynamic>? data = widget.orderDoc.data() as Map<String, dynamic>?;
+              Map<String, dynamic>? data = _activeDoc.data() as Map<String, dynamic>?;
               var items = data?['items'] as List<dynamic>? ?? [];
               String? vendorId = data?['vendor_id'];
               
@@ -156,9 +194,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 await NotificationService.sendNotification(
                   vendorId: vId,
                   title: 'Order Cancelled by Customer',
-                  message: 'Order #${data?['order_id'] ?? widget.orderDoc.id} was cancelled. Reason: $selectedReason',
+                  message: 'Order #${data?['order_id'] ?? _activeDoc.id} was cancelled. Reason: $selectedReason',
                   type: 'order_cancelled',
-                  orderId: data?['order_id'] ?? widget.orderDoc.id,
+                  orderId: data?['order_id'] ?? _activeDoc.id,
                 );
               }
               // ---------------------
@@ -228,7 +266,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         await FirebaseFirestore.instance.collection('support_requests').add({
           'user_id': user!.uid,
           'user_email': user!.email,
-          'order_id': widget.orderDoc.id,
+          'order_id': _activeDoc.id,
           'type': 'Callback Request',
           'status': 'Pending',
           'created_at': FieldValue.serverTimestamp(),
@@ -344,7 +382,15 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var data = widget.orderDoc.data() as Map<String, dynamic>;
+    if (_isLoading && _fetchedDoc == null && widget.orderDoc == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
+    if (_fetchedDoc == null && widget.orderDoc == null) {
+         return const Scaffold(body: Center(child: Text("Order not found")));
+    }
+
+    var data = _activeDoc.data() as Map<String, dynamic>;
     var items = data['items'] as List<dynamic>? ?? [];
     String status = data['status'] ?? 'Pending';
     double total = (data['total_amount'] ?? 0).toDouble();
@@ -359,7 +405,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       displayOrderId = data['order_id'].toString();
     } else {
       displayOrderId =
-          "KIRI-${widget.orderDoc.id.substring(0, 6).toUpperCase()}";
+          "KIRI-${_activeDoc.id.substring(0, 6).toUpperCase()}";
     }
 
     // --- SAFE ADDRESS EXTRACTION ---
@@ -607,7 +653,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                       borderRadius: BorderRadius.circular(4),
                                       image: (item['imageUrl'] != null)
                                           ? DecorationImage(
-                                              image: NetworkImage(item['imageUrl']),
+                                              image: CachedNetworkImageProvider(item['imageUrl']),
                                               fit: BoxFit.cover)
                                           : null,
                                     ),
@@ -812,7 +858,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           Icons.download, "Download Invoice", Colors.black, () {
                         final invoiceData = Map<String, dynamic>.from(data);
                         // Prioritize the display order ID, fallback to document ID
-                        invoiceData['order_id'] = data['order_id'] ?? widget.orderDoc.id;
+                        invoiceData['order_id'] = data['order_id'] ?? _activeDoc.id;
                         InvoiceService.generateInvoice(invoiceData);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

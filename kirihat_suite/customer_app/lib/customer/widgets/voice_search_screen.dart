@@ -55,14 +55,13 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen> with SingleTicker
           if (status == 'notListening') {
              if (mounted) {
                 // Determine if we should close or just show retry
-                // For now, if we have text, assume success and close.
+                // Only auto-close if we have valid text
                 if (_text != 'Try saying "Milk" or "Vegetables"' && 
                     _text != 'Listening...' && 
                     _text.isNotEmpty) {
-                   // Ensure we don't pop twice if _stopListening already handled it
-                   if (ModalRoute.of(context)?.isCurrent ?? false) {
-                      Navigator.pop(context, _text); 
-                   }
+                    // Do nothing here, let the onResult finalResult handle the pop 
+                    // or the user can tap to confirm if we add a button. 
+                    // But for now, we rely on _stopListening or finalResult.
                 } else {
                    setState(() {
                      _isListening = false;
@@ -109,21 +108,23 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen> with SingleTicker
           setState(() {
             _text = val.recognizedWords;
             if (val.hasConfidenceRating && val.confidence > 0) {
-               _soundLevel = val.confidence; // Rough proxy for visual interest
+               _soundLevel = val.confidence; 
             }
           });
           
+          // Wait for final result to ensure we captured the full phrase
           if (val.finalResult) {
-             // Delay slightly to show final text then close
-             Future.delayed(const Duration(milliseconds: 500), () {
-               if (mounted) Navigator.pop(context, _text);
+             Future.delayed(const Duration(milliseconds: 800), () {
+               if (mounted && _text.isNotEmpty) {
+                 Navigator.pop(context, _text);
+               }
              });
           }
         },
         listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
+        pauseFor: const Duration(seconds: 3), // Increased to 3s to allow pauses
         partialResults: true,
-        cancelOnError: true,
+        cancelOnError: false, 
         listenMode: stt.ListenMode.search,
       );
     }
@@ -136,8 +137,10 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen> with SingleTicker
        _animationController.stop();
      });
      
-     // If we have valid text, return it immediately
-     if (_text != 'Try saying "Milk" or "Vegetables"' && _text.isNotEmpty && _text != 'Listening...') {
+     // Only close if we have actual text
+     if (_text != 'Try saying "Milk" or "Vegetables"' && 
+         _text.isNotEmpty && 
+         _text != 'Listening...') {
         Navigator.pop(context, _text);
      }
   }

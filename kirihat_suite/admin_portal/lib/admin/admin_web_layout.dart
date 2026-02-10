@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'admin_sidebar.dart';
 import 'admin_header.dart';
 import 'dashboard/main_dashboard.dart';
-import 'users/user_management.dart';
+import 'users/user_management_improved.dart';
 import 'dashboard/customer_monitor.dart';
 import 'dashboard/vendor_monitor.dart';
 import 'dashboard/rider_monitor.dart';
@@ -38,6 +38,7 @@ import 'catalog/price_override_requests_screen.dart';
 import 'setup/system_initialization_screen.dart';
 import 'layout_manager/home_layout_manager_screen.dart';
 import 'account_deletions_screen.dart';
+import 'settings/onboarding_slides_screen.dart';
 
 class AdminWebLayout extends StatefulWidget {
   const AdminWebLayout({super.key});
@@ -133,6 +134,8 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
         return const AccountDeletionsScreen();
       case 'search_analytics':
         return const SearchAnalyticsScreen();
+      case 'onboarding_slides':
+        return const OnboardingSlidesScreen();
       default:
         return const Center(child: Text('Page Not Found'));
     }

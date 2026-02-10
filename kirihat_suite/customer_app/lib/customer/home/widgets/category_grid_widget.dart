@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:kirihat_core/models/home_layout_model.dart';
 import 'package:kirihat_core/services/hero_category_service.dart';
 import '../../category/category_products_screen.dart';
@@ -24,12 +25,18 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
     with AutomaticKeepAliveClientMixin {
   final HeroCategoryService _heroService = HeroCategoryService();
   
-  List<Map<String, dynamic>>? _cachedCategories;
-  DateTime? _cacheTimestamp;
+  // Static cache shared across all instances — survives widget rebuilds
+  static final Map<String, List<Map<String, dynamic>>> _staticCache = {};
+  static final Map<String, DateTime> _staticCacheTimestamps = {};
   static const Duration _cacheDuration = Duration(minutes: 10);
   
   bool _isLoading = false;
   String? _errorMessage;
+
+  String get _cacheKey {
+    final heroCategoryId = widget.layout.data['hero_category_id'] as String? ?? '';
+    return '${widget.vendorId}_$heroCategoryId';
+  }
 
   @override
   bool get wantKeepAlive => true;
@@ -41,9 +48,13 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
   }
 
   bool get _isCacheValid {
-    if (_cachedCategories == null || _cacheTimestamp == null) return false;
-    return DateTime.now().difference(_cacheTimestamp!) < _cacheDuration;
+    final cached = _staticCache[_cacheKey];
+    final timestamp = _staticCacheTimestamps[_cacheKey];
+    if (cached == null || timestamp == null) return false;
+    return DateTime.now().difference(timestamp) < _cacheDuration;
   }
+
+  List<Map<String, dynamic>>? get _cachedCategories => _staticCache[_cacheKey];
 
   Future<void> _loadCategories() async {
     // Use cache if valid
@@ -60,7 +71,7 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
       if (heroCategoryId == null || heroCategoryId.isEmpty) {
         setState(() {
           _isLoading = false;
-          _cachedCategories = [];
+          _staticCache[_cacheKey] = [];
         });
         return;
       }
@@ -77,7 +88,7 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
       if (heroCategory.isEmpty) {
         setState(() {
           _isLoading = false;
-          _cachedCategories = [];
+          _staticCache[_cacheKey] = [];
         });
         return;
       }
@@ -89,7 +100,7 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
       if (categoryIds.isEmpty) {
         setState(() {
           _isLoading = false;
-          _cachedCategories = [];
+          _staticCache[_cacheKey] = [];
         });
         return;
       }
@@ -101,8 +112,8 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
       ).timeout(const Duration(seconds: 15));
 
       setState(() {
-        _cachedCategories = categories;
-        _cacheTimestamp = DateTime.now();
+        _staticCache[_cacheKey] = categories;
+        _staticCacheTimestamps[_cacheKey] = DateTime.now();
         _isLoading = false;
       });
     } catch (e) {
@@ -165,8 +176,8 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
                   IconButton(
                     icon: const Icon(Icons.refresh, size: 20),
                     onPressed: () {
-                      _cachedCategories = null;
-                      _cacheTimestamp = null;
+                      _staticCache.remove(_cacheKey);
+                      _staticCacheTimestamps.remove(_cacheKey);
                       _loadCategories();
                     },
                     tooltip: 'Retry',
@@ -230,8 +241,24 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
                       ? CachedNetworkImage(
                           imageUrl: icon,
                           fit: BoxFit.contain,
-                          placeholder: (context, url) => Center(child: Icon(Icons.category, color: Colors.grey[300])),
-                          errorWidget: (context, url, error) => Icon(Icons.error, color: Colors.red[200]),
+                          memCacheWidth: 200,
+                          fadeInDuration: const Duration(milliseconds: 200),
+                          fadeOutDuration: Duration.zero,
+                          placeholder: (context, url) => Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.grey[100]!,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Icon(
+                            Icons.category_outlined, 
+                            size: 32, 
+                            color: Colors.grey[400],
+                          ),
                         )
                       : Icon(
                           Icons.category_outlined,
@@ -323,8 +350,8 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () {
-                _cachedCategories = null;
-                _cacheTimestamp = null;
+                _staticCache.remove(_cacheKey);
+                _staticCacheTimestamps.remove(_cacheKey);
                 _loadCategories();
               },
             ),
@@ -358,8 +385,6 @@ class _EnhancedCategoryGridWidgetState extends State<EnhancedCategoryGridWidget>
 
   @override
   void dispose() {
-    _cachedCategories = null;
-    _cacheTimestamp = null;
     super.dispose();
   }
 }

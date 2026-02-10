@@ -1,0 +1,15 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kirihat.live_app",
+      "sha256_cert_fingerprints": [
+        "A5:E0:17:E2:8F:CA:E4:41:E6:43:B8:65:08:6D:59:C5:79:00:61:34:C3:46:BB:A4:61:0E:18:36:25:4F:A5:C3",
+        "A5:E0:17:89:D2:84:87:02:64:84:89:34:6C:75:5D:87:34:98:A2:47:82:34:10:92:38:74:10:23:43:98:99:12",
+        "AE:EB:C8:2C:A1:08:52:06:31:68:11:A1:B1:87:87:AA:DF:07:BC:01:5F:45:8B:3A:CA:81:10:E8:37:F3:9B:75",
+        "F6:91:90:81:CD:E7:86:E0:9A:A1:5B:6F:1A:79:72:99:AE:58:90:49:CF:CE:38:AD:F6:9A:76:F3:69:11:11:9B"
+      ]
+    }
+  }
+]

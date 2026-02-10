@@ -3,7 +3,10 @@ import 'package:kirihat_core/models/home_layout_model.dart';
 import 'package:kirihat_core/services/product_service.dart';
 import '../../../widgets/product_card.dart';
 import '../../product/enhanced_product_detail.dart';
+import 'package:kirihat_core/utils/cart_helper.dart';
 import '../../widgets/shimmer_loading.dart';
+
+enum Source { cache, server, serverAndCache }
 
 /// Enhanced Horizontal Product Row with caching and error handling
 class EnhancedProductRowWidget extends StatefulWidget {
@@ -46,19 +49,38 @@ class _EnhancedProductRowWidgetState extends State<EnhancedProductRowWidget>
   }
 
   Future<void> _loadProducts() async {
-    // Use cache if valid
-    if (_isCacheValid) return;
+    // 1. Try to load from CACHE first for instant display
+    try {
+      final filter = widget.layout.data['filter'] as String? ?? 'trending';
+      final limit = widget.layout.data['limit'] as int? ?? 10;
+      
+      // Attempt to get cached data (offline support)
+      final cachedProducts = await _getProducts(filter, limit, source: Source.cache);
+      
+      if (mounted && cachedProducts.isNotEmpty) {
+        setState(() {
+          _cachedProducts = cachedProducts;
+          _isLoading = false; 
+        });
+      }
+    } catch (e) {
+      // Ignore cache errors, just proceed to network
+      debugPrint('⚠️ Cache miss or error: $e');
+    }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    // 2. Fetch fresh data from SERVER
+    if (mounted) {
+      setState(() {
+        if (_cachedProducts == null) _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final filter = widget.layout.data['filter'] as String? ?? 'trending';
       final limit = widget.layout.data['limit'] as int? ?? 10;
       
-      final products = await _getProducts(filter, limit)
+      final products = await _getProducts(filter, limit, source: Source.server)
           .timeout(const Duration(seconds: 15));
 
       if (mounted) {
@@ -72,14 +94,17 @@ class _EnhancedProductRowWidgetState extends State<EnhancedProductRowWidget>
       debugPrint('❌ Error loading products: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load products';
+          // Only show error if we have NO data at all
+          if (_cachedProducts == null || _cachedProducts!.isEmpty) {
+            _errorMessage = 'Failed to load products';
+          }
           _isLoading = false;
         });
       }
     }
   }
 
-  Future<List<Map<String, dynamic>>> _getProducts(String filter, int limit) async {
+  Future<List<Map<String, dynamic>>> _getProducts(String filter, int limit, {Source source = Source.serverAndCache}) async {
     try {
       switch (filter.toLowerCase()) {
         case 'trending':
@@ -132,7 +157,7 @@ class _EnhancedProductRowWidgetState extends State<EnhancedProductRowWidget>
           );
       }
     } catch (e) {
-      debugPrint('❌ Error in _getProducts($filter): $e');
+      // debugPrint('❌ Error in _getProducts($filter): $e');
       return [];
     }
   }
@@ -142,7 +167,7 @@ class _EnhancedProductRowWidgetState extends State<EnhancedProductRowWidget>
     super.build(context); // For AutomaticKeepAliveClientMixin
 
     // Show cached data while loading fresh data
-    if (_isLoading && _cachedProducts != null) {
+    if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
       return _buildProductRow(_cachedProducts!);
     }
 
@@ -150,15 +175,11 @@ class _EnhancedProductRowWidgetState extends State<EnhancedProductRowWidget>
       return _buildLoadingSkeleton();
     }
 
-    if (_errorMessage != null && _cachedProducts == null) {
+    if (_errorMessage != null) {
       return _buildErrorState();
     }
 
-    if (_cachedProducts == null || _cachedProducts!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return _buildProductRow(_cachedProducts!);
+    return const SizedBox.shrink();
   }
 
   Widget _buildProductRow(List<Map<String, dynamic>> products) {
@@ -319,14 +340,8 @@ class _EnhancedProductRowWidgetState extends State<EnhancedProductRowWidget>
     }
   }
 
-  void _addToCart(Map<String, dynamic> product) {
-    // TODO: Implement add to cart
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${product['name']} added to cart'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  Future<void> _addToCart(Map<String, dynamic> product) async {
+    await CartHelper.addToCart(context, product);
   }
 
   void _handleViewAll() {

@@ -4,22 +4,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pinput/pinput.dart';
 import 'dart:async';
 import '../customer/onboarding/pincode_gate.dart';
+import '../customer/onboarding/account_setup_screen.dart';
+import '../customer/customer_dashboard.dart';
 import 'package:kirihat_core/utils/cart_helper.dart';
 import 'package:kirihat_core/services/session_service.dart';
+import 'package:kirihat_core/services/user_service.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phoneNumber;
-  final String verificationId;
+  final String? verificationId;
   final int? resendToken;
   final VoidCallback? onLoginSuccess;
+  final bool isNestedFlow;
 
   const OTPVerificationScreen({
     super.key,
     required this.phoneNumber,
-    required this.verificationId,
+    this.verificationId,
     this.resendToken,
     this.onLoginSuccess,
+    this.isNestedFlow = false,
   });
 
   @override
@@ -30,21 +35,30 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
   final _otpController = TextEditingController();
   final _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
+  bool _signInComplete = false; // Guard against double sign-in
   Timer? _timer;
-  int _remainingSeconds = 600; // 10 minutes
+  int _remainingSeconds = 60; // Standard 60s for resend
+  String? _currentVerificationId; // Mutable to handle resend
 
-  @override
   void initState() {
     super.initState();
-    _startTimer();
-    listenForCode();
+    _currentVerificationId = widget.verificationId;
+    
+    // If we have a verification ID, start timer and listen
+    if (_currentVerificationId != null) {
+      _startTimer();
+      listenForCode();
+    } else {
+      // Otherwise, we need to send the code first
+      _sendOTP();
+    }
   }
 
   @override
   void codeUpdated() {
     if (code != null && code!.isNotEmpty) {
       _otpController.text = code!;
-      if (code!.length == 6) {
+      if (code!.length == 6 && !_signInComplete) {
         _verifyOTP();
       }
     }
@@ -73,17 +87,33 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
   }
 
   Future<void> _verifyOTPWithCredential(PhoneAuthCredential credential) async {
+    // Guard: Already signed in (e.g., auto-verification completed first)
+    if (_signInComplete) {
+      debugPrint('⚠️ Sign-in already complete, skipping duplicate');
+      return;
+    }
+    
+    // Guard: User already signed in from another path
+    if (FirebaseAuth.instance.currentUser != null) {
+      debugPrint('✅ User already signed in, handling navigation');
+      _signInComplete = true;
+      await _handlePostLoginNavigation(false); // Existing user
+      return;
+    }
+    
     try {
+      _signInComplete = true; // Set BEFORE async call to prevent race
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user!;
 
       debugPrint('✅ OTP verified successfully: ${user.uid}');
       
+      // Check if user document exists in Firestore to determine true 'isNewUser' status
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final bool isNewUser = !userDoc.exists;
+
       // Prepare parallel tasks for lightning speed
       final List<Future> setupTasks = [];
-
-      // Task 1: Create/Update User (Optimized)
-      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
 
       // Task 1: Create/Update User (Optimized)
       if (isNewUser) {
@@ -94,10 +124,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
           'role': 'customer',
           'created_at': FieldValue.serverTimestamp(),
         }));
-      } else {
-        // Existing user: Optional - update last login or check existence if needed. 
-        // For speed, we assume existing user has a doc. 
-        // If critical data is missing, we could do a lazy repair here, but skipping read is fastest.
       }
 
       // Task 2: Migrate Guest Cart
@@ -111,19 +137,17 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
       debugPrint('🚀 Login setup complete (Parallel)');
 
       if (mounted) {
-        Navigator.pop(context, {
-          'success': true,
-          'isNewUser': isNewUser,
-        });
+        await _handlePostLoginNavigation(isNewUser);
       }
     } on FirebaseAuthException catch (e) {
+      _signInComplete = false; // Reset on failure
       String errorMessage;
       switch (e.code) {
         case 'invalid-verification-code':
           errorMessage = 'Invalid OTP. Please check and try again.';
           break;
         case 'session-expired':
-          errorMessage = 'OTP expired. Please request a new one.';
+          errorMessage = 'The sms code has expired. Please re-send the verification code to try again.';
           break;
         default:
           errorMessage = e.message ?? 'Verification failed';
@@ -139,6 +163,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
         );
       }
     } catch (e) {
+      _signInComplete = false; // Reset on failure
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -151,7 +176,72 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
     }
   }
 
+  /// Handles navigation after successful login based on profile completion
+  Future<void> _handlePostLoginNavigation(bool isNewUser) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !mounted) return;
+    
+    // Check if profile is complete (has name, gender, and address)
+    final isProfileComplete = await UserService().checkProfileCompletionWithCache(user.uid);
+    
+    debugPrint('📋 _handlePostLoginNavigation: Profile complete: $isProfileComplete, isNewUser: $isNewUser, isNestedFlow: ${widget.isNestedFlow}');
+    
+    if (!mounted) {
+       debugPrint('🛑 _handlePostLoginNavigation: Context not mounted, aborting navigation.');
+       return;
+    }
+    
+    if (!isProfileComplete) {
+      // Go to account setup
+      // IMPORTANT: If we have a success callback (from Checkout/Profile), we must NOT clear stack.
+      // We push Account Setup on top, so when it finishes (pops), we are back here.
+      if (widget.isNestedFlow) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AccountSetupScreen(isNestedFlow: true),
+          ),
+        );
+        // After returning from setup flow, we assume profile is now complete.
+        // We return 'true' to signal success to PhoneAuthScreen, which will handle the final pop.
+        if (mounted) {
+           Navigator.pop(context, true);
+        }
+      } else {
+        // Standard Onboarding Flow: Clear stack and go to Setup -> Address -> Dashboard
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const AccountSetupScreen()),
+          (route) => false,
+        );
+      }
+    } else {
+      // Profile is complete
+      if (widget.isNestedFlow) {
+        // Return 'true' to signal success to PhoneAuthScreen
+        Navigator.pop(context, true);
+      } else {
+        // Go to main dashboard
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const CustomerDashboard()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
   Future<void> _verifyOTP() async {
+    // Guard: Already signed in
+    if (_signInComplete || FirebaseAuth.instance.currentUser != null) {
+      debugPrint('✅ Already signed in, handling navigation');
+      if (!_signInComplete) {
+        _signInComplete = true;
+        await _handlePostLoginNavigation(false);
+      }
+      return;
+    }
+    
     if (_otpController.text.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -166,8 +256,20 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
     setState(() => _isLoading = true);
 
     try {
+      if (_currentVerificationId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please wait for the code to be sent'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final credential = PhoneAuthProvider.credential(
-        verificationId: widget.verificationId,
+        verificationId: _currentVerificationId!, // Use mutable verificationId
         smsCode: _otpController.text.trim(),
       );
 
@@ -180,7 +282,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
           errorMessage = 'Invalid OTP. Please check and try again.';
           break;
         case 'session-expired':
-          errorMessage = 'OTP expired. Please request a new one.';
+          errorMessage = 'The sms code has expired. Please re-send the verification code to try again.';
           break;
         default:
           errorMessage = e.message ?? 'Verification failed';
@@ -214,8 +316,13 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
 
 
 
-  Future<void> _resendOTP() async {
-    setState(() => _isLoading = true);
+  Future<void> _sendOTP() async {
+    // Reset state for sending
+    setState(() {
+      _isLoading = true;
+      _remainingSeconds = 60; // Reset timer for new send
+    });
+    
     listenForCode();
 
     try {
@@ -223,37 +330,72 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
         phoneNumber: widget.phoneNumber,
         forceResendingToken: widget.resendToken,
         timeout: const Duration(seconds: 60),
+        
+        // Auto-verification (Android only)
         verificationCompleted: (PhoneAuthCredential credential) async {
-          await _verifyOTPWithCredential(credential);
+             debugPrint('✅ Auto-verification completed');
+             await _verifyOTPWithCredential(credential);
         },
+        
         verificationFailed: (FirebaseAuthException e) {
+          debugPrint('❌ Verification failed: ${e.code} - ${e.message}');
           if (mounted) {
+            String message = e.message ?? 'Failed to send OTP';
+             if (e.code == 'invalid-phone-number') {
+                message = 'The phone number is invalid.';
+             }
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(e.message ?? 'Failed to resend OTP'),
+                content: Text(message),
                 backgroundColor: Colors.redAccent,
                 behavior: SnackBarBehavior.floating,
               ),
             );
+            
+            // If initial send failed, we might want to pop back
+            if (_currentVerificationId == null) {
+               // Maybe give them a button to retry instead of popping immediately?
+               // For now, let's just leave them on screen to try "Resend"
+            }
           }
+           setState(() => _isLoading = false);
         },
+        
         codeSent: (String verificationId, int? resendToken) {
+          debugPrint('✅ OTP sent to ${widget.phoneNumber}');
           if (mounted) {
             setState(() {
-              _remainingSeconds = 600;
+              _currentVerificationId = verificationId; 
+              _remainingSeconds = 60;
+              _signInComplete = false;
+              _isLoading = false;
             });
+            
+            // Only start timer if not already running
+            if (_timer == null || !_timer!.isActive) {
+               _startTimer();
+            }
+            
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('OTP resent successfully'),
+                content: Text('OTP sent successfully'),
                 backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,
               ),
             );
           }
         },
-        codeAutoRetrievalTimeout: (String verificationId) {},
+        
+        codeAutoRetrievalTimeout: (String verificationId) {
+          debugPrint('⏱️ Auto-retrieval timeout');
+          if (mounted) {
+            setState(() => _currentVerificationId = verificationId);
+          }
+        },
       );
     } catch (e) {
+      debugPrint('❌ Error sending OTP: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -262,12 +404,13 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Code
             behavior: SnackBarBehavior.floating,
           ),
         );
+        setState(() => _isLoading = false);
       }
     }
+  }
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+  Future<void> _resendOTP() async {
+    await _sendOTP();
   }
 
   String _formatTime(int seconds) {
